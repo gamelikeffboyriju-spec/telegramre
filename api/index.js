@@ -1,7 +1,4 @@
-const express = require('express');
 const axios = require('axios');
-
-const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
@@ -12,13 +9,10 @@ const VALID_KEYS = [
     'BRONX_MASTER_KEY',
     'BRONX_KEY_2026', 
     'DEMO_KEY', 
-    'test123',
-    'PUBLIC_NUMBER_KEY',
-    'PUBLIC_TG_KEY',
-    'PUBLIC_VEHICLE_KEY'
+    'test123'
 ];
 
-// ========== REQUEST COUNTS (Memory mein store) ==========
+// ========== REQUEST COUNTS (In-memory) ==========
 let requestCounts = {};
 
 function getIndiaDate() {
@@ -102,156 +96,23 @@ const endpoints = [
     { path: '/pkv2', param: 'num', example: '3359736848', desc: 'Pakistan Number v2' }
 ];
 
-// ========== CORS ==========
-app.use((req, res, next) => {
+// ========== MAIN HANDLER ==========
+module.exports = async (req, res) => {
+    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    next();
-});
-
-app.use(express.json());
-
-// ========== API KEY CHECK ==========
-function checkApiKey(req, res, next) {
-    const key = req.query.key || req.headers['x-api-key'];
-    if (!key) {
-        return res.status(401).json({ success: false, error: "❌ API Key Required" });
-    }
-    if (!VALID_KEYS.includes(key)) {
-        return res.status(403).json({ success: false, error: "❌ Invalid API Key" });
-    }
-    if (!checkAndResetLimit(key)) {
-        return res.status(429).json({ 
-            success: false, 
-            error: "❌ Daily quota exceeded (1000/day)",
-            reset: "2:00 AM IST"
-        });
-    }
-    req.apiKey = key;
-    next();
-}
-
-// ========== PROXY ROUTES ==========
-app.use('/api/key-bronx', checkApiKey);
-
-endpoints.forEach(ep => {
-    app.get(`/api/key-bronx${ep.path}`, async (req, res) => {
-        const paramValue = req.query[ep.param];
-        const apiKey = req.apiKey;
-        
-        if (!paramValue) {
-            return res.status(400).json({ 
-                success: false, 
-                error: `Missing ${ep.param}`,
-                example: `/api/key-bronx${ep.path}?key=YOUR_KEY&${ep.param}=${ep.example}`
-            });
-        }
-        
-        try {
-            const realUrl = `${REAL_API_BASE}${ep.path}?key=${REAL_API_KEY}&${ep.param}=${paramValue}`;
-            console.log(`📡 ${ep.path} -> ${paramValue}`);
-            
-            const response = await axios.get(realUrl, { timeout: 30000 });
-            const used = incrementRequestCount(apiKey);
-            
-            const cleanedData = cleanResponse(response.data);
-            cleanedData.rate_limit = {
-                limit: 1000,
-                used: used,
-                remaining: 1000 - used,
-                reset: "2:00 AM IST"
-            };
-            
-            res.json(cleanedData);
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    });
-});
-
-// ========== ROOT ROUTE ==========
-app.get('/', (req, res) => {
-    res.json({
-        success: true,
-        name: "BRONX OSINT API",
-        credit: "@BRONX_ULTRA",
-        message: "API is running!",
-        base_url: "https://" + req.get('host'),
-        endpoints: endpoints.map(ep => ({
-            name: ep.path.replace('/', ''),
-            url: `/api/key-bronx${ep.path}?key=YOUR_KEY&${ep.param}=${ep.example}`,
-            description: ep.desc
-        })),
-        rate_limit: {
-            limit: 1000,
-            reset: "2:00 AM IST",
-            per: "key/day"
-        }
-    });
-});
-
-// ========== TEST ROUTE ==========
-app.get('/test', (req, res) => {
-    res.json({ 
-        status: '✅ BRONX OSINT API Running', 
-        credit: '@BRONX_ULTRA',
-        time: new Date().toISOString()
-    });
-});
-
-// ========== QUOTA CHECK ==========
-app.get('/quota', (req, res) => {
-    const key = req.query.key;
-    if (!key) return res.status(400).json({ error: "Missing key" });
-    if (!VALID_KEYS.includes(key)) return res.status(403).json({ error: "Invalid key" });
     
-    const today = getIndiaDate();
-    const used = requestCounts[key] && requestCounts[key].date === today ? requestCounts[key].count : 0;
-    res.json({
-        success: true,
-        key: key.substring(0, 8) + '...',
-        limit: 1000,
-        used: used,
-        remaining: 1000 - used,
-        reset: "2:00 AM IST",
-        date: today
-    });
-});
-
-// ========== HTML UI ROUTE ==========
-app.get('/docs', (req, res) => {
-    let endpointsHTML = '';
-    const categories = {
-        'Phone Intelligence': ['number', 'aadhar', 'name', 'numv2', 'adv'],
-        'Financial': ['upi', 'ifsc', 'pan'],
-        'Location': ['pincode', 'ip'],
-        'Vehicle': ['vehicle', 'rc'],
-        'Gaming': ['ff', 'bgmi'],
-        'Social': ['insta', 'git', 'tg'],
-        'Pakistan': ['pk', 'pkv2']
-    };
-    
-    for (const [cat, paths] of Object.entries(categories)) {
-        endpointsHTML += `<div class="category">📱 ${cat}</div><div class="endpoints-grid">`;
-        endpoints.filter(ep => paths.includes(ep.path.replace('/', ''))).forEach(ep => {
-            endpointsHTML += `
-                <div class="endpoint-card">
-                    <span class="method">GET</span>
-                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
-                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
-                    <div class="param">📌 ${ep.desc}</div>
-                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
-                    <div class="copy-btn" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">📋 COPY URL</div>
-                </div>
-            `;
-        });
-        endpointsHTML += `</div>`;
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
     
-    const html = `<!DOCTYPE html>
+    const url = req.url;
+    const query = req.query || {};
+    
+    // ========== ROOT ROUTE - HTML UI ==========
+    if (url === '/' || url === '') {
+        const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -285,18 +146,18 @@ app.get('/docs', (req, res) => {
         .code { background: #0a0a0a; border: 1px solid #00ff41; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; overflow-x: auto; margin: 10px 0; }
         .category { font-size: 22px; font-weight: bold; margin: 30px 0 15px; padding-left: 15px; border-left: 4px solid #00ff41; }
         .endpoints-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .endpoint-card { background: #0a0a0a; border: 1px solid #00ff4133; border-radius: 10px; padding: 15px; transition: 0.3s; }
+        .endpoint-card { background: #0a0a0a; border: 1px solid #00ff4133; border-radius: 10px; padding: 15px; transition: 0.3s; cursor: pointer; }
         .endpoint-card:hover { border-color: #00ff41; transform: translateY(-2px); box-shadow: 0 0 15px #00ff41; }
         .method { background: #00ff4120; padding: 2px 8px; border-radius: 5px; font-size: 10px; }
         .endpoint-name { font-size: 18px; font-weight: bold; margin: 10px 0; }
         .endpoint-url { font-family: monospace; font-size: 10px; color: #00ff4190; }
         .param { font-size: 11px; color: #00ff4190; margin-top: 8px; }
-        .copy-btn { margin-top: 12px; color: #00ff41; font-size: 10px; cursor: pointer; text-align: center; padding: 5px; border: 1px solid #00ff41; border-radius: 6px; }
-        .copy-btn:hover { background: #00ff41; color: #000; }
+        .copy-btn { margin-top: 12px; color: #00ff41; font-size: 10px; text-align: center; padding: 5px; border: 1px solid #00ff41; border-radius: 6px; }
         .footer { text-align: center; padding: 30px; margin-top: 40px; border-top: 1px solid #00ff4133; font-size: 11px; }
         .toast { position: fixed; bottom: 20px; right: 20px; background: #00ff41; color: #0a0a0a; padding: 10px 20px; border-radius: 8px; animation: slideIn 0.3s; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @media (max-width: 768px) { .header h1 { font-size: 28px; } .stat-num { font-size: 24px; } }
+        a { color: #00ff41; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -319,15 +180,132 @@ app.get('/docs', (req, res) => {
         <div class="auth-box">
             <h3>🔐 AUTHENTICATION</h3>
             <div class="code">GET /api/key-bronx/number?key=YOUR_KEY&num=9876543210</div>
-            <p style="margin-top: 15px;">💡 Contact <strong style="color: #00ff41;">@BRONX_ULTRA</strong> on Telegram to get keys</p>
+            <p style="margin-top: 15px;">💡 Contact <strong style="color: #00ff41;">@BRONX_ULTRA</strong> on Telegram</p>
         </div>
         
-        ${endpointsHTML}
+        <div class="category">📱 Phone Intelligence</div>
+        <div class="endpoints-grid">
+            ${['number', 'aadhar', 'name', 'numv2', 'adv'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
+        
+        <div class="category">💰 Financial</div>
+        <div class="endpoints-grid">
+            ${['upi', 'ifsc', 'pan'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
+        
+        <div class="category">📍 Location</div>
+        <div class="endpoints-grid">
+            ${['pincode', 'ip'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
+        
+        <div class="category">🚗 Vehicle</div>
+        <div class="endpoints-grid">
+            ${['vehicle', 'rc'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
+        
+        <div class="category">🎮 Gaming</div>
+        <div class="endpoints-grid">
+            ${['ff', 'bgmi'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
+        
+        <div class="category">🌐 Social</div>
+        <div class="endpoints-grid">
+            ${['insta', 'git', 'tg'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
+        
+        <div class="category">🇵🇰 Pakistan</div>
+        <div class="endpoints-grid">
+            ${['pk', 'pkv2'].map(name => {
+                const ep = endpoints.find(e => e.path.replace('/', '') === name);
+                if (!ep) return '';
+                return `
+                <div class="endpoint-card" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">
+                    <span class="method">GET</span>
+                    <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
+                    <div class="endpoint-url">/api/key-bronx${ep.path}</div>
+                    <div class="param">📌 ${ep.desc}</div>
+                    <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    <div class="copy-btn">📋 COPY URL</div>
+                </div>`;
+            }).join('')}
+        </div>
         
         <div class="footer">
             <p>✨ BRONX OSINT API | @BRONX_ULTRA</p>
             <p>⚡ 1000 requests/day | Resets 2:00 AM IST</p>
-            <p><a href="/test" style="color:#00ff41;">📡 Test API</a> | <a href="/quota?key=BRONX_KEY_2026" style="color:#00ff41;">📊 Check Quota</a></p>
+            <p><a href="/test">📡 Test API</a> | <a href="/keys">🔑 View Keys</a></p>
         </div>
     </div>
     <script>
@@ -343,7 +321,97 @@ app.get('/docs', (req, res) => {
     </script>
 </body>
 </html>`;
-    res.send(html);
-});
-
-module.exports = app;
+        res.setHeader('Content-Type', 'text/html');
+        return res.status(200).send(html);
+    }
+    
+    // ========== TEST ROUTE ==========
+    if (url === '/test') {
+        return res.status(200).json({ 
+            status: '✅ BRONX OSINT API Running', 
+            credit: '@BRONX_ULTRA',
+            time: new Date().toISOString()
+        });
+    }
+    
+    // ========== KEYS ROUTE ==========
+    if (url === '/keys') {
+        return res.status(200).json({ 
+            success: true, 
+            keys: VALID_KEYS,
+            contact: "@BRONX_ULTRA"
+        });
+    }
+    
+    // ========== QUOTA ROUTE ==========
+    if (url === '/quota') {
+        const key = query.key;
+        if (!key) return res.status(400).json({ error: "Missing key" });
+        if (!VALID_KEYS.includes(key)) return res.status(403).json({ error: "Invalid key" });
+        
+        const today = getIndiaDate();
+        const used = requestCounts[key] && requestCounts[key].date === today ? requestCounts[key].count : 0;
+        return res.status(200).json({
+            success: true,
+            key: key.substring(0, 8) + '...',
+            limit: 1000,
+            used: used,
+            remaining: 1000 - used,
+            reset: "2:00 AM IST"
+        });
+    }
+    
+    // ========== API PROXY ROUTES ==========
+    if (url.startsWith('/api/key-bronx/')) {
+        const endpointName = url.replace('/api/key-bronx/', '').split('?')[0];
+        const ep = endpoints.find(e => e.path.replace('/', '') === endpointName);
+        
+        if (!ep) {
+            return res.status(404).json({ success: false, error: `Endpoint not found: ${endpointName}` });
+        }
+        
+        const apiKey = query.key;
+        if (!apiKey) {
+            return res.status(401).json({ success: false, error: "❌ API Key Required" });
+        }
+        if (!VALID_KEYS.includes(apiKey)) {
+            return res.status(403).json({ success: false, error: "❌ Invalid API Key" });
+        }
+        if (!checkAndResetLimit(apiKey)) {
+            return res.status(429).json({ success: false, error: "❌ Daily quota exceeded (1000/day). Resets at 2:00 AM IST" });
+        }
+        
+        const paramValue = query[ep.param];
+        if (!paramValue) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Missing ${ep.param}`,
+                example: `${ep.param}=${ep.example}`
+            });
+        }
+        
+        try {
+            const realUrl = `${REAL_API_BASE}${ep.path}?key=${REAL_API_KEY}&${ep.param}=${paramValue}`;
+            console.log(`📡 ${endpointName} -> ${paramValue}`);
+            
+            const response = await axios.get(realUrl, { timeout: 30000 });
+            const used = incrementRequestCount(apiKey);
+            
+            const cleanedData = cleanResponse(response.data);
+            cleanedData.rate_limit = {
+                limit: 1000,
+                used: used,
+                remaining: 1000 - used,
+                reset: "2:00 AM IST"
+            };
+            
+            return res.status(200).json(cleanedData);
+        } catch (error) {
+            console.error(error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    }
+    
+    // ========== 404 ==========
+    return res.status(404).json({ success: false, error: "Route not found" });
+};
