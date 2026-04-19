@@ -1,8 +1,7 @@
-// package.json
 {
     "name": "bronx-osint-api1",
-    "version": "2.0.0",
-    "description": "BRONX OSINT API - Neon Edition with 50 Keys System",
+    "version": "3.0.0",
+    "description": "BRONX OSINT API - Neon Premium Edition with 50+ Keys",
     "main": "api/index.js",
     "scripts": {
         "start": "node api/index.js"
