@@ -4,8 +4,122 @@ const axios = require('axios');
 const app = express();
 
 // ========== CONFIG ==========
-const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
+const REAL_API_BASE = 'https://ft-osint.onrender.com/api';
 const REAL_API_KEY = 'nobita';
+
+// ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
+let customAPIs = [
+    { 
+        id: 1, 
+        name: 'Number Info backup ✅', 
+        endpoint: 'rajput-api', 
+        param: 'num', 
+        example: '9876543210', 
+        desc: 'india Number Lookup Vip Bronx api',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://rajput-api.vercel.app/search?num={parma}'
+    },
+    { 
+        id: 2, 
+        name: 'vehcial Ditails Api 🚕', 
+        endpoint: 'rc-details', 
+        param: 'ca_number', 
+        example: 'MH02FZ0555', 
+        desc: 'Vehicle RC Details Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={parma}'
+    },
+    { 
+        id: 3, 
+        name: 'Adhar Detail api ', 
+        endpoint: 'aadhar-details', 
+        param: 'aadhar', 
+        example: '393933081942', 
+        desc: 'Aadhar Number Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-adhar-api.vercel.app/aadhar={param}'
+    },
+    { 
+        id: 4, 
+        name: '📧 Email Lookup API', 
+        endpoint: 'email-lookup', 
+        param: 'mail', 
+        example: 'user@gmail.com', 
+        desc: 'Email Information Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-mail-api.vercel.app/mail={parma}'
+    },
+    { 
+        id: 5, 
+        name: '📲 Telegram Number API', 
+        endpoint: 'telegram-num', 
+        param: 'id', 
+        example: '7530266953', 
+        desc: 'Telegram Number Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'http://45.91.248.51:3000/api/tgnum?id={parma}'
+    },
+    { 
+        id: 6, 
+        name: 'Custom API 6', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 7, 
+        name: 'Custom API 7', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 8, 
+        name: 'Custom API 8', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 9, 
+        name: 'Custom API 9', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 10, 
+        name: 'Custom API 10', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    }
+];
 
 // ========== INDIA TIME HELPER ==========
 function getIndiaTime() {
@@ -32,7 +146,6 @@ function isKeyExpired(expiryDate) {
 
 function parseExpiryDate(dateStr) {
     if (!dateStr) return null;
-    const indiaTime = getIndiaTime();
     const [day, month, year] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day, 23, 59, 59);
 }
@@ -40,7 +153,7 @@ function parseExpiryDate(dateStr) {
 // ========== ENHANCED KEY STORAGE ==========
 let keyStorage = {};
 
-// ========== UNLIMITED MASTER KEY ==========
+// ========== UNLIMITED MASTER KEY (HIDDEN FROM PUBLIC) ==========
 keyStorage['BRONX_ULTRA_MASTER_2026'] = {
     name: '👑 BRONX ULTRA OWNER',
     scopes: ['*'],
@@ -50,10 +163,11 @@ keyStorage['BRONX_ULTRA_MASTER_2026'] = {
     expiry: null,
     created: getIndiaDateTime(),
     resetType: 'never',
-    unlimited: true
+    unlimited: true,
+    hidden: true // HIDE FROM PUBLIC
 };
 
-// ========== 49 PREMIUM KEYS WITH LIMITS & EXPIRY ==========
+// ========== 49 PREMIUM KEYS ==========
 const premiumKeys = [
     { key: 'PREMIUM_NUMBER_001', name: '📱 Number Hunter Pro', scopes: ['number', 'numv2', 'adv'], limit: 100, expiry: '31-12-2026' },
     { key: 'PREMIUM_AADHAR_001', name: '🆔 Aadhar Master', scopes: ['aadhar'], limit: 50, expiry: '30-06-2026' },
@@ -117,11 +231,12 @@ premiumKeys.forEach(keyData => {
         expiryStr: keyData.expiry,
         created: getIndiaDateTime(),
         resetType: 'never',
-        unlimited: false
+        unlimited: false,
+        hidden: false
     };
 });
 
-// ========== ADDITIONAL DEMO/TEST KEYS ==========
+// Demo/Test keys
 keyStorage['DEMO_KEY_2026'] = {
     name: '🎁 Demo User',
     scopes: ['number', 'aadhar', 'pincode'],
@@ -132,7 +247,8 @@ keyStorage['DEMO_KEY_2026'] = {
     expiryStr: '31-12-2026',
     created: getIndiaDateTime(),
     resetType: 'never',
-    unlimited: false
+    unlimited: false,
+    hidden: false
 };
 
 keyStorage['TEST_KEY_2026'] = {
@@ -145,7 +261,8 @@ keyStorage['TEST_KEY_2026'] = {
     expiryStr: '30-06-2026',
     created: getIndiaDateTime(),
     resetType: 'never',
-    unlimited: false
+    unlimited: false,
+    hidden: false
 };
 
 // ========== KEY MANAGEMENT FUNCTIONS ==========
@@ -155,7 +272,6 @@ function checkKeyValid(apiKey) {
         return { valid: false, error: '❌ Invalid API Key. Contact @BRONX_ULTRA to purchase.' };
     }
     
-    // Check expiry
     if (keyData.expiry && isKeyExpired(keyData.expiry)) {
         return { 
             valid: false, 
@@ -165,7 +281,6 @@ function checkKeyValid(apiKey) {
         };
     }
     
-    // Check limit
     if (!keyData.unlimited && keyData.used >= keyData.limit) {
         return {
             valid: false,
@@ -191,7 +306,6 @@ function getRemainingQuota(apiKey) {
     return Math.max(0, keyData.limit - keyData.used);
 }
 
-// ========== SCOPE CHECK ==========
 function checkKeyScope(keyData, endpoint) {
     if (keyData.scopes.includes('*')) return { valid: true };
     if (keyData.scopes.includes(endpoint)) return { valid: true };
@@ -253,10 +367,13 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== SERVE ENHANCED HTML UI ==========
+// ========== SERVE ENHANCED HTML UI WITH DARK/LIGHT MODE ==========
 function serveHTML(res) {
-    const totalKeys = Object.keys(keyStorage).length;
-    const premiumCount = Object.values(keyStorage).filter(k => k.type === 'premium').length;
+    const totalKeys = Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length;
+    const premiumCount = Object.values(keyStorage).filter(k => k.type === 'premium' && !k.hidden).length;
+    
+    // Get visible custom APIs
+    const visibleCustomAPIs = customAPIs.filter(api => api.visible && api.endpoint);
     
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -265,13 +382,60 @@ function serveHTML(res) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚡ BRONX OSINT | NEON API</title>
     <style>
+        /* ========== LIGHT MODE VARIABLES ========== */
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a0033;
+            --bg-card: rgba(10,10,10,0.9);
+            --text-primary: #fff;
+            --text-secondary: #00ff41;
+            --border-glow: #ff00ff;
+            --header-gradient: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            --card-border: 2px solid;
+            --code-bg: #000;
+            --table-header: linear-gradient(45deg, #ff00ff, #00ff41);
+        }
+        
+        /* ========== LIGHT MODE ========== */
+        body.light-mode {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #e0e0e0;
+            --bg-card: rgba(255,255,255,0.95);
+            --text-primary: #1a1a1a;
+            --text-secondary: #0066cc;
+            --border-glow: #0066cc;
+            --header-gradient: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 50%, #f5f5f5 100%);
+            --card-border: 2px solid #0066cc;
+            --code-bg: #1e1e1e;
+            --table-header: linear-gradient(45deg, #0066cc, #00aa00);
+        }
+        
+        body.light-mode .header h1 {
+            background: linear-gradient(45deg, #0066cc, #00aa00, #cc6600, #cc0000, #009999);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.light-mode .stat-num {
+            background: linear-gradient(45deg, #0066cc, #00aa00, #cc6600);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.light-mode .badge-1 { background: #0066cc20; color: #0066cc; border-color: #0066cc; }
+        body.light-mode .badge-2 { background: #00aa0020; color: #00aa00; border-color: #00aa00; }
+        body.light-mode .badge-3 { background: #cc660020; color: #cc6600; border-color: #cc6600; }
+        body.light-mode .badge-4 { background: #cc000020; color: #cc0000; border-color: #cc0000; }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            background: var(--header-gradient);
             font-family: 'Courier New', monospace;
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
         }
         body::before {
             content: "";
@@ -285,6 +449,41 @@ function serveHTML(res) {
             z-index: 1;
         }
         .container { max-width: 1300px; margin: 0 auto; padding: 20px; position: relative; z-index: 2; }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            gap: 10px;
+        }
+        .theme-btn {
+            padding: 12px 20px;
+            border-radius: 50px;
+            border: 2px solid;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .theme-btn.dark {
+            background: #0a0a0a;
+            color: #00ff41;
+            border-color: #00ff41;
+            box-shadow: 0 0 20px #00ff4166;
+        }
+        .theme-btn.light {
+            background: #f5f5f5;
+            color: #0066cc;
+            border-color: #0066cc;
+            box-shadow: 0 0 20px #0066cc66;
+        }
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
         
         /* Animated Background */
         @keyframes glowPulse {
@@ -301,7 +500,7 @@ function serveHTML(res) {
             border-image: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
             border-radius: 30px;
             margin-bottom: 30px;
-            background: rgba(10,10,10,0.9);
+            background: var(--bg-card);
             backdrop-filter: blur(10px);
             animation: glowPulse 3s infinite;
             position: relative;
@@ -376,9 +575,9 @@ function serveHTML(res) {
             flex-wrap: wrap;
         }
         .stat-card {
-            background: rgba(10,10,10,0.9);
+            background: var(--bg-card);
             backdrop-filter: blur(10px);
-            border: 2px solid;
+            border: var(--card-border);
             border-radius: 20px;
             padding: 20px 35px;
             text-align: center;
@@ -400,7 +599,7 @@ function serveHTML(res) {
         .stat-label { 
             font-size: 12px; 
             letter-spacing: 3px;
-            color: #fff;
+            color: var(--text-primary);
             text-shadow: 0 0 10px currentColor;
         }
         
@@ -430,49 +629,9 @@ function serveHTML(res) {
             text-shadow: 0 0 20px #00ff41;
         }
         
-        /* Owner Section */
+        /* Owner Section - HIDDEN */
         .owner-section {
-            background: linear-gradient(135deg, #ffd70020, #ff00ff20);
-            border: 3px solid #ffd700;
-            border-radius: 20px;
-            padding: 25px;
-            margin: 30px 0;
-            text-align: center;
-            box-shadow: 0 0 50px #ffd70066;
-            animation: ownerPulse 2s infinite;
-        }
-        @keyframes ownerPulse {
-            0%, 100% { box-shadow: 0 0 30px #ffd70066, 0 0 60px #ff00ff33; }
-            50% { box-shadow: 0 0 50px #ffd70099, 0 0 80px #ff00ff66; }
-        }
-        .owner-title {
-            font-size: 32px;
-            background: linear-gradient(45deg, #ffd700, #ff00ff, #00ff41);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .owner-key {
-            font-size: 24px;
-            background: #0a0a0a;
-            padding: 15px 30px;
-            border-radius: 50px;
-            display: inline-block;
-            border: 2px solid #ffd700;
-            color: #ffd700;
-            text-shadow: 0 0 20px #ffd700;
-            letter-spacing: 3px;
-        }
-        .unlimited-badge {
-            background: #ff00ff;
-            color: #000;
-            padding: 5px 15px;
-            border-radius: 30px;
-            font-weight: bold;
-            margin-left: 15px;
-            font-size: 14px;
+            display: none;
         }
         
         /* Auth Grid */
@@ -483,9 +642,9 @@ function serveHTML(res) {
             margin: 30px 0;
         }
         .auth-card {
-            background: rgba(10,10,10,0.9);
+            background: var(--bg-card);
             backdrop-filter: blur(10px);
-            border: 2px solid;
+            border: var(--card-border);
             border-radius: 20px;
             padding: 25px;
             transition: all 0.3s;
@@ -495,12 +654,12 @@ function serveHTML(res) {
         .auth-card:nth-child(3) { border-color: #ffff00; }
         .auth-card:hover { transform: translateY(-3px); box-shadow: 0 0 40px currentColor; }
         .auth-card h3 {
-            color: #fff;
+            color: var(--text-primary);
             margin-bottom: 15px;
             font-size: 20px;
         }
         .code {
-            background: #000;
+            background: var(--code-bg);
             border: 1px solid #00ff41;
             border-radius: 12px;
             padding: 15px;
@@ -523,7 +682,6 @@ function serveHTML(res) {
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .category i { margin-right: 10px; }
         
         /* Endpoint Grid */
         .endpoint-grid {
@@ -532,7 +690,7 @@ function serveHTML(res) {
             gap: 18px;
         }
         .endpoint {
-            background: rgba(10,10,10,0.8);
+            background: var(--bg-card);
             backdrop-filter: blur(10px);
             border: 2px solid;
             border-radius: 16px;
@@ -561,6 +719,7 @@ function serveHTML(res) {
         .endpoint[data-category="🎮 Gaming"] { border-color: #00ffff; }
         .endpoint[data-category="🌐 Social"] { border-color: #ff8800; }
         .endpoint[data-category="🇵🇰 Pakistan"] { border-color: #00ff88; }
+        .endpoint[data-category="🔧 Custom APIs"] { border-color: #ff00ff; background: linear-gradient(135deg, var(--bg-card), #ff00ff10); }
         
         .method {
             padding: 4px 12px;
@@ -570,11 +729,12 @@ function serveHTML(res) {
             letter-spacing: 1px;
         }
         .method.get { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
+        .method.custom { background: #ff00ff20; color: #ff00ff; border: 1px solid #ff00ff; }
         .endpoint-name {
             font-size: 22px;
             font-weight: bold;
             margin: 12px 0 8px;
-            background: linear-gradient(45deg, #fff, #00ff41);
+            background: linear-gradient(45deg, var(--text-primary), #00ff41);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -594,104 +754,118 @@ function serveHTML(res) {
             border-top: 1px dashed #ffffff30;
         }
         
-        /* Key Info Section */
-        .key-info-section {
-            margin: 40px 0;
-            padding: 30px;
-            background: rgba(10,10,10,0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff00ff;
+        /* Custom API Admin Panel */
+        .admin-panel {
+            background: linear-gradient(135deg, #1a0033, #0a0a0a);
+            border: 3px solid #ff00ff;
             border-radius: 20px;
+            padding: 30px;
+            margin: 40px 0;
+            box-shadow: 0 0 60px #ff00ff66;
         }
-        .key-info-title {
-            font-size: 24px;
+        body.light-mode .admin-panel {
+            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+            border-color: #0066cc;
+            box-shadow: 0 0 60px #0066cc66;
+        }
+        .admin-panel h2 {
             color: #00ff41;
+            font-size: 28px;
             margin-bottom: 20px;
-            text-shadow: 0 0 20px #00ff41;
+            text-shadow: 0 0 30px #00ff41;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        .key-table-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border-radius: 12px;
-        }
-        .key-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .key-table th {
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            color: #000;
-            padding: 12px;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-        }
-        .key-table td {
-            padding: 10px;
-            border-bottom: 1px solid #ffffff20;
-            color: #fff;
-        }
-        .key-table tr:hover { background: #ffffff10; }
-        .status-active { color: #00ff41; }
-        .status-expired { color: #ff0000; }
-        .status-exhausted { color: #ffff00; }
-        
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 40px;
-            margin-top: 50px;
-            border-top: 2px solid;
-            border-image: linear-gradient(90deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
-            background: linear-gradient(180deg, transparent, #0a0a0a);
-        }
-        .footer p {
-            margin: 10px 0;
+        .admin-panel h2 small {
             font-size: 14px;
+            color: #ffff00;
         }
-        .footer .glow-text {
-            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 18px;
-            font-weight: bold;
+        .custom-api-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
-        
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
-            color: #00ff41;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-weight: bold;
+        .custom-api-form input, .custom-api-form select {
+            padding: 12px 15px;
+            background: #0a0a0a;
             border: 2px solid #00ff41;
-            box-shadow: 0 0 40px #00ff41;
-            animation: slideIn 0.3s, glowPulse 2s infinite;
-            z-index: 9999;
+            border-radius: 10px;
+            color: #00ff41;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
         }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        body.light-mode .custom-api-form input,
+        body.light-mode .custom-api-form select {
+            background: #fff;
+            border-color: #0066cc;
+            color: #1a1a1a;
+        }
+        .custom-api-form button {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #ff00ff, #00ff41);
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .custom-api-form button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px #00ff41;
+        }
+        .toggle-visibility {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+        .toggle-visibility input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .custom-apis-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .custom-api-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .custom-api-item .api-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .custom-api-item .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+        }
+        .status.visible { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
+        .status.hidden { background: #ff000020; color: #ff6b6b; border: 1px solid #ff0000; }
+        .custom-api-item button {
+            padding: 6px 15px;
+            background: #ff00ff20;
+            border: 1px solid #ff00ff;
+            border-radius: 8px;
+            color: #ff00ff;
+            cursor: pointer;
+            margin-left: 5px;
         }
         
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: linear-gradient(#ff00ff, #00ff41, #ffff00); border-radius: 10px; }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header h1 { font-size: 32px; }
-            .stat-num { font-size: 28px; }
-            .owner-key { font-size: 14px; word-break: break-all; }
-        }
-        
-        /* Extra API Operation Panel */
+        /* API Testing Panel */
         .api-panel {
             background: linear-gradient(135deg, #1a0033, #0a0a0a);
             border: 3px solid #ff00ff;
@@ -699,6 +873,11 @@ function serveHTML(res) {
             padding: 30px;
             margin: 40px 0;
             box-shadow: 0 0 60px #ff00ff66;
+        }
+        body.light-mode .api-panel {
+            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+            border-color: #0066cc;
+            box-shadow: 0 0 60px #0066cc66;
         }
         .api-panel h2 {
             color: #00ff41;
@@ -720,6 +899,12 @@ function serveHTML(res) {
             color: #00ff41;
             font-size: 16px;
             font-family: 'Courier New', monospace;
+        }
+        body.light-mode .api-panel input,
+        body.light-mode .api-panel select {
+            background: #fff;
+            border-color: #0066cc;
+            color: #1a1a1a;
         }
         .api-panel button {
             padding: 15px 30px;
@@ -749,9 +934,115 @@ function serveHTML(res) {
             font-size: 12px;
             color: #00ff41;
         }
+        body.light-mode .api-result {
+            background: #1e1e1e;
+        }
+        
+        /* Key Table */
+        .key-info-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 2px solid #ff00ff;
+            border-radius: 20px;
+        }
+        .key-info-title {
+            font-size: 24px;
+            color: #00ff41;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00ff41;
+        }
+        .key-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 12px;
+        }
+        .key-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .key-table th {
+            background: var(--table-header);
+            color: #000;
+            padding: 12px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .key-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ffffff20;
+            color: var(--text-primary);
+        }
+        .key-table tr:hover { background: #ffffff10; }
+        .status-active { color: #00ff41; }
+        .status-expired { color: #ff0000; }
+        .status-exhausted { color: #ffff00; }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            margin-top: 50px;
+            border-top: 2px solid;
+            border-image: linear-gradient(90deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
+            background: linear-gradient(180deg, transparent, var(--bg-primary));
+        }
+        .footer p {
+            margin: 10px 0;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        .footer .glow-text {
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #0a0a0a, #1a0033);
+            color: #00ff41;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            border: 2px solid #00ff41;
+            box-shadow: 0 0 40px #00ff41;
+            animation: slideIn 0.3s, glowPulse 2s infinite;
+            z-index: 9999;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(#ff00ff, #00ff41, #ffff00); border-radius: 10px; }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 32px; }
+            .stat-num { font-size: 28px; }
+            .theme-toggle { top: 10px; right: 10px; }
+            .theme-btn { padding: 8px 15px; font-size: 12px; }
+        }
     </style>
 </head>
 <body>
+    <div class="theme-toggle">
+        <button class="theme-btn dark" onclick="setTheme('dark')">🌙 DARK</button>
+        <button class="theme-btn light" onclick="setTheme('light')">☀️ LIGHT</button>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>
@@ -759,15 +1050,15 @@ function serveHTML(res) {
             </h1>
             <div class="badge-container">
                 <span class="badge badge-1">🔐 NEON INTELLIGENCE</span>
-                <span class="badge badge-2">🌐 50+ PREMIUM KEYS</span>
-                <span class="badge badge-3">👑 UNLIMITED OWNER</span>
+                <span class="badge badge-2">🌐 ${totalKeys}+ PREMIUM KEYS</span>
+                <span class="badge badge-3">🔧 CUSTOM APIs</span>
                 <span class="badge badge-4">⚡ REAL-TIME DATA</span>
             </div>
         </div>
         
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-num">${Object.keys(endpoints).length}</div>
+                <div class="stat-num">${Object.keys(endpoints).length + visibleCustomAPIs.length}</div>
                 <div class="stat-label">ENDPOINTS</div>
             </div>
             <div class="stat-card">
@@ -775,8 +1066,8 @@ function serveHTML(res) {
                 <div class="stat-label">ACTIVE KEYS</div>
             </div>
             <div class="stat-card">
-                <div class="stat-num">∞</div>
-                <div class="stat-label">OWNER LIMIT</div>
+                <div class="stat-num">10</div>
+                <div class="stat-label">CUSTOM SLOTS</div>
             </div>
             <div class="stat-card">
                 <div class="stat-num">JSON</div>
@@ -786,19 +1077,8 @@ function serveHTML(res) {
         
         <div class="limit-alert">
             <div>⚡ KEY-BASED LIMIT SYSTEM</div>
-            <div style="margin-top: 10px;">🔑 Premium Keys: Fixed Lifetime Limits | 👑 Owner: UNLIMITED</div>
+            <div style="margin-top: 10px;">🔑 Premium Keys: Fixed Lifetime Limits | Custom APIs Available</div>
             <div style="margin-top: 10px;">⏰ Key Expiry: Auto-checked | 🇮🇳 India Time Zone</div>
-        </div>
-        
-        <div class="owner-section">
-            <div class="owner-title">👑 BRONX ULTRA OWNER KEY 👑</div>
-            <div>
-                <span class="owner-key">YOUR-KEY</span>
-                <span class="unlimited-badge">∞ UNLIMITED ∞</span>
-            </div>
-            <div style="margin-top: 15px; color: #ffd700; font-size: 14px;">
-                ⭐ All Scopes Access | Never Expires | No Request Limit ⭐
-            </div>
         </div>
         
         <div class="auth-grid">
@@ -819,14 +1099,66 @@ function serveHTML(res) {
             </div>
         </div>
         
-        <!-- Extra API Operation Panel -->
+        <!-- Custom API Admin Panel -->
+        <div class="admin-panel">
+            <h2>
+                🔧 CUSTOM API MANAGER 
+                <small>(10 Slots - Toggle Visibility)</small>
+            </h2>
+            <div class="custom-api-form">
+                <select id="apiSlotSelect">
+                    <option value="0">Select Slot (1-10)</option>
+                    ${customAPIs.map((api, i) => `<option value="${i}">Slot ${api.id} - ${api.name}</option>`).join('')}
+                </select>
+                <input type="text" id="apiNameInput" placeholder="API Display Name">
+                <input type="text" id="apiEndpointInput" placeholder="Endpoint (e.g., myapi)">
+                <input type="text" id="apiParamInput" placeholder="Parameter (e.g., query)">
+                <input type="text" id="apiExampleInput" placeholder="Example Value">
+                <input type="text" id="apiDescInput" placeholder="Description">
+                <input type="text" id="apiRealUrlInput" placeholder="Real API URL (use {param})">
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                <button onclick="saveCustomAPI()">💾 Save API</button>
+                <button onclick="loadAPIToSlot()">📂 Load to Form</button>
+                <div class="toggle-visibility">
+                    <input type="checkbox" id="apiVisibleCheck"> 
+                    <label for="apiVisibleCheck">👁️ Visible to Public</label>
+                </div>
+                <button onclick="toggleAPIVisibility()">🔄 Toggle Visibility</button>
+            </div>
+            <div class="custom-apis-list" id="customApisList">
+                ${customAPIs.map((api, i) => `
+                    <div class="custom-api-item">
+                        <div class="api-info">
+                            <strong style="color: #ff00ff;">Slot ${api.id}</strong>
+                            <span style="color: var(--text-primary);">${api.name || '(Empty)'}</span>
+                            <code style="color: #00ff41;">/${api.endpoint || 'not-set'}</code>
+                            <span class="status ${api.visible ? 'visible' : 'hidden'}">${api.visible ? '👁️ Visible' : '🔒 Hidden'}</span>
+                        </div>
+                        <div>
+                            <button onclick="editAPI(${i})">✏️ Edit</button>
+                            <button onclick="deleteAPI(${i})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <!-- API Testing Panel -->
         <div class="api-panel">
             <h2>🧪 API TESTING PANEL</h2>
             <div class="input-group">
                 <select id="endpointSelect">
-                    ${Object.entries(endpoints).map(([name, ep]) => `<option value="${name}">${name.toUpperCase()} - ${ep.desc}</option>`).join('')}
+                    <optgroup label="📱 Built-in APIs">
+                        ${Object.entries(endpoints).map(([name, ep]) => `<option value="${name}">${name.toUpperCase()} - ${ep.desc}</option>`).join('')}
+                    </optgroup>
+                    ${visibleCustomAPIs.length > 0 ? `
+                        <optgroup label="🔧 Custom APIs">
+                            ${visibleCustomAPIs.map(api => `<option value="custom_${api.id}" data-custom="true" data-endpoint="${api.endpoint}" data-param="${api.param}" data-real="${api.realAPI}">🔧 ${api.name} - ${api.desc}</option>`).join('')}
+                        </optgroup>
+                    ` : ''}
                 </select>
-                <input type="text" id="apiKeyInput" placeholder="Enter API Key" value="YOUR-KEY">
+                <input type="text" id="apiKeyInput" placeholder="Enter API Key">
                 <input type="text" id="paramInput" placeholder="Parameter Value">
                 <button onclick="testAPI()">🚀 TEST API</button>
             </div>
@@ -856,8 +1188,23 @@ function serveHTML(res) {
             </div>
         `).join('')}
         
+        ${visibleCustomAPIs.length > 0 ? `
+            <div class="category">🔧 Custom APIs</div>
+            <div class="endpoint-grid">
+                ${visibleCustomAPIs.map(api => `
+                    <div class="endpoint" data-category="🔧 Custom APIs" onclick="copyCustomUrl('${api.endpoint}', '${api.param}', '${api.example}')">
+                        <span class="method custom">CUSTOM</span>
+                        <div class="endpoint-name">/${api.endpoint}</div>
+                        <div class="endpoint-url">/api/custom/${api.endpoint}</div>
+                        <div class="param">📝 ${api.desc}</div>
+                        <div class="param">🔑 ${api.param}=${api.example}</div>
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+        
         <div class="key-info-section">
-            <div class="key-info-title">🔑 PREMIUM KEYS LIST (49 Keys)</div>
+            <div class="key-info-title">🔑 PREMIUM KEYS LIST</div>
             <div class="key-table-container">
                 <table class="key-table">
                     <thead>
@@ -871,9 +1218,7 @@ function serveHTML(res) {
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody id="keyTableBody">
-                        <!-- Populated by JavaScript -->
-                    </tbody>
+                    <tbody id="keyTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -881,19 +1226,41 @@ function serveHTML(res) {
         <div class="footer">
             <p class="glow-text">✨ BRONX OSINT API - NEON EDITION ✨</p>
             <p style="color: #ff00ff;">Powered by @BRONX_ULTRA</p>
-            <p style="color: #00ff41;">🇮🇳 India Time Zone | 50+ Premium Keys | Unlimited Owner Access</p>
+            <p style="color: #00ff41;">🇮🇳 India Time Zone | Premium Keys | Custom API Support</p>
             <p style="color: #ffff00; margin-top: 15px;">⚠️ Keys are lifetime limited - No reset! Contact @BRONX_ULTRA for new keys.</p>
         </div>
     </div>
     
     <script>
         const endpoints = ${JSON.stringify(endpoints)};
-        const keyStorage = ${JSON.stringify(keyStorage)};
+        const keyStorage = ${JSON.stringify(Object.fromEntries(Object.entries(keyStorage).filter(([k, v]) => !v.hidden)))};
+        let customAPIs = ${JSON.stringify(customAPIs)};
+        
+        // Theme functions
+        function setTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.remove('light-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
         
         function copyUrl(endpoint, param, example) {
-            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=YOUR-KEY&' + param + '=' + example;
+            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
             navigator.clipboard.writeText(url);
             showToast('✅ URL Copied! ' + endpoint.toUpperCase());
+        }
+        
+        function copyCustomUrl(endpoint, param, example) {
+            const url = window.location.origin + '/api/custom/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
+            navigator.clipboard.writeText(url);
+            showToast('✅ Custom API URL Copied!');
         }
         
         function showToast(message) {
@@ -905,18 +1272,33 @@ function serveHTML(res) {
         }
         
         async function testAPI() {
-            const endpoint = document.getElementById('endpointSelect').value;
+            const select = document.getElementById('endpointSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            const isCustom = selectedOption.dataset.custom === 'true';
             const apiKey = document.getElementById('apiKeyInput').value;
             const paramValue = document.getElementById('paramInput').value;
             const resultDiv = document.getElementById('apiResult');
+            
+            if (!apiKey) {
+                showToast('❌ Please enter API Key');
+                return;
+            }
             
             if (!paramValue) {
                 showToast('❌ Please enter parameter value');
                 return;
             }
             
-            const ep = endpoints[endpoint];
-            const url = '/api/key-bronx/' + endpoint + '?key=' + apiKey + '&' + ep.param + '=' + paramValue;
+            let url;
+            if (isCustom) {
+                const endpoint = selectedOption.dataset.endpoint;
+                const param = selectedOption.dataset.param;
+                url = '/api/custom/' + endpoint + '?key=' + apiKey + '&' + param + '=' + paramValue;
+            } else {
+                const endpoint = select.value;
+                const ep = endpoints[endpoint];
+                url = '/api/key-bronx/' + endpoint + '?key=' + apiKey + '&' + ep.param + '=' + paramValue;
+            }
             
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = '⏳ Loading...';
@@ -930,9 +1312,102 @@ function serveHTML(res) {
             }
         }
         
+        // Custom API Management
+        function saveCustomAPI() {
+            const slot = parseInt(document.getElementById('apiSlotSelect').value);
+            if (isNaN(slot)) {
+                showToast('❌ Please select a slot');
+                return;
+            }
+            
+            customAPIs[slot] = {
+                ...customAPIs[slot],
+                name: document.getElementById('apiNameInput').value || customAPIs[slot].name,
+                endpoint: document.getElementById('apiEndpointInput').value || customAPIs[slot].endpoint,
+                param: document.getElementById('apiParamInput').value || customAPIs[slot].param,
+                example: document.getElementById('apiExampleInput').value || customAPIs[slot].example,
+                desc: document.getElementById('apiDescInput').value || customAPIs[slot].desc,
+                realAPI: document.getElementById('apiRealUrlInput').value || customAPIs[slot].realAPI
+            };
+            
+            // Save to server
+            fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot, api: customAPIs[slot] })
+            }).then(() => {
+                showToast('✅ API Saved! Refresh to see changes.');
+                setTimeout(() => location.reload(), 1000);
+            });
+        }
+        
+        function loadAPIToSlot() {
+            const slot = parseInt(document.getElementById('apiSlotSelect').value);
+            if (isNaN(slot)) {
+                showToast('❌ Please select a slot');
+                return;
+            }
+            
+            const api = customAPIs[slot];
+            document.getElementById('apiNameInput').value = api.name || '';
+            document.getElementById('apiEndpointInput').value = api.endpoint || '';
+            document.getElementById('apiParamInput').value = api.param || '';
+            document.getElementById('apiExampleInput').value = api.example || '';
+            document.getElementById('apiDescInput').value = api.desc || '';
+            document.getElementById('apiRealUrlInput').value = api.realAPI || '';
+            document.getElementById('apiVisibleCheck').checked = api.visible || false;
+        }
+        
+        function toggleAPIVisibility() {
+            const slot = parseInt(document.getElementById('apiSlotSelect').value);
+            if (isNaN(slot)) {
+                showToast('❌ Please select a slot');
+                return;
+            }
+            
+            customAPIs[slot].visible = !customAPIs[slot].visible;
+            
+            fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot, api: customAPIs[slot] })
+            }).then(() => {
+                showToast('✅ Visibility toggled! Refreshing...');
+                setTimeout(() => location.reload(), 800);
+            });
+        }
+        
+        function editAPI(index) {
+            document.getElementById('apiSlotSelect').value = index;
+            loadAPIToSlot();
+            document.querySelector('.admin-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function deleteAPI(index) {
+            customAPIs[index] = {
+                ...customAPIs[index],
+                name: 'Custom API ' + (index + 1),
+                endpoint: '',
+                param: '',
+                example: '',
+                desc: '',
+                realAPI: '',
+                visible: false
+            };
+            
+            fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot: index, api: customAPIs[index] })
+            }).then(() => {
+                showToast('🗑️ API Deleted! Refreshing...');
+                setTimeout(() => location.reload(), 800);
+            });
+        }
+        
         function populateKeyTable() {
             const tbody = document.getElementById('keyTableBody');
-            const keys = Object.entries(keyStorage).filter(([k, d]) => d.type !== 'owner');
+            const keys = Object.entries(keyStorage);
             
             tbody.innerHTML = keys.map(([key, data]) => {
                 const now = new Date();
@@ -951,9 +1426,10 @@ function serveHTML(res) {
                 }
                 
                 const limitDisplay = data.unlimited ? '∞' : data.limit;
+                const displayKey = key.length > 20 ? key.substring(0, 17) + '...' : key;
                 
                 return '<tr>' +
-                    '<td><code style="color: #ff00ff;">' + key.substring(0, 15) + '...</code></td>' +
+                    '<td><code style="color: #ff00ff;">' + displayKey + '</code></td>' +
                     '<td>' + (data.name || 'User') + '</td>' +
                     '<td style="font-size: 11px;">' + (data.scopes.includes('*') ? 'ALL' : data.scopes.slice(0, 3).join(', ') + (data.scopes.length > 3 ? '...' : '')) + '</td>' +
                     '<td>' + limitDisplay + '</td>' +
@@ -966,11 +1442,17 @@ function serveHTML(res) {
         
         populateKeyTable();
         
-        // Update endpoint select with param placeholder
         document.getElementById('endpointSelect').addEventListener('change', function() {
-            const endpoint = this.value;
-            const ep = endpoints[endpoint];
-            document.getElementById('paramInput').placeholder = ep.param + ' (e.g., ' + ep.example + ')';
+            const selectedOption = this.options[this.selectedIndex];
+            const isCustom = selectedOption.dataset.custom === 'true';
+            
+            if (isCustom) {
+                document.getElementById('paramInput').placeholder = selectedOption.dataset.param + ' (e.g., ' + customAPIs[selectedOption.value.split('_')[1] - 1].example + ')';
+            } else {
+                const endpoint = this.value;
+                const ep = endpoints[endpoint];
+                document.getElementById('paramInput').placeholder = ep.param + ' (e.g., ' + ep.example + ')';
+            }
         });
         document.getElementById('endpointSelect').dispatchEvent(new Event('change'));
     </script>
@@ -990,24 +1472,26 @@ app.get('/test', (req, res) => {
         credit: '@BRONX_ULTRA', 
         time: getIndiaDateTime(),
         timezone: 'Asia/Kolkata (IST)',
-        total_keys: Object.keys(keyStorage).length,
-        premium_keys: Object.values(keyStorage).filter(k => k.type === 'premium').length
+        total_keys: Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length,
+        custom_apis: customAPIs.filter(api => api.visible).length
     });
 });
 
 app.get('/keys', (req, res) => {
     const keyList = {};
     for (const [key, data] of Object.entries(keyStorage)) {
-        keyList[key] = { 
-            owner: data.name, 
-            scopes: data.scopes, 
-            type: data.type,
-            limit: data.unlimited ? 'Unlimited' : data.limit,
-            used: data.used,
-            remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
-            expiry: data.expiryStr || 'Never',
-            created: data.created
-        };
+        if (!data.hidden) {
+            keyList[key] = { 
+                owner: data.name, 
+                scopes: data.scopes, 
+                type: data.type,
+                limit: data.unlimited ? 'Unlimited' : data.limit,
+                used: data.used,
+                remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
+                expiry: data.expiryStr || 'Never',
+                created: data.created
+            };
+        }
     }
     res.json({ success: true, total_keys: Object.keys(keyList).length, keys: keyList });
 });
@@ -1017,7 +1501,7 @@ app.get('/key-info', (req, res) => {
     if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
     
     const keyData = keyStorage[apiKey];
-    if (!keyData) {
+    if (!keyData || keyData.hidden) {
         return res.status(404).json({ success: false, error: "Key not found" });
     }
     
@@ -1049,7 +1533,7 @@ app.get('/quota', (req, res) => {
     if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
     
     const keyData = keyStorage[apiKey];
-    if (!keyData) {
+    if (!keyData || keyData.hidden) {
         return res.status(404).json({ success: false, error: "Key not found" });
     }
     
@@ -1068,6 +1552,86 @@ app.get('/quota', (req, res) => {
     });
 });
 
+// Custom API endpoint
+app.get('/api/custom/:endpoint', async (req, res) => {
+    const { endpoint } = req.params;
+    const query = req.query;
+    const apiKey = query.key || req.headers['x-api-key'];
+    
+    // Find custom API
+    const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
+    if (!customAPI) {
+        return res.status(404).json({ success: false, error: `Custom endpoint not found: ${endpoint}` });
+    }
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "❌ API Key Required" });
+    }
+    
+    // Check key validity
+    const keyCheck = checkKeyValid(apiKey);
+    if (!keyCheck.valid) {
+        return res.status(403).json({ 
+            success: false, 
+            error: keyCheck.error,
+            ...(keyCheck.expired && { expired: true }),
+            ...(keyCheck.limitExhausted && { limit_exhausted: true })
+        });
+    }
+    
+    const keyData = keyCheck.keyData;
+    const paramValue = query[customAPI.param];
+    
+    if (!paramValue) {
+        return res.status(400).json({ 
+            success: false, 
+            error: `Missing parameter: ${customAPI.param}`, 
+            example: `?key=YOUR_KEY&${customAPI.param}=${customAPI.example}` 
+        });
+    }
+    
+    try {
+        const realUrl = customAPI.realAPI.replace('{param}', encodeURIComponent(paramValue));
+        console.log(`📡 [Custom] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
+        
+        const response = await axios.get(realUrl, { timeout: 30000 });
+        
+        incrementKeyUsage(apiKey);
+        
+        const cleanedData = cleanResponse(response.data);
+        cleanedData.api_info = {
+            powered_by: "@BRONX_ULTRA",
+            endpoint: endpoint,
+            type: 'custom',
+            key_owner: keyData.name,
+            timestamp: getIndiaDateTime()
+        };
+        
+        res.json(cleanedData);
+    } catch (error) {
+        console.error(`❌ Custom API Error [${endpoint}]:`, error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Admin route for custom API management
+app.post('/admin/custom-api', (req, res) => {
+    const { slot, api } = req.body;
+    
+    if (slot === undefined || slot < 0 || slot >= customAPIs.length) {
+        return res.status(400).json({ success: false, error: "Invalid slot" });
+    }
+    
+    customAPIs[slot] = { ...customAPIs[slot], ...api };
+    
+    res.json({ success: true, message: "Custom API updated", api: customAPIs[slot] });
+});
+
+// Get all custom APIs (for admin)
+app.get('/admin/custom-apis', (req, res) => {
+    res.json({ success: true, customAPIs });
+});
+
 app.get('/api/key-bronx/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
     const query = req.query;
@@ -1081,7 +1645,6 @@ app.get('/api/key-bronx/:endpoint', async (req, res) => {
         return res.status(401).json({ success: false, error: "❌ API Key Required. Use ?key=YOUR_KEY" });
     }
     
-    // Check key validity
     const keyCheck = checkKeyValid(apiKey);
     if (!keyCheck.valid) {
         return res.status(403).json({ 
@@ -1094,7 +1657,6 @@ app.get('/api/key-bronx/:endpoint', async (req, res) => {
     
     const keyData = keyCheck.keyData;
     
-    // Check scope
     const scopeCheck = checkKeyScope(keyData, endpoint);
     if (!scopeCheck.valid) {
         return res.status(403).json({ success: false, error: scopeCheck.error });
@@ -1117,7 +1679,6 @@ app.get('/api/key-bronx/:endpoint', async (req, res) => {
         
         const response = await axios.get(realUrl, { timeout: 30000 });
         
-        // Increment usage
         const updatedKey = incrementKeyUsage(apiKey);
         
         const cleanedData = cleanResponse(response.data);
@@ -1144,12 +1705,11 @@ app.get('/api/key-bronx/:endpoint', async (req, res) => {
     }
 });
 
-// 404 handler
 app.use((req, res) => {
     res.status(404).json({ 
         success: false, 
         error: "Endpoint not found",
-        available_endpoints: ["/", "/test", "/keys", "/key-info", "/quota", "/api/key-bronx/:endpoint"],
+        available_endpoints: ["/", "/test", "/keys", "/key-info", "/quota", "/api/key-bronx/:endpoint", "/api/custom/:endpoint"],
         contact: "@BRONX_ULTRA"
     });
 });
