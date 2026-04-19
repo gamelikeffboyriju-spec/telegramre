@@ -7,278 +7,222 @@ const app = express();
 const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
 const REAL_API_KEY = 'nobita';
 
-// ========== KEYS WITH SCOPES, LIMITS & EXPIRY ==========
-const VALID_KEYS = {
-    'BRONX_MASTER_KEY': { 
-        scopes: ['*'], 
-        name: '👑 OWNER',
-        dailyLimit: 999999,
-        expiresAt: null,
-        type: 'master'
-    },
-    'BRONX_KEY_2026': { 
-        scopes: ['*'], 
-        name: 'Premium User',
-        dailyLimit: 1000,
-        expiresAt: null,
-        type: 'premium'
-    },
-    'DEMO_KEY': { 
-        scopes: ['number', 'aadhar', 'pincode'], 
-        name: 'Demo User',
-        dailyLimit: 50,
-        expiresAt: null,
-        type: 'demo'
-    },
-    'test123': { 
-        scopes: ['number'], 
-        name: 'Test User',
-        dailyLimit: 50,
-        expiresAt: null,
-        type: 'test'
-    },
-    'PUBLIC_NUMBER_KEY': { 
-        scopes: ['number'], 
-        name: 'Number Only',
-        dailyLimit: 50,
-        expiresAt: new Date('2026-04-25').getTime(),
-        type: 'public'
-    },
-    'PUBLIC_TG_KEY': { 
-        scopes: ['tg'], 
-        name: 'Telegram Only',
-        dailyLimit: 50,
-        expiresAt: new Date('2026-04-20').getTime(),
-        type: 'public'
-    },
-    'PUBLIC_VEHICLE_KEY': { 
-        scopes: ['vehicle', 'rc'], 
-        name: 'Vehicle Only',
-        dailyLimit: 50,
-        expiresAt: new Date('2026-04-28').getTime(),
-        type: 'public'
-    }
-};
-
-// ========== REQUEST COUNTS ==========
-let requestCounts = {};
-
-function getIndiaDate() {
+// ========== INDIA TIME HELPER ==========
+function getIndiaTime() {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(now.getTime() + istOffset);
-    return istDate.toISOString().split('T')[0];
+    return new Date(now.getTime() + istOffset);
 }
 
-function checkAndResetLimit(apiKey) {
-    const today = getIndiaDate();
-    const keyData = VALID_KEYS[apiKey];
-    const limit = keyData?.dailyLimit || 1000;
+function getIndiaDate() {
+    return getIndiaTime().toISOString().split('T')[0];
+}
+
+function getIndiaDateTime() {
+    return getIndiaTime().toISOString().replace('T', ' ').substring(0, 19);
+}
+
+// ========== EXPIRY CHECK ==========
+function isKeyExpired(expiryDate) {
+    if (!expiryDate) return false;
+    const indiaNow = getIndiaTime();
+    const expiry = new Date(expiryDate);
+    return indiaNow > expiry;
+}
+
+function parseExpiryDate(dateStr) {
+    if (!dateStr) return null;
+    const indiaTime = getIndiaTime();
+    const [day, month, year] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 23, 59, 59);
+}
+
+// ========== ENHANCED KEY STORAGE ==========
+let keyStorage = {};
+
+// ========== UNLIMITED MASTER KEY ==========
+keyStorage['BRONX_ULTRA_MASTER_2026'] = {
+    name: '👑 BRONX ULTRA OWNER',
+    scopes: ['*'],
+    type: 'owner',
+    limit: Infinity,
+    used: 0,
+    expiry: null,
+    created: getIndiaDateTime(),
+    resetType: 'never',
+    unlimited: true
+};
+
+// ========== 49 PREMIUM KEYS WITH LIMITS & EXPIRY ==========
+const premiumKeys = [
+    { key: 'PREMIUM_NUMBER_001', name: '📱 Number Hunter Pro', scopes: ['number', 'numv2', 'adv'], limit: 100, expiry: '31-12-2026' },
+    { key: 'PREMIUM_AADHAR_001', name: '🆔 Aadhar Master', scopes: ['aadhar'], limit: 50, expiry: '30-06-2026' },
+    { key: 'PREMIUM_SOCIAL_001', name: '🌐 Social Intel', scopes: ['insta', 'git', 'tg'], limit: 200, expiry: '31-12-2026' },
+    { key: 'PREMIUM_VEHICLE_001', name: '🚗 Vehicle Tracker Pro', scopes: ['vehicle', 'rc'], limit: 75, expiry: '31-10-2026' },
+    { key: 'PREMIUM_GAMING_001', name: '🎮 Gaming Intel', scopes: ['ff', 'bgmi'], limit: 150, expiry: '31-12-2026' },
+    { key: 'PREMIUM_FINANCE_001', name: '💰 Finance Pro', scopes: ['upi', 'ifsc', 'pan'], limit: 60, expiry: '30-09-2026' },
+    { key: 'PREMIUM_LOCATION_001', name: '📍 Location Master', scopes: ['pincode', 'ip'], limit: 100, expiry: '31-12-2026' },
+    { key: 'PREMIUM_NAME_001', name: '🔍 Name Search Pro', scopes: ['name'], limit: 80, expiry: '31-08-2026' },
+    { key: 'PREMIUM_PAK_001', name: '🇵🇰 Pakistan Intel', scopes: ['pk', 'pkv2'], limit: 50, expiry: '31-12-2026' },
+    { key: 'PREMIUM_COMBO_001', name: '🎯 Combo Pack 1', scopes: ['number', 'aadhar', 'pan'], limit: 120, expiry: '31-12-2026' },
+    { key: 'PREMIUM_COMBO_002', name: '🎯 Combo Pack 2', scopes: ['vehicle', 'rc', 'pincode'], limit: 90, expiry: '30-11-2026' },
+    { key: 'PREMIUM_COMBO_003', name: '🎯 Combo Pack 3', scopes: ['insta', 'git', 'tg', 'ff'], limit: 180, expiry: '31-12-2026' },
+    { key: 'PREMIUM_BASIC_001', name: '⭐ Basic User 1', scopes: ['number'], limit: 30, expiry: '31-07-2026' },
+    { key: 'PREMIUM_BASIC_002', name: '⭐ Basic User 2', scopes: ['pincode'], limit: 40, expiry: '31-08-2026' },
+    { key: 'PREMIUM_BASIC_003', name: '⭐ Basic User 3', scopes: ['ip'], limit: 50, expiry: '30-09-2026' },
+    { key: 'PREMIUM_ADVANCED_001', name: '🌟 Advanced User 1', scopes: ['number', 'numv2', 'adv', 'name'], limit: 200, expiry: '31-12-2026' },
+    { key: 'PREMIUM_ADVANCED_002', name: '🌟 Advanced User 2', scopes: ['aadhar', 'pan', 'upi'], limit: 100, expiry: '31-12-2026' },
+    { key: 'PREMIUM_ADVANCED_003', name: '🌟 Advanced User 3', scopes: ['vehicle', 'rc', 'pincode', 'ip'], limit: 150, expiry: '31-12-2026' },
+    { key: 'PREMIUM_ELITE_001', name: '💎 Elite User 1', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name'], limit: 300, expiry: '31-12-2026' },
+    { key: 'PREMIUM_ELITE_002', name: '💎 Elite User 2', scopes: ['insta', 'git', 'tg', 'ff', 'bgmi'], limit: 250, expiry: '31-12-2026' },
+    { key: 'PREMIUM_BUSINESS_001', name: '🏢 Business Pack 1', scopes: ['number', 'aadhar', 'pan', 'upi', 'ifsc'], limit: 500, expiry: '31-12-2026' },
+    { key: 'PREMIUM_BUSINESS_002', name: '🏢 Business Pack 2', scopes: ['vehicle', 'rc', 'pincode', 'ip', 'name'], limit: 400, expiry: '31-12-2026' },
+    { key: 'PREMIUM_STUDENT_001', name: '🎓 Student Pack 1', scopes: ['number', 'pincode', 'ip'], limit: 50, expiry: '31-12-2026' },
+    { key: 'PREMIUM_STUDENT_002', name: '🎓 Student Pack 2', scopes: ['insta', 'git', 'ff'], limit: 60, expiry: '31-12-2026' },
+    { key: 'PREMIUM_DEV_001', name: '💻 Developer 1', scopes: ['number', 'ip', 'git'], limit: 200, expiry: '31-12-2026' },
+    { key: 'PREMIUM_DEV_002', name: '💻 Developer 2', scopes: ['number', 'numv2', 'adv', 'ip', 'git'], limit: 250, expiry: '31-12-2026' },
+    { key: 'PREMIUM_SECURITY_001', name: '🛡️ Security Pro', scopes: ['aadhar', 'pan', 'vehicle'], limit: 100, expiry: '31-12-2026' },
+    { key: 'PREMIUM_INVESTIGATOR_001', name: '🔎 Investigator', scopes: ['number', 'numv2', 'adv', 'aadhar', 'vehicle', 'rc'], limit: 350, expiry: '31-12-2026' },
+    { key: 'PREMIUM_SOCIALPRO_001', name: '📸 Social Media Pro', scopes: ['insta', 'git', 'tg'], limit: 300, expiry: '31-12-2026' },
+    { key: 'PREMIUM_GAMERPRO_001', name: '🎮 Gamer Pro', scopes: ['ff', 'bgmi'], limit: 200, expiry: '31-12-2026' },
+    { key: 'PREMIUM_FINANCEPRO_001', name: '💵 Finance Pro Max', scopes: ['upi', 'ifsc', 'pan'], limit: 150, expiry: '31-12-2026' },
+    { key: 'PREMIUM_LOCATIONPRO_001', name: '🗺️ Location Pro', scopes: ['pincode', 'ip'], limit: 200, expiry: '31-12-2026' },
+    { key: 'PREMIUM_PREMIUM_001', name: '👔 Premium User 1', scopes: ['number', 'aadhar', 'name', 'pincode'], limit: 150, expiry: '31-12-2026' },
+    { key: 'PREMIUM_PREMIUM_002', name: '👔 Premium User 2', scopes: ['vehicle', 'rc', 'pan', 'upi'], limit: 120, expiry: '30-11-2026' },
+    { key: 'PREMIUM_PREMIUM_003', name: '👔 Premium User 3', scopes: ['insta', 'tg', 'ff', 'bgmi'], limit: 180, expiry: '31-10-2026' },
+    { key: 'PREMIUM_GOLD_001', name: '🥇 Gold Member 1', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'pincode'], limit: 400, expiry: '31-12-2026' },
+    { key: 'PREMIUM_GOLD_002', name: '🥇 Gold Member 2', scopes: ['vehicle', 'rc', 'pan', 'upi', 'ifsc', 'ip'], limit: 350, expiry: '31-12-2026' },
+    { key: 'PREMIUM_PLATINUM_001', name: '💠 Platinum User 1', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'vehicle', 'rc'], limit: 500, expiry: '31-12-2026' },
+    { key: 'PREMIUM_PLATINUM_002', name: '💠 Platinum User 2', scopes: ['insta', 'git', 'tg', 'ff', 'bgmi', 'ip', 'pincode'], limit: 450, expiry: '31-12-2026' },
+    { key: 'PREMIUM_DIAMOND_001', name: '💎 Diamond User', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'pan', 'upi'], limit: 600, expiry: '31-12-2026' },
+    { key: 'PREMIUM_ULTIMATE_001', name: '🏆 Ultimate User', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'vehicle', 'rc', 'pan', 'upi', 'ifsc'], limit: 750, expiry: '31-12-2026' },
+    { key: 'PREMIUM_STARTER_001', name: '🌱 Starter Pack', scopes: ['number', 'pincode'], limit: 25, expiry: '31-07-2026' },
+    { key: 'PREMIUM_STARTER_002', name: '🌱 Starter Pack 2', scopes: ['ip', 'git'], limit: 30, expiry: '31-08-2026' },
+    { key: 'PREMIUM_WEEKLY_001', name: '📅 Weekly Pass', scopes: ['number', 'aadhar', 'name'], limit: 40, expiry: '30-06-2026' },
+    { key: 'PREMIUM_MONTHLY_001', name: '📆 Monthly Pass', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name'], limit: 100, expiry: '31-07-2026' },
+    { key: 'PREMIUM_QUARTERLY_001', name: '📊 Quarterly Pass', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'vehicle', 'rc'], limit: 250, expiry: '30-09-2026' },
+    { key: 'PREMIUM_YEARLY_001', name: '🎯 Yearly Pass', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'vehicle', 'rc', 'pan', 'upi', 'ifsc', 'pincode', 'ip'], limit: 1000, expiry: '31-12-2026' },
+    { key: 'PREMIUM_VIP_001', name: '👑 VIP Member', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'insta', 'git', 'tg'], limit: 500, expiry: '31-12-2026' }
+];
+
+// Initialize premium keys
+premiumKeys.forEach(keyData => {
+    keyStorage[keyData.key] = {
+        name: keyData.name,
+        scopes: keyData.scopes,
+        type: 'premium',
+        limit: keyData.limit,
+        used: 0,
+        expiry: parseExpiryDate(keyData.expiry),
+        expiryStr: keyData.expiry,
+        created: getIndiaDateTime(),
+        resetType: 'never',
+        unlimited: false
+    };
+});
+
+// ========== ADDITIONAL DEMO/TEST KEYS ==========
+keyStorage['DEMO_KEY_2026'] = {
+    name: '🎁 Demo User',
+    scopes: ['number', 'aadhar', 'pincode'],
+    type: 'demo',
+    limit: 10,
+    used: 0,
+    expiry: parseExpiryDate('31-12-2026'),
+    expiryStr: '31-12-2026',
+    created: getIndiaDateTime(),
+    resetType: 'never',
+    unlimited: false
+};
+
+keyStorage['TEST_KEY_2026'] = {
+    name: '🧪 Test User',
+    scopes: ['number'],
+    type: 'test',
+    limit: 5,
+    used: 0,
+    expiry: parseExpiryDate('30-06-2026'),
+    expiryStr: '30-06-2026',
+    created: getIndiaDateTime(),
+    resetType: 'never',
+    unlimited: false
+};
+
+// ========== KEY MANAGEMENT FUNCTIONS ==========
+function checkKeyValid(apiKey) {
+    const keyData = keyStorage[apiKey];
+    if (!keyData) {
+        return { valid: false, error: '❌ Invalid API Key. Contact @BRONX_ULTRA to purchase.' };
+    }
     
-    if (!requestCounts[apiKey]) {
-        requestCounts[apiKey] = { count: 0, date: today };
-        return true;
+    // Check expiry
+    if (keyData.expiry && isKeyExpired(keyData.expiry)) {
+        return { 
+            valid: false, 
+            error: '⏰ Your Key has EXPIRED! Please purchase a new key. Contact @BRONX_ULTRA on Telegram.',
+            expired: true,
+            expiredDate: keyData.expiryStr
+        };
     }
-    if (requestCounts[apiKey].date !== today) {
-        requestCounts[apiKey] = { count: 0, date: today };
-        return true;
+    
+    // Check limit
+    if (!keyData.unlimited && keyData.used >= keyData.limit) {
+        return {
+            valid: false,
+            error: `🛑 Limit Exhausted! You have used ${keyData.used}/${keyData.limit} requests. Contact @BRONX_ULTRA for more.`,
+            limitExhausted: true
+        };
     }
-    return requestCounts[apiKey].count < limit;
+    
+    return { valid: true, keyData };
 }
 
-function incrementRequestCount(apiKey) {
-    const today = getIndiaDate();
-    if (!requestCounts[apiKey] || requestCounts[apiKey].date !== today) {
-        requestCounts[apiKey] = { count: 1, date: today };
-    } else {
-        requestCounts[apiKey].count++;
+function incrementKeyUsage(apiKey) {
+    if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) {
+        keyStorage[apiKey].used++;
     }
-    return requestCounts[apiKey].count;
+    return keyStorage[apiKey];
 }
 
 function getRemainingQuota(apiKey) {
-    const today = getIndiaDate();
-    const keyData = VALID_KEYS[apiKey];
-    const limit = keyData?.dailyLimit || 1000;
-    if (!requestCounts[apiKey] || requestCounts[apiKey].date !== today) return limit;
-    return limit - requestCounts[apiKey].count;
+    const keyData = keyStorage[apiKey];
+    if (!keyData) return 0;
+    if (keyData.unlimited) return Infinity;
+    return Math.max(0, keyData.limit - keyData.used);
 }
 
-function isKeyExpired(keyData) {
-    if (!keyData.expiresAt) return false;
-    return Date.now() > keyData.expiresAt;
+// ========== SCOPE CHECK ==========
+function checkKeyScope(keyData, endpoint) {
+    if (keyData.scopes.includes('*')) return { valid: true };
+    if (keyData.scopes.includes(endpoint)) return { valid: true };
+    return { 
+        valid: false, 
+        error: `❌ This key cannot access '${endpoint}'. Allowed scopes: ${keyData.scopes.join(', ')}` 
+    };
 }
 
-// ========== ENDPOINTS WITH EXAMPLE RESPONSES ==========
-const endpoints = [
-    { path: '/number', param: 'num', example: '7307841587', desc: 'Indian Mobile Number Lookup - SIM records, address, relatives, Aadhaar', category: 'Phone Intelligence',
-      exampleResponse: {
-        "success": true,
-        "number": "7307841587",
-        "total": 2,
-        "results": [
-          { "mobile": "7307841587", "name": "Nemsingh", "address": "j gram dabhaura simra post sarsava k tilhar Shahjahanpur Uttar Pradesh 242303", "circle": "JIO UPE", "alternate": "8542812624", "father_name": "jayram", "aadhar": "226010868980", "email": "akaShguptu@gmail.com" },
-          { "mobile": "9219059191", "name": "Premraj", "address": "s/o itwari Tilhar dabhaura simra tilhar Shahjahanpur Uttar Pradesh 242307", "circle": "JIO UPE", "alternate": "7307841587", "father_name": "itwari", "aadhar": "619872770858" }
-        ],
-        "cached": true
-      }
-    },
-    { path: '/aadhar', param: 'num', example: '393933081942', desc: 'Aadhaar Number Lookup - linked records', category: 'Phone Intelligence',
-      exampleResponse: {
-        "success": true,
-        "aadhar": "393933081942",
-        "total": 1,
-        "results": [{ "name": "J Vinod", "phoneNumber": "9490160194", "age": "28", "gender": "Male", "address": "Hyderabad", "district": "HYDERABAD", "state": "TELANGANA" }]
-      }
-    },
-    { path: '/name', param: 'name', example: 'abhiraaj', desc: 'Name - Linked Aadhaar records', category: 'Phone Intelligence',
-      exampleResponse: {
-        "success": true,
-        "name": "abhiraaj",
-        "total": 1,
-        "results": [{ "name": "ABHIRAAJ BALASAHEB GAWADE", "phoneNumber": "9823796702", "age": "6", "gender": "Male", "address": "CHAMDGAD", "district": "KOLHAPUR", "state": "MAHARASHTRA" }]
-      }
-    },
-    { path: '/numv2', param: 'num', example: '6205949840', desc: 'Number Info v2 - alternate database', category: 'Phone Intelligence',
-      exampleResponse: {
-        "success": true,
-        "number": "6205949840",
-        "total": 1,
-        "results": [{ "mobile": "6205949840", "name": "Vikram Yadav", "fname": "Biran Yadav", "address": "Khagaria Bihar 851212", "circle": "BIHAR JIO" }]
-      }
-    },
-    { path: '/adv', param: 'num', example: '9876543210', desc: 'Advanced - Aadhaar linked records', category: 'Phone Intelligence',
-      exampleResponse: {
-        "success": true,
-        "number": "9876543210",
-        "total": 17,
-        "results": [{ "aadharNumber": "527034357255", "name": "RAHUL SHARMA", "address": "MUMBAI", "age": 24, "gender": "MALE", "state": "MAHARASHTRA" }]
-      }
-    },
-    { path: '/upi', param: 'upi', example: 'example@ybl', desc: 'UPI ID verification - name, bank, status', category: 'Financial',
-      exampleResponse: {
-        "success": true,
-        "upi_id": "example@ybl",
-        "valid": true,
-        "account_name": "MURENDRA SARABU",
-        "bank": "Union Bank of India",
-        "ifsc": "UBIN",
-        "psp": "PhonePe"
-      }
-    },
-    { path: '/ifsc', param: 'ifsc', example: 'SBIN0001234', desc: 'IFSC - bank name, branch, payment modes', category: 'Financial',
-      exampleResponse: {
-        "success": true,
-        "ifsc": "SBIN0001234",
-        "bank": "State Bank of India",
-        "branch": "HAJIGANJ",
-        "address": "PATNA, BIHAR",
-        "city": "PATNA",
-        "state": "BIHAR",
-        "payment_modes": { "upi": true, "imps": true, "neft": true, "rtgs": true }
-      }
-    },
-    { path: '/pan', param: 'pan', example: 'AXDPR2606K', desc: 'PAN to GSTIN - linked GST registration', category: 'Financial',
-      exampleResponse: {
-        "success": true,
-        "pan": "AXDPR2606K",
-        "result": { "gstins": [{ "gstin": "192500063179ES0", "status": "Active", "state": "WEST BENGAL" }] }
-      }
-    },
-    { path: '/pincode', param: 'pin', example: '110001', desc: 'Pincode - area, district, post offices', category: 'Location',
-      exampleResponse: {
-        "success": true,
-        "pincode": "110001",
-        "state": "Delhi",
-        "district": "Central Delhi",
-        "country": "India",
-        "total_offices": 21,
-        "post_offices": [{ "name": "Connaught Place", "branch_type": "Sub Post Office" }]
-      }
-    },
-    { path: '/ip', param: 'ip', example: '8.8.8.8', desc: 'IP geolocation - coordinates, ISP, timezone', category: 'Location',
-      exampleResponse: {
-        "success": true,
-        "ip": "8.8.8.8",
-        "country": "United States",
-        "city": "Mountain View",
-        "isp": "Google LLC",
-        "latitude": 37.3860517,
-        "longitude": -122.0838511
-      }
-    },
-    { path: '/vehicle', param: 'vehicle', example: 'MH02FZ0555', desc: 'Vehicle registration - owner, insurance, RC status', category: 'Vehicle',
-      exampleResponse: {
-        "status": "success",
-        "data": { "rc_number": "MH02FZ0555", "owner_name": "SHAH RUKH KHAN", "maker_model": "BLACK BADGE CULLINAN", "fuel_type": "PETROL", "registration_date": "2023-04-12", "rc_status": "ACTIVE" }
-      }
-    },
-    { path: '/rc', param: 'owner', example: 'UP92P2111', desc: 'RC to Owner - detailed ownership & vehicle info', category: 'Vehicle',
-      exampleResponse: {
-        "success": true,
-        "rc": "UP92P2111",
-        "result": { "Owner Name": "SANJU SOLANKI", "Registration Number": "UP92P2111", "Model Name": "HERO MOTOCORP LTD" }
-      }
-    },
-    { path: '/ff', param: 'uid', example: '123456789', desc: 'Free Fire - player info + ban status', category: 'Gaming',
-      exampleResponse: {
-        "success": true,
-        "uid": "123456789",
-        "info": { "Nickname": "Chfjdjs", "Level": "5", "Region": "Br" },
-        "ban": { "ban_status": "BANNED", "ban_period": 6 }
-      }
-    },
-    { path: '/bgmi', param: 'uid', example: '5121439477', desc: 'BGMI - username by player UID', category: 'Gaming',
-      exampleResponse: {
-        "success": true,
-        "uid": "5121439477",
-        "game": "BGMI",
-        "region": "IND",
-        "username": "Kūiūrūaūt"
-      }
-    },
-    { path: '/insta', param: 'username', example: 'cristiano', desc: 'Instagram - profile + linked OSINT records', category: 'Social',
-      exampleResponse: {
-        "success": true,
-        "username": "cristiano",
-        "profile": { "name": "Cristiano Ronaldo", "followers": 672571267, "verified": true },
-        "osint": { "records": [{ "id": "173560420", "email": null, "phone": null }] }
-      }
-    },
-    { path: '/git', param: 'username', example: 'ftgamer2', desc: 'GitHub profile - repos, followers, bio', category: 'Social',
-      exampleResponse: {
-        "success": true,
-        "username": "ftgamer2",
-        "name": "FTGAMERV2",
-        "bio": "Teen dev cooking cool stuff",
-        "public_repos": 6,
-        "followers": 1
-      }
-    },
-    { path: '/tg', param: 'info', example: 'JAUUOWNER', desc: 'Telegram user - profile, phone, linked records', category: 'Social',
-      exampleResponse: {
-        "success": true,
-        "username": "@JAUUOWNER",
-        "data": { "profile": { "full_name": "JAUU OWNER OFFICIAL", "premium": true }, "phone_lookup": { "number": "8140827956", "country": "India" } }
-      }
-    },
-    { path: '/pk', param: 'num', example: '03331234567', desc: 'Pakistan number - subscriber records with CNIC', category: 'Pakistan',
-      exampleResponse: {
-        "success": true,
-        "number": "03331234567",
-        "total": 3,
-        "results": [{ "name": "ASIM ALI", "number": "3331234567", "cnic": "3430125586549", "address": "KARACHI, Sindh" }]
-      }
-    },
-    { path: '/pkv2', param: 'num', example: '3359736848', desc: 'Pakistan number v2 - alternate database', category: 'Pakistan',
-      exampleResponse: {
-        "success": true,
-        "number": "3359736848",
-        "total": 2,
-        "results": [{ "name": "SHAH NAWAZ KHAN", "mobile": "923359736848", "cnic": "1110189490683", "address": "MARDAN" }]
-      }
-    }
-];
+// ========== ENDPOINTS ==========
+const endpoints = {
+    number: { param: 'num', category: '📱 Phone Intelligence', example: '9876543210', desc: 'Indian Mobile Number Lookup' },
+    aadhar: { param: 'num', category: '📱 Phone Intelligence', example: '393933081942', desc: 'Aadhaar Number Lookup' },
+    name: { param: 'name', category: '📱 Phone Intelligence', example: 'abhiraaj', desc: 'Name to Records Search' },
+    numv2: { param: 'num', category: '📱 Phone Intelligence', example: '6205949840', desc: 'Number Info v2' },
+    adv: { param: 'num', category: '📱 Phone Intelligence', example: '9876543210', desc: 'Advanced Phone Lookup' },
+    upi: { param: 'upi', category: '💰 Financial', example: 'example@ybl', desc: 'UPI ID Verification' },
+    ifsc: { param: 'ifsc', category: '💰 Financial', example: 'SBIN0001234', desc: 'IFSC Code Details' },
+    pan: { param: 'pan', category: '💰 Financial', example: 'AXDPR2606K', desc: 'PAN to GST Search' },
+    pincode: { param: 'pin', category: '📍 Location', example: '110001', desc: 'Pincode Details' },
+    ip: { param: 'ip', category: '📍 Location', example: '8.8.8.8', desc: 'IP Lookup' },
+    vehicle: { param: 'vehicle', category: '🚗 Vehicle', example: 'MH02FZ0555', desc: 'Vehicle Registration' },
+    rc: { param: 'owner', category: '🚗 Vehicle', example: 'UP92P2111', desc: 'RC Owner Details' },
+    ff: { param: 'uid', category: '🎮 Gaming', example: '123456789', desc: 'Free Fire Info' },
+    bgmi: { param: 'uid', category: '🎮 Gaming', example: '5121439477', desc: 'BGMI Info' },
+    insta: { param: 'username', category: '🌐 Social', example: 'cristiano', desc: 'Instagram Profile' },
+    git: { param: 'username', category: '🌐 Social', example: 'ftgamer2', desc: 'GitHub Profile' },
+    tg: { param: 'info', category: '🌐 Social', example: 'JAUUOWNER', desc: 'Telegram Lookup' },
+    pk: { param: 'num', category: '🇵🇰 Pakistan', example: '03331234567', desc: 'Pakistan Number v1' },
+    pkv2: { param: 'num', category: '🇵🇰 Pakistan', example: '3359736848', desc: 'Pakistan Number v2' }
+};
 
 // ========== CLEAN RESPONSE ==========
 function cleanResponse(data) {
@@ -296,7 +240,6 @@ function cleanResponse(data) {
         delete obj.BY;
         delete obj.CHANNEL;
         delete obj.developer;
-        delete obj.Developer;
         Object.keys(obj).forEach(key => {
             if (obj[key] && typeof obj[key] === 'object') {
                 removeFields(obj[key]);
@@ -306,382 +249,909 @@ function cleanResponse(data) {
     
     removeFields(cleaned);
     cleaned.by = "@BRONX_ULTRA";
+    cleaned.powered_by = "BRONX OSINT API";
     return cleaned;
 }
 
-// ========== API KEY CHECK ==========
-function checkApiKey(req, res, next) {
-    const key = req.query.key || req.headers['x-api-key'];
-    
-    if (!key) {
-        return res.status(401).json({ success: false, error: "❌ API Key Required" });
-    }
-    
-    const keyData = VALID_KEYS[key];
-    if (!keyData) {
-        return res.status(403).json({ success: false, error: "❌ Invalid API Key" });
-    }
-    
-    if (isKeyExpired(keyData)) {
-        return res.status(403).json({ 
-            success: false, 
-            error: "❌ Your Key Is Expired! Please Renew",
-            message: "Contact @BRONX_ULTRA on Telegram to renew your key"
-        });
-    }
-    
-    if (!checkAndResetLimit(key)) {
-        const remaining = getRemainingQuota(key);
-        return res.status(429).json({ 
-            success: false, 
-            error: `❌ Daily quota exceeded (${keyData.dailyLimit}/day)`,
-            reset: "2:00 AM IST"
-        });
-    }
-    
-    req.apiKey = key;
-    req.keyData = keyData;
-    next();
-}
-
-// ========== CORS ==========
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    next();
-});
-
-app.use(express.json());
-
-// Proxy routes
-app.use('/api/key-bronx', checkApiKey);
-
-endpoints.forEach(ep => {
-    app.get(`/api/key-bronx${ep.path}`, async (req, res) => {
-        const paramValue = req.query[ep.param];
-        const apiKey = req.apiKey;
-        const keyData = req.keyData;
-        
-        if (!paramValue) {
-            return res.status(400).json({ 
-                success: false, 
-                error: `Missing ${ep.param}`,
-                example: `/api/key-bronx${ep.path}?key=YOUR_KEY&${ep.param}=${ep.example}`
-            });
-        }
-        
-        if (!keyData.scopes.includes('*') && !keyData.scopes.includes(ep.path.replace('/', ''))) {
-            return res.status(403).json({ 
-                success: false, 
-                error: `This key cannot access '${ep.path.replace('/', '')}'. Allowed: ${keyData.scopes.join(', ')}`
-            });
-        }
-        
-        try {
-            const realUrl = `${REAL_API_BASE}${ep.path}?key=${REAL_API_KEY}&${ep.param}=${paramValue}`;
-            console.log(`📡 ${ep.path} -> ${paramValue}`);
-            
-            const response = await axios.get(realUrl, { timeout: 30000 });
-            const used = incrementRequestCount(apiKey);
-            const limit = keyData.dailyLimit;
-            
-            const cleanedData = cleanResponse(response.data);
-            cleanedData.rate_limit = {
-                limit: limit,
-                used: used,
-                remaining: limit - used,
-                reset: "2:00 AM IST"
-            };
-            
-            res.setHeader('X-RateLimit-Limit', limit);
-            res.setHeader('X-RateLimit-Remaining', limit - used);
-            res.setHeader('X-RateLimit-Reset', '2:00 AM IST');
-            
-            res.json(cleanedData);
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    });
-});
-
-// ========== ROOT ROUTE - COMPLETE UI WITH ALL ENDPOINTS ==========
-app.get('/', (req, res) => {
-    // Generate endpoints HTML
-    let endpointsHTML = '';
-    const categories = {};
-    endpoints.forEach(ep => {
-        if (!categories[ep.category]) categories[ep.category] = [];
-        categories[ep.category].push(ep);
-    });
-    
-    const categoryOrder = ['Phone Intelligence', 'Financial', 'Location', 'Vehicle', 'Gaming', 'Social', 'Pakistan'];
-    
-    categoryOrder.forEach(cat => {
-        if (categories[cat]) {
-            endpointsHTML += `<div class="category">📱 ${cat}</div><div class="endpoints-grid">`;
-            categories[cat].forEach(ep => {
-                const exampleResponseJSON = JSON.stringify(ep.exampleResponse, null, 2);
-                endpointsHTML += `
-                    <div class="endpoint-card">
-                        <span class="method">GET</span>
-                        <div class="endpoint-name">${ep.path.replace('/', '').toUpperCase()}</div>
-                        <div class="endpoint-url">/api/key-bronx${ep.path}</div>
-                        <div class="param">📌 ${ep.desc}</div>
-                        <div class="param">🔑 ${ep.param}=${ep.example}</div>
-                        <div class="example-response">
-                            <div class="example-title">📋 Example Response:</div>
-                            <pre class="example-code">${escapeHtml(exampleResponseJSON.substring(0, 300))}${exampleResponseJSON.length > 300 ? '...' : ''}</pre>
-                        </div>
-                        <div class="copy-btn" onclick="copyUrl('${ep.path.replace('/', '')}', '${ep.param}', '${ep.example}')">📋 COPY URL →</div>
-                    </div>
-                `;
-            });
-            endpointsHTML += `</div>`;
-        }
-    });
+// ========== SERVE ENHANCED HTML UI ==========
+function serveHTML(res) {
+    const totalKeys = Object.keys(keyStorage).length;
+    const premiumCount = Object.values(keyStorage).filter(k => k.type === 'premium').length;
     
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRONX OSINT | API Documentation</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>⚡ BRONX OSINT | NEON API</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            line-height: 1.6;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,255,65,0.03) 0px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .container { max-width: 1300px; margin: 0 auto; padding: 20px; position: relative; z-index: 2; }
         
-        .header { border-bottom: 1px solid #2a2a2a; padding: 30px 0; margin-bottom: 40px; }
-        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
-        .logo h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #00ff41, #00cc33); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .logo p { color: #666; font-size: 13px; }
-        .stats { display: flex; gap: 30px; }
-        .stat { text-align: center; }
-        .stat-value { font-size: 24px; font-weight: 700; color: #00ff41; }
-        .stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        /* Animated Background */
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 20px #ff00ff33, 0 0 40px #00ff4133, 0 0 60px #ffff0033; }
+            33% { box-shadow: 0 0 30px #00ff4133, 0 0 50px #ff00ff33, 0 0 70px #00ffff33; }
+            66% { box-shadow: 0 0 25px #ffff0033, 0 0 45px #ff000033, 0 0 65px #00ff4133; }
+        }
         
-        .hero { background: #111; border: 1px solid #222; border-radius: 20px; padding: 40px; text-align: center; margin-bottom: 40px; }
-        .hero h2 { font-size: 28px; margin-bottom: 15px; }
-        .hero p { color: #888; max-width: 600px; margin: 0 auto; }
-        .badge { display: inline-block; background: rgba(0,255,65,0.1); color: #00ff41; padding: 5px 15px; border-radius: 20px; font-size: 11px; margin-bottom: 20px; }
-        .feature-grid { display: flex; justify-content: center; gap: 40px; margin-top: 30px; flex-wrap: wrap; }
-        .feature { text-align: center; }
-        .feature-value { font-size: 28px; font-weight: 700; color: #00ff41; }
-        .feature-label { font-size: 11px; color: #666; }
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px;
+            border: 3px solid;
+            border-image: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
+            border-radius: 30px;
+            margin-bottom: 30px;
+            background: rgba(10,10,10,0.9);
+            backdrop-filter: blur(10px);
+            animation: glowPulse 3s infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, #ff00ff10, #00ff4110, #ffff0010, transparent);
+            animation: rotate 10s linear infinite;
+        }
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .header h1 {
+            font-size: 56px;
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff6b6b, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px #ff00ff66;
+            letter-spacing: 5px;
+            position: relative;
+            z-index: 2;
+        }
+        .header h1 span {
+            display: inline-block;
+            animation: flicker 2s infinite;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .badge-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 2;
+        }
+        .badge {
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border: 2px solid;
+            animation: badgeGlow 2s infinite;
+        }
+        .badge-1 { background: #ff00ff20; color: #ff00ff; border-color: #ff00ff; box-shadow: 0 0 20px #ff00ff66; }
+        .badge-2 { background: #00ff4120; color: #00ff41; border-color: #00ff41; box-shadow: 0 0 20px #00ff4166; }
+        .badge-3 { background: #ffff0020; color: #ffff00; border-color: #ffff00; box-shadow: 0 0 20px #ffff0066; }
+        .badge-4 { background: #ff000020; color: #ff6b6b; border-color: #ff0000; box-shadow: 0 0 20px #ff000066; }
+        @keyframes badgeGlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
         
-        .auth-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
-        .auth-card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 25px; }
-        .auth-card h3 { color: #00ff41; margin-bottom: 15px; font-size: 18px; }
-        .code { background: #0a0a0a; border: 1px solid #222; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; overflow-x: auto; margin: 10px 0; color: #00ff41; }
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: rgba(10,10,10,0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid;
+            border-radius: 20px;
+            padding: 20px 35px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .stat-card:nth-child(1) { border-color: #ff00ff; box-shadow: 0 0 30px #ff00ff33; }
+        .stat-card:nth-child(2) { border-color: #00ff41; box-shadow: 0 0 30px #00ff4133; }
+        .stat-card:nth-child(3) { border-color: #ffff00; box-shadow: 0 0 30px #ffff0033; }
+        .stat-card:nth-child(4) { border-color: #ff0000; box-shadow: 0 0 30px #ff000033; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-num { 
+            font-size: 42px; 
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label { 
+            font-size: 12px; 
+            letter-spacing: 3px;
+            color: #fff;
+            text-shadow: 0 0 10px currentColor;
+        }
         
-        .rate-card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 25px; margin-bottom: 40px; }
-        .rate-grid { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; gap: 20px; }
-        .rate-item { text-align: center; }
-        .rate-value { font-size: 32px; font-weight: 700; color: #00ff41; }
-        .rate-label { font-size: 10px; color: #666; }
-        .error-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .error-table th, .error-table td { padding: 10px; text-align: left; border-bottom: 1px solid #222; }
-        .error-table th { color: #00ff41; }
+        /* Limit Alert */
+        .limit-alert {
+            background: linear-gradient(135deg, #ff00ff10, #00ff4110, #ffff0010);
+            border: 2px solid;
+            border-image: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00) 1;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .limit-alert div:first-child {
+            font-size: 20px;
+            background: linear-gradient(45deg, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+        .reset-time {
+            font-weight: bold;
+            font-size: 20px;
+            color: #00ff41;
+            text-shadow: 0 0 20px #00ff41;
+        }
         
-        .category { font-size: 22px; font-weight: 700; margin: 40px 0 20px; padding-left: 15px; border-left: 4px solid #00ff41; }
-        .endpoints-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .endpoint-card { background: #111; border: 1px solid #222; border-radius: 12px; padding: 18px; transition: all 0.3s; }
-        .endpoint-card:hover { border-color: #00ff41; transform: translateY(-2px); box-shadow: 0 0 15px rgba(0,255,65,0.2); }
-        .method { display: inline-block; background: rgba(0,255,65,0.1); color: #00ff41; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; }
-        .endpoint-name { font-size: 16px; font-weight: 600; margin: 10px 0; }
-        .endpoint-url { font-family: monospace; font-size: 10px; color: #666; word-break: break-all; }
-        .param { font-size: 10px; color: #666; margin-top: 8px; }
-        .example-response { margin-top: 12px; padding-top: 10px; border-top: 1px solid #222; }
-        .example-title { font-size: 10px; color: #00ff41; margin-bottom: 5px; }
-        .example-code { background: #0a0a0a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 9px; overflow-x: auto; color: #888; max-height: 150px; overflow-y: auto; }
-        .copy-btn { margin-top: 12px; color: #00ff41; font-size: 10px; cursor: pointer; text-align: center; padding: 5px; border: 1px solid #00ff41; border-radius: 6px; transition: 0.3s; }
-        .copy-btn:hover { background: #00ff41; color: #000; }
+        /* Owner Section */
+        .owner-section {
+            background: linear-gradient(135deg, #ffd70020, #ff00ff20);
+            border: 3px solid #ffd700;
+            border-radius: 20px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+            box-shadow: 0 0 50px #ffd70066;
+            animation: ownerPulse 2s infinite;
+        }
+        @keyframes ownerPulse {
+            0%, 100% { box-shadow: 0 0 30px #ffd70066, 0 0 60px #ff00ff33; }
+            50% { box-shadow: 0 0 50px #ffd70099, 0 0 80px #ff00ff66; }
+        }
+        .owner-title {
+            font-size: 32px;
+            background: linear-gradient(45deg, #ffd700, #ff00ff, #00ff41);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .owner-key {
+            font-size: 24px;
+            background: #0a0a0a;
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: inline-block;
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            letter-spacing: 3px;
+        }
+        .unlimited-badge {
+            background: #ff00ff;
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-weight: bold;
+            margin-left: 15px;
+            font-size: 14px;
+        }
         
-        .keys-section { background: #111; border: 1px solid #222; border-radius: 16px; padding: 25px; margin-bottom: 40px; }
-        .key-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
-        .key-card { background: #0a0a0a; border: 1px solid #222; border-radius: 10px; padding: 12px; }
-        .key-name { font-size: 12px; font-weight: bold; color: #00ff41; word-break: break-all; }
-        .key-scope { font-size: 9px; color: #666; margin-top: 5px; }
-        .key-limit { font-size: 10px; color: #ffcc00; margin-top: 5px; }
-        .key-expiry { font-size: 9px; color: #ff4444; margin-top: 3px; }
+        /* Auth Grid */
+        .auth-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .auth-card {
+            background: rgba(10,10,10,0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid;
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s;
+        }
+        .auth-card:nth-child(1) { border-color: #ff00ff; }
+        .auth-card:nth-child(2) { border-color: #00ff41; }
+        .auth-card:nth-child(3) { border-color: #ffff00; }
+        .auth-card:hover { transform: translateY(-3px); box-shadow: 0 0 40px currentColor; }
+        .auth-card h3 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .code {
+            background: #000;
+            border: 1px solid #00ff41;
+            border-radius: 12px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            color: #00ff41;
+            box-shadow: inset 0 0 20px #00ff4133;
+        }
         
-        .footer { text-align: center; padding: 30px 0; border-top: 1px solid #222; margin-top: 40px; color: #666; font-size: 11px; }
-        .toast { position: fixed; bottom: 20px; right: 20px; background: #00ff41; color: #000; padding: 10px 20px; border-radius: 8px; font-weight: 600; animation: slideIn 0.3s; z-index: 1000; font-size: 12px; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @media (max-width: 768px) { .auth-section { grid-template-columns: 1fr; } .header-content { flex-direction: column; text-align: center; } .hero h2 { font-size: 20px; } .category { font-size: 18px; } .endpoints-grid { grid-template-columns: 1fr; } }
-        a { color: #00ff41; text-decoration: none; }
+        /* Categories */
+        .category {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 40px 0 20px;
+            padding-left: 20px;
+            border-left: 6px solid;
+            background: linear-gradient(90deg, currentColor 0%, transparent 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .category i { margin-right: 10px; }
+        
+        /* Endpoint Grid */
+        .endpoint-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 18px;
+        }
+        .endpoint {
+            background: rgba(10,10,10,0.8);
+            backdrop-filter: blur(10px);
+            border: 2px solid;
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .endpoint::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+        .endpoint:hover::before { left: 100%; }
+        .endpoint:hover { transform: translateY(-5px) scale(1.02); }
+        .endpoint[data-category="📱 Phone Intelligence"] { border-color: #ff00ff; }
+        .endpoint[data-category="💰 Financial"] { border-color: #00ff41; }
+        .endpoint[data-category="📍 Location"] { border-color: #ffff00; }
+        .endpoint[data-category="🚗 Vehicle"] { border-color: #ff0000; }
+        .endpoint[data-category="🎮 Gaming"] { border-color: #00ffff; }
+        .endpoint[data-category="🌐 Social"] { border-color: #ff8800; }
+        .endpoint[data-category="🇵🇰 Pakistan"] { border-color: #00ff88; }
+        
+        .method {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .method.get { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
+        .endpoint-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 12px 0 8px;
+            background: linear-gradient(45deg, #fff, #00ff41);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #ff00ff;
+            word-break: break-all;
+            opacity: 0.9;
+        }
+        .param { 
+            font-size: 12px; 
+            color: #ffff00; 
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ffffff30;
+        }
+        
+        /* Key Info Section */
+        .key-info-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: rgba(10,10,10,0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid #ff00ff;
+            border-radius: 20px;
+        }
+        .key-info-title {
+            font-size: 24px;
+            color: #00ff41;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00ff41;
+        }
+        .key-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 12px;
+        }
+        .key-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .key-table th {
+            background: linear-gradient(45deg, #ff00ff, #00ff41);
+            color: #000;
+            padding: 12px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .key-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ffffff20;
+            color: #fff;
+        }
+        .key-table tr:hover { background: #ffffff10; }
+        .status-active { color: #00ff41; }
+        .status-expired { color: #ff0000; }
+        .status-exhausted { color: #ffff00; }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            margin-top: 50px;
+            border-top: 2px solid;
+            border-image: linear-gradient(90deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
+            background: linear-gradient(180deg, transparent, #0a0a0a);
+        }
+        .footer p {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .footer .glow-text {
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #0a0a0a, #1a0033);
+            color: #00ff41;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            border: 2px solid #00ff41;
+            box-shadow: 0 0 40px #00ff41;
+            animation: slideIn 0.3s, glowPulse 2s infinite;
+            z-index: 9999;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(#ff00ff, #00ff41, #ffff00); border-radius: 10px; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 32px; }
+            .stat-num { font-size: 28px; }
+            .owner-key { font-size: 14px; word-break: break-all; }
+        }
+        
+        /* Extra API Operation Panel */
+        .api-panel {
+            background: linear-gradient(135deg, #1a0033, #0a0a0a);
+            border: 3px solid #ff00ff;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 40px 0;
+            box-shadow: 0 0 60px #ff00ff66;
+        }
+        .api-panel h2 {
+            color: #00ff41;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px #00ff41;
+        }
+        .api-panel .input-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .api-panel input, .api-panel select {
+            flex: 1;
+            padding: 15px 20px;
+            background: #0a0a0a;
+            border: 2px solid #00ff41;
+            border-radius: 50px;
+            color: #00ff41;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+        }
+        .api-panel button {
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #ff00ff, #00ff41);
+            border: none;
+            border-radius: 50px;
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px #ff00ff66;
+        }
+        .api-panel button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px #00ff41;
+        }
+        .api-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #000;
+            border: 1px solid #00ff41;
+            border-radius: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #00ff41;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <h1>🔍 BRONX OSINT</h1>
-                    <p>Private Intelligence API</p>
-                </div>
-                <div class="stats">
-                    <div class="stat"><div class="stat-value">${endpoints.length}</div><div class="stat-label">ENDPOINTS</div></div>
-                    <div class="stat"><div class="stat-value">JSON</div><div class="stat-label">RESPONSES</div></div>
-                    <div class="stat"><div class="stat-value">KEY</div><div class="stat-label">ACCESS</div></div>
-                </div>
+            <h1>
+                <span>⚡</span> BRONX OSINT <span>⚡</span>
+            </h1>
+            <div class="badge-container">
+                <span class="badge badge-1">🔐 NEON INTELLIGENCE</span>
+                <span class="badge badge-2">🌐 50+ PREMIUM KEYS</span>
+                <span class="badge badge-3">👑 UNLIMITED OWNER</span>
+                <span class="badge badge-4">⚡ REAL-TIME DATA</span>
             </div>
         </div>
         
-        <div class="hero">
-            <span class="badge">⚡ Premium OSINT Infrastructure</span>
-            <h2>Private OSINT APIs for fast and reliable data intelligence.</h2>
-            <p>Optimized performance. Controlled access. Real results.</p>
-            <div class="feature-grid">
-                <div class="feature"><div class="feature-value">20+</div><div class="feature-label">Endpoints</div></div>
-                <div class="feature"><div class="feature-value">JSON</div><div class="feature-label">Responses</div></div>
-                <div class="feature"><div class="feature-value">Key-Based</div><div class="feature-label">Access</div></div>
-                <div class="feature"><div class="feature-value">1000/Day</div><div class="feature-label">Daily Quota</div></div>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-num">${Object.keys(endpoints).length}</div>
+                <div class="stat-label">ENDPOINTS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">${totalKeys}</div>
+                <div class="stat-label">ACTIVE KEYS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">∞</div>
+                <div class="stat-label">OWNER LIMIT</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">JSON</div>
+                <div class="stat-label">RESPONSE</div>
             </div>
         </div>
         
-        <div class="auth-section">
+        <div class="limit-alert">
+            <div>⚡ KEY-BASED LIMIT SYSTEM</div>
+            <div style="margin-top: 10px;">🔑 Premium Keys: Fixed Lifetime Limits | 👑 Owner: UNLIMITED</div>
+            <div style="margin-top: 10px;">⏰ Key Expiry: Auto-checked | 🇮🇳 India Time Zone</div>
+        </div>
+        
+        <div class="owner-section">
+            <div class="owner-title">👑 BRONX ULTRA OWNER KEY 👑</div>
+            <div>
+                <span class="owner-key">BRONX_ULTRA_MASTER_2026</span>
+                <span class="unlimited-badge">∞ UNLIMITED ∞</span>
+            </div>
+            <div style="margin-top: 15px; color: #ffd700; font-size: 14px;">
+                ⭐ All Scopes Access | Never Expires | No Request Limit ⭐
+            </div>
+        </div>
+        
+        <div class="auth-grid">
             <div class="auth-card">
                 <h3>🔐 AUTHENTICATION</h3>
-                <p>API Key Required — Pass via query param or header</p>
                 <div class="code">GET /api/key-bronx/number?key=YOUR_KEY&num=9876543210</div>
-                <div class="code">curl -H "X-API-Key: YOUR_KEY" https://your-domain.vercel.app/api/key-bronx/number?num=9876543210</div>
+                <div style="margin-top: 15px; color: #ffff00; font-size: 12px;">Header: x-api-key also supported</div>
             </div>
             <div class="auth-card">
-                <h3>📋 RATE LIMITS</h3>
-                <div class="rate-grid">
-                    <div class="rate-item"><div class="rate-value">1000</div><div class="rate-label">Default Quota/Day</div></div>
-                    <div class="rate-item"><div class="rate-value">25s</div><div class="rate-label">Max Response Time</div></div>
-                </div>
-                <p style="font-size: 11px; color: #666;">Quota resets at <strong style="color: #00ff41;">2:00 AM IST</strong> daily</p>
+                <h3>📊 CHECK QUOTA</h3>
+                <div class="code">GET /quota?key=YOUR_KEY</div>
+                <div style="margin-top: 15px; color: #00ff41; font-size: 12px;">Returns remaining requests</div>
+            </div>
+            <div class="auth-card">
+                <h3>🔑 KEY INFO</h3>
+                <div class="code">GET /key-info?key=YOUR_KEY</div>
+                <div style="margin-top: 15px; color: #ff00ff; font-size: 12px;">Check expiry & limits</div>
             </div>
         </div>
         
-        <div class="rate-card">
-            <h3>⚠️ ERROR CODES</h3>
-            <table class="error-table">
-                <tr><th>Code</th><th>Meaning</th></tr>
-                <tr><td style="color:#ff4444;">400</td><td>Bad request — missing or invalid parameter</td></tr>
-                <tr><td style="color:#ffcc00;">401</td><td>No API key provided</td></tr>
-                <tr><td style="color:#ff00ff;">403</td><td>Invalid key, expired, or scope denied</td></tr>
-                <tr><td style="color:#ff4444;">429</td><td>Daily quota exceeded</td></tr>
-                <tr><td style="color:#4444ff;">503</td><td>Upstream timeout — retry in a moment</td></tr>
-            </table>
-        </div>
-        
-        <div class="keys-section">
-            <h3>🗝️ AVAILABLE API KEYS</h3>
-            <div class="key-grid">
-                <div class="key-card"><div class="key-name">⭐ BRONX_MASTER_KEY</div><div class="key-scope">✓ All Endpoints (*)</div><div class="key-limit">Unlimited Requests | Never Expires</div><div class="key-expiry">👑 Owner Only</div></div>
-                <div class="key-card"><div class="key-name">🔑 BRONX_KEY_2026</div><div class="key-scope">✓ All Endpoints (*)</div><div class="key-limit">1000 requests/day | Never Expires</div></div>
-                <div class="key-card"><div class="key-name">🎁 DEMO_KEY</div><div class="key-scope">✓ number, aadhar, pincode</div><div class="key-limit">50 requests/day | Never Expires</div></div>
-                <div class="key-card"><div class="key-name">📞 PUBLIC_NUMBER_KEY</div><div class="key-scope">✓ number only</div><div class="key-limit">50 requests/day</div><div class="key-expiry">⚠️ Expires: 25 April 2026</div></div>
-                <div class="key-card"><div class="key-name">✈️ PUBLIC_TG_KEY</div><div class="key-scope">✓ tg only</div><div class="key-limit">50 requests/day</div><div class="key-expiry">⚠️ Expires: 20 April 2026</div></div>
-                <div class="key-card"><div class="key-name">🚗 PUBLIC_VEHICLE_KEY</div><div class="key-scope">✓ vehicle, rc</div><div class="key-limit">50 requests/day</div><div class="key-expiry">⚠️ Expires: 28 April 2026</div></div>
+        <!-- Extra API Operation Panel -->
+        <div class="api-panel">
+            <h2>🧪 API TESTING PANEL</h2>
+            <div class="input-group">
+                <select id="endpointSelect">
+                    ${Object.entries(endpoints).map(([name, ep]) => `<option value="${name}">${name.toUpperCase()} - ${ep.desc}</option>`).join('')}
+                </select>
+                <input type="text" id="apiKeyInput" placeholder="Enter API Key" value="BRONX_ULTRA_MASTER_2026">
+                <input type="text" id="paramInput" placeholder="Parameter Value">
+                <button onclick="testAPI()">🚀 TEST API</button>
             </div>
-            <p style="margin-top: 15px; font-size: 11px; color: #666;">💡 Contact <strong style="color: #00ff41;">@BRONX_ULTRA</strong> on Telegram to get keys</p>
+            <div id="apiResult" class="api-result" style="display:none;"></div>
         </div>
         
-        ${endpointsHTML}
+        ${Object.entries({
+            '📱 Phone Intelligence': '📱 Phone Intelligence',
+            '💰 Financial': '💰 Financial',
+            '📍 Location': '📍 Location',
+            '🚗 Vehicle': '🚗 Vehicle',
+            '🎮 Gaming': '🎮 Gaming',
+            '🌐 Social': '🌐 Social',
+            '🇵🇰 Pakistan': '🇵🇰 Pakistan'
+        }).filter(([_, cat]) => Object.values(endpoints).some(e => e.category === cat)).map(([display, cat]) => `
+            <div class="category">${display}</div>
+            <div class="endpoint-grid">
+                ${Object.entries(endpoints).filter(([_, e]) => e.category === cat).map(([name, ep]) => `
+                    <div class="endpoint" data-category="${cat}" onclick="copyUrl('${name}', '${ep.param}', '${ep.example}')">
+                        <span class="method get">GET</span>
+                        <div class="endpoint-name">/${name}</div>
+                        <div class="endpoint-url">/api/key-bronx/${name}</div>
+                        <div class="param">📝 ${ep.desc}</div>
+                        <div class="param">🔑 ${ep.param}=${ep.example}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `).join('')}
+        
+        <div class="key-info-section">
+            <div class="key-info-title">🔑 PREMIUM KEYS LIST (49 Keys)</div>
+            <div class="key-table-container">
+                <table class="key-table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Owner</th>
+                            <th>Scopes</th>
+                            <th>Limit</th>
+                            <th>Used</th>
+                            <th>Expiry</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keyTableBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
         
         <div class="footer">
-            <p>✨ BRONX OSINT API | Powered by <strong style="color: #00ff41;">@BRONX_ULTRA</strong></p>
-            <p style="margin-top: 8px;">⚡ Response se 'by', 'channel', 'developer' auto-hide | '@BRONX_ULTRA' added</p>
-            <p>🔄 Daily limit: 1000 requests/key | Resets at 2:00 AM IST only</p>
-            <p style="margin-top: 8px;"><a href="/test">📡 Test API</a> | <a href="/quota?key=BRONX_KEY_2026">📊 Check Quota</a> | <a href="/keys">🔑 View Keys</a></p>
+            <p class="glow-text">✨ BRONX OSINT API - NEON EDITION ✨</p>
+            <p style="color: #ff00ff;">Powered by @BRONX_ULTRA</p>
+            <p style="color: #00ff41;">🇮🇳 India Time Zone | 50+ Premium Keys | Unlimited Owner Access</p>
+            <p style="color: #ffff00; margin-top: 15px;">⚠️ Keys are lifetime limited - No reset! Contact @BRONX_ULTRA for new keys.</p>
         </div>
     </div>
+    
     <script>
+        const endpoints = ${JSON.stringify(endpoints)};
+        const keyStorage = ${JSON.stringify(keyStorage)};
+        
         function copyUrl(endpoint, param, example) {
-            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
+            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=BRONX_ULTRA_MASTER_2026&' + param + '=' + example;
             navigator.clipboard.writeText(url);
+            showToast('✅ URL Copied! ' + endpoint.toUpperCase());
+        }
+        
+        function showToast(message) {
             const toast = document.createElement('div');
             toast.className = 'toast';
-            toast.innerHTML = '✅ URL Copied! Use YOUR_KEY from @BRONX_ULTRA';
+            toast.innerHTML = message;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+            setTimeout(() => toast.remove(), 2500);
         }
+        
+        async function testAPI() {
+            const endpoint = document.getElementById('endpointSelect').value;
+            const apiKey = document.getElementById('apiKeyInput').value;
+            const paramValue = document.getElementById('paramInput').value;
+            const resultDiv = document.getElementById('apiResult');
+            
+            if (!paramValue) {
+                showToast('❌ Please enter parameter value');
+                return;
+            }
+            
+            const ep = endpoints[endpoint];
+            const url = '/api/key-bronx/' + endpoint + '?key=' + apiKey + '&' + ep.param + '=' + paramValue;
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Loading...';
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                resultDiv.innerHTML = '<pre style="color: #00ff41;">' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                resultDiv.innerHTML = '<pre style="color: #ff0000;">Error: ' + error.message + '</pre>';
+            }
+        }
+        
+        function populateKeyTable() {
+            const tbody = document.getElementById('keyTableBody');
+            const keys = Object.entries(keyStorage).filter(([k, d]) => d.type !== 'owner');
+            
+            tbody.innerHTML = keys.map(([key, data]) => {
+                const now = new Date();
+                const expiry = data.expiry ? new Date(data.expiry) : null;
+                const isExpired = expiry && now > expiry;
+                const isExhausted = !data.unlimited && data.used >= data.limit;
+                let status = '✅ Active';
+                let statusClass = 'status-active';
+                
+                if (isExpired) {
+                    status = '⏰ Expired';
+                    statusClass = 'status-expired';
+                } else if (isExhausted) {
+                    status = '🛑 Exhausted';
+                    statusClass = 'status-exhausted';
+                }
+                
+                const limitDisplay = data.unlimited ? '∞' : data.limit;
+                
+                return '<tr>' +
+                    '<td><code style="color: #ff00ff;">' + key.substring(0, 15) + '...</code></td>' +
+                    '<td>' + (data.name || 'User') + '</td>' +
+                    '<td style="font-size: 11px;">' + (data.scopes.includes('*') ? 'ALL' : data.scopes.slice(0, 3).join(', ') + (data.scopes.length > 3 ? '...' : '')) + '</td>' +
+                    '<td>' + limitDisplay + '</td>' +
+                    '<td>' + data.used + '</td>' +
+                    '<td>' + (data.expiryStr || 'Never') + '</td>' +
+                    '<td class="' + statusClass + '">' + status + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+        
+        populateKeyTable();
+        
+        // Update endpoint select with param placeholder
+        document.getElementById('endpointSelect').addEventListener('change', function() {
+            const endpoint = this.value;
+            const ep = endpoints[endpoint];
+            document.getElementById('paramInput').placeholder = ep.param + ' (e.g., ' + ep.example + ')';
+        });
+        document.getElementById('endpointSelect').dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>`;
-    
-    function escapeHtml(str) {
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
     res.send(html);
-});
+}
 
-// ========== API INFO ==========
-app.get('/api/info', (req, res) => {
-    const endpointUrls = {};
-    endpoints.forEach(ep => {
-        endpointUrls[ep.path.replace('/', '')] = {
-            description: ep.desc,
-            example: `/api/key-bronx${ep.path}?key=YOUR_KEY&${ep.param}=${ep.example}`,
-            category: ep.category
-        };
-    });
-    res.json({
-        success: true,
-        credit: "@BRONX_ULTRA",
-        total_endpoints: endpoints.length,
-        endpoints: endpointUrls,
-        rate_limit: "1000 requests/day, resets at 2:00 AM IST only"
-    });
-});
+// ========== EXPRESS ROUTES ==========
+app.use(express.json());
+
+app.get('/', (req, res) => serveHTML(res));
 
 app.get('/test', (req, res) => {
-    res.json({ status: '✅ BRONX OSINT API Running', credit: '@BRONX_ULTRA', time: new Date().toISOString() });
-});
-
-app.get('/quota', (req, res) => {
-    const key = req.query.key;
-    if (!key) return res.status(400).json({ error: "Missing key parameter" });
-    if (!VALID_KEYS[key]) return res.status(403).json({ error: "Invalid API Key" });
-    
-    const remaining = getRemainingQuota(key);
-    const limit = VALID_KEYS[key].dailyLimit;
-    const isExpired = isKeyExpired(VALID_KEYS[key]);
-    
-    res.json({
-        success: true,
-        key: key.substring(0, 8) + '...',
-        limit: limit,
-        used: limit - remaining,
-        remaining: remaining,
-        reset: "2:00 AM IST",
-        isExpired: isExpired,
-        expiresAt: VALID_KEYS[key].expiresAt ? new Date(VALID_KEYS[key].expiresAt).toLocaleDateString() : 'Never'
+    res.json({ 
+        status: '✅ BRONX OSINT API Running', 
+        credit: '@BRONX_ULTRA', 
+        time: getIndiaDateTime(),
+        timezone: 'Asia/Kolkata (IST)',
+        total_keys: Object.keys(keyStorage).length,
+        premium_keys: Object.values(keyStorage).filter(k => k.type === 'premium').length
     });
 });
 
 app.get('/keys', (req, res) => {
-    const publicKeys = {};
-    for (const [key, data] of Object.entries(VALID_KEYS)) {
-        publicKeys[key] = {
-            name: data.name,
-            scopes: data.scopes,
-            dailyLimit: data.dailyLimit,
-            expiresAt: data.expiresAt ? new Date(data.expiresAt).toLocaleDateString() : 'Never',
-            type: data.type
+    const keyList = {};
+    for (const [key, data] of Object.entries(keyStorage)) {
+        keyList[key] = { 
+            owner: data.name, 
+            scopes: data.scopes, 
+            type: data.type,
+            limit: data.unlimited ? 'Unlimited' : data.limit,
+            used: data.used,
+            remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
+            expiry: data.expiryStr || 'Never',
+            created: data.created
         };
     }
-    res.json({ success: true, keys: publicKeys, contact: "@BRONX_ULTRA" });
+    res.json({ success: true, total_keys: Object.keys(keyList).length, keys: keyList });
+});
+
+app.get('/key-info', (req, res) => {
+    const apiKey = req.query.key;
+    if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
+    
+    const keyData = keyStorage[apiKey];
+    if (!keyData) {
+        return res.status(404).json({ success: false, error: "Key not found" });
+    }
+    
+    const now = getIndiaTime();
+    const isExpired = keyData.expiry && now > keyData.expiry;
+    const isExhausted = !keyData.unlimited && keyData.used >= keyData.limit;
+    
+    res.json({
+        success: true,
+        key: apiKey,
+        owner: keyData.name,
+        type: keyData.type,
+        scopes: keyData.scopes,
+        limit: keyData.unlimited ? 'Unlimited' : keyData.limit,
+        used: keyData.used,
+        remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used),
+        expiry: keyData.expiryStr || 'Never',
+        expired: isExpired,
+        exhausted: isExhausted,
+        status: isExpired ? 'expired' : (isExhausted ? 'exhausted' : 'active'),
+        created: keyData.created,
+        timezone: 'Asia/Kolkata',
+        current_time: getIndiaDateTime()
+    });
+});
+
+app.get('/quota', (req, res) => {
+    const apiKey = req.query.key;
+    if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
+    
+    const keyData = keyStorage[apiKey];
+    if (!keyData) {
+        return res.status(404).json({ success: false, error: "Key not found" });
+    }
+    
+    const remaining = keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used);
+    
+    res.json({ 
+        success: true,
+        key: apiKey,
+        owner: keyData.name,
+        limit: keyData.unlimited ? 'Unlimited' : keyData.limit, 
+        used: keyData.used, 
+        remaining: remaining,
+        expiry: keyData.expiryStr || 'Never',
+        resetType: 'never',
+        timezone: 'Asia/Kolkata'
+    });
+});
+
+app.get('/api/key-bronx/:endpoint', async (req, res) => {
+    const { endpoint } = req.params;
+    const query = req.query;
+    const apiKey = query.key || req.headers['x-api-key'];
+    
+    if (!endpoints[endpoint]) {
+        return res.status(404).json({ success: false, error: `Endpoint not found: ${endpoint}`, available_endpoints: Object.keys(endpoints) });
+    }
+    
+    if (!apiKey) {
+        return res.status(401).json({ success: false, error: "❌ API Key Required. Use ?key=YOUR_KEY" });
+    }
+    
+    // Check key validity
+    const keyCheck = checkKeyValid(apiKey);
+    if (!keyCheck.valid) {
+        return res.status(403).json({ 
+            success: false, 
+            error: keyCheck.error,
+            ...(keyCheck.expired && { expired: true, expiry_date: keyCheck.expiredDate }),
+            ...(keyCheck.limitExhausted && { limit_exhausted: true })
+        });
+    }
+    
+    const keyData = keyCheck.keyData;
+    
+    // Check scope
+    const scopeCheck = checkKeyScope(keyData, endpoint);
+    if (!scopeCheck.valid) {
+        return res.status(403).json({ success: false, error: scopeCheck.error });
+    }
+    
+    const ep = endpoints[endpoint];
+    const paramValue = query[ep.param];
+    
+    if (!paramValue) {
+        return res.status(400).json({ 
+            success: false, 
+            error: `Missing parameter: ${ep.param}`, 
+            example: `?key=YOUR_KEY&${ep.param}=${ep.example}` 
+        });
+    }
+    
+    try {
+        const realUrl = `${REAL_API_BASE}/${endpoint}?key=${REAL_API_KEY}&${ep.param}=${encodeURIComponent(paramValue)}`;
+        console.log(`📡 [${getIndiaDateTime()}] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
+        
+        const response = await axios.get(realUrl, { timeout: 30000 });
+        
+        // Increment usage
+        const updatedKey = incrementKeyUsage(apiKey);
+        
+        const cleanedData = cleanResponse(response.data);
+        cleanedData.api_info = {
+            powered_by: "@BRONX_ULTRA",
+            endpoint: endpoint,
+            key_owner: keyData.name,
+            key_type: keyData.type,
+            limit: keyData.unlimited ? 'Unlimited' : keyData.limit,
+            used: updatedKey.used,
+            remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - updatedKey.used),
+            expiry: keyData.expiryStr || 'Never',
+            timezone: 'Asia/Kolkata',
+            timestamp: getIndiaDateTime()
+        };
+        
+        res.json(cleanedData);
+    } catch (error) {
+        console.error(`❌ Error [${endpoint}]:`, error.message);
+        if (error.response) {
+            return res.status(error.response.status).json(cleanResponse(error.response.data));
+        }
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ 
+        success: false, 
+        error: "Endpoint not found",
+        available_endpoints: ["/", "/test", "/keys", "/key-info", "/quota", "/api/key-bronx/:endpoint"],
+        contact: "@BRONX_ULTRA"
+    });
 });
 
 module.exports = app;
