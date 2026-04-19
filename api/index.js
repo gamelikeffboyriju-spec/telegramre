@@ -1,92 +1,5 @@
-const axios = require('axios');
-
-// ========== CONFIG ==========
-const REAL_API_BASE = 'https://ft-osint.onrender.com/api';
-const REAL_API_KEY = 'nobita';
-
-// ========== API KEYS ==========
-const VALID_KEYS = ['BRONX_MASTER_KEY', 'BRONX_KEY_2026', 'DEMO_KEY', 'test123'];
-
-// ========== REQUEST COUNTS ==========
-let requestCounts = {};
-
-function getIndiaDate() {
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(now.getTime() + istOffset);
-    return istDate.toISOString().split('T')[0];
-}
-
-function checkAndResetLimit(apiKey) {
-    const today = getIndiaDate();
-    if (!requestCounts[apiKey]) {
-        requestCounts[apiKey] = { count: 0, date: today };
-        return true;
-    }
-    if (requestCounts[apiKey].date !== today) {
-        requestCounts[apiKey] = { count: 0, date: today };
-        return true;
-    }
-    return requestCounts[apiKey].count < 1000;
-}
-
-function incrementRequestCount(apiKey) {
-    const today = getIndiaDate();
-    if (!requestCounts[apiKey] || requestCounts[apiKey].date !== today) {
-        requestCounts[apiKey] = { count: 1, date: today };
-    } else {
-        requestCounts[apiKey].count++;
-    }
-    return requestCounts[apiKey].count;
-}
-
-function cleanResponse(data) {
-    if (!data) return data;
-    let cleaned = JSON.parse(JSON.stringify(data));
-    function removeFields(obj) {
-        if (!obj || typeof obj !== 'object') return;
-        if (Array.isArray(obj)) {
-            obj.forEach(item => removeFields(item));
-            return;
-        }
-        delete obj.by;
-        delete obj.channel;
-        delete obj.BY;
-        delete obj.CHANNEL;
-        delete obj.developer;
-        Object.keys(obj).forEach(key => {
-            if (obj[key] && typeof obj[key] === 'object') removeFields(obj[key]);
-        });
-    }
-    removeFields(cleaned);
-    cleaned.by = "@BRONX_ULTRA";
-    return cleaned;
-}
-
-const endpoints = [
-    { path: '/number', param: 'num', example: '9876543210', desc: 'Indian Mobile Number Lookup' },
-    { path: '/aadhar', param: 'num', example: '393933081942', desc: 'Aadhaar Number Lookup' },
-    { path: '/name', param: 'name', example: 'abhiraaj', desc: 'Search by Name' },
-    { path: '/numv2', param: 'num', example: '6205949840', desc: 'Number Info v2' },
-    { path: '/adv', param: 'num', example: '9876543210', desc: 'Advanced Phone Lookup' },
-    { path: '/upi', param: 'upi', example: 'example@ybl', desc: 'UPI ID Verification' },
-    { path: '/ifsc', param: 'ifsc', example: 'SBIN0001234', desc: 'IFSC Code Details' },
-    { path: '/pan', param: 'pan', example: 'AXDPR2606K', desc: 'PAN to GST Search' },
-    { path: '/pincode', param: 'pin', example: '110001', desc: 'Pincode Details' },
-    { path: '/ip', param: 'ip', example: '8.8.8.8', desc: 'IP Address Lookup' },
-    { path: '/vehicle', param: 'vehicle', example: 'MH02FZ0555', desc: 'Vehicle Registration Info' },
-    { path: '/rc', param: 'owner', example: 'UP92P2111', desc: 'RC Owner Details' },
-    { path: '/ff', param: 'uid', example: '123456789', desc: 'Free Fire Player Info' },
-    { path: '/bgmi', param: 'uid', example: '5121439477', desc: 'BGMI Player Info' },
-    { path: '/insta', param: 'username', example: 'cristiano', desc: 'Instagram Profile Data' },
-    { path: '/git', param: 'username', example: 'ftgamer2', desc: 'GitHub Profile' },
-    { path: '/tg', param: 'info', example: 'JAUUOWNER', desc: 'Telegram User Lookup' },
-    { path: '/pk', param: 'num', example: '03331234567', desc: 'Pakistan Number v1' },
-    { path: '/pkv2', param: 'num', example: '3359736848', desc: 'Pakistan Number v2' }
-];
-
-module.exports = async (req, res) => {
-    // CORS
+export default async function handler(req, res) {
+    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
@@ -98,8 +11,93 @@ module.exports = async (req, res) => {
     const url = req.url;
     const query = req.query || {};
     
-    // ROOT ROUTE - HTML UI
-    if (url === '/' || url === '' || url === '/docs') {
+    // ========== CONFIG ==========
+    const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
+    const REAL_API_KEY = 'nobita';
+    const VALID_KEYS = ['BRONX_KEY_2026', 'DEMO_KEY', 'test123', 'BRONX_MASTER_KEY'];
+    
+    // ========== REQUEST COUNTS ==========
+    if (!global.requestCounts) global.requestCounts = {};
+    
+    function getIndiaDate() {
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istDate = new Date(now.getTime() + istOffset);
+        return istDate.toISOString().split('T')[0];
+    }
+    
+    function checkAndResetLimit(apiKey) {
+        const today = getIndiaDate();
+        if (!global.requestCounts[apiKey]) {
+            global.requestCounts[apiKey] = { count: 0, date: today };
+            return true;
+        }
+        if (global.requestCounts[apiKey].date !== today) {
+            global.requestCounts[apiKey] = { count: 0, date: today };
+            return true;
+        }
+        return global.requestCounts[apiKey].count < 1000;
+    }
+    
+    function incrementRequestCount(apiKey) {
+        const today = getIndiaDate();
+        if (!global.requestCounts[apiKey] || global.requestCounts[apiKey].date !== today) {
+            global.requestCounts[apiKey] = { count: 1, date: today };
+        } else {
+            global.requestCounts[apiKey].count++;
+        }
+        return global.requestCounts[apiKey].count;
+    }
+    
+    function cleanResponse(data) {
+        if (!data) return data;
+        let cleaned = JSON.parse(JSON.stringify(data));
+        function removeFields(obj) {
+            if (!obj || typeof obj !== 'object') return;
+            if (Array.isArray(obj)) {
+                obj.forEach(item => removeFields(item));
+                return;
+            }
+            delete obj.by;
+            delete obj.channel;
+            delete obj.BY;
+            delete obj.CHANNEL;
+            delete obj.developer;
+            Object.keys(obj).forEach(key => {
+                if (obj[key] && typeof obj[key] === 'object') removeFields(obj[key]);
+            });
+        }
+        removeFields(cleaned);
+        cleaned.by = "@BRONX_ULTRA";
+        return cleaned;
+    }
+    
+    const axios = require('axios');
+    
+    const endpoints = [
+        { path: '/number', param: 'num', example: '9876543210', desc: 'Indian Mobile Number Lookup' },
+        { path: '/aadhar', param: 'num', example: '393933081942', desc: 'Aadhaar Number Lookup' },
+        { path: '/name', param: 'name', example: 'abhiraaj', desc: 'Search by Name' },
+        { path: '/numv2', param: 'num', example: '6205949840', desc: 'Number Info v2' },
+        { path: '/adv', param: 'num', example: '9876543210', desc: 'Advanced Phone Lookup' },
+        { path: '/upi', param: 'upi', example: 'example@ybl', desc: 'UPI ID Verification' },
+        { path: '/ifsc', param: 'ifsc', example: 'SBIN0001234', desc: 'IFSC Code Details' },
+        { path: '/pan', param: 'pan', example: 'AXDPR2606K', desc: 'PAN to GST Search' },
+        { path: '/pincode', param: 'pin', example: '110001', desc: 'Pincode Details' },
+        { path: '/ip', param: 'ip', example: '8.8.8.8', desc: 'IP Address Lookup' },
+        { path: '/vehicle', param: 'vehicle', example: 'MH02FZ0555', desc: 'Vehicle Registration Info' },
+        { path: '/rc', param: 'owner', example: 'UP92P2111', desc: 'RC Owner Details' },
+        { path: '/ff', param: 'uid', example: '123456789', desc: 'Free Fire Player Info' },
+        { path: '/bgmi', param: 'uid', example: '5121439477', desc: 'BGMI Player Info' },
+        { path: '/insta', param: 'username', example: 'cristiano', desc: 'Instagram Profile Data' },
+        { path: '/git', param: 'username', example: 'ftgamer2', desc: 'GitHub Profile' },
+        { path: '/tg', param: 'info', example: 'JAUUOWNER', desc: 'Telegram User Lookup' },
+        { path: '/pk', param: 'num', example: '03331234567', desc: 'Pakistan Number v1' },
+        { path: '/pkv2', param: 'num', example: '3359736848', desc: 'Pakistan Number v2' }
+    ];
+    
+    // ========== ROOT ROUTE - HTML UI ==========
+    if (url === '/' || url === '') {
         const categories = {
             '📱 Phone Intelligence': ['number', 'aadhar', 'name', 'numv2', 'adv'],
             '💰 Financial': ['upi', 'ifsc', 'pan'],
@@ -161,7 +159,7 @@ module.exports = async (req, res) => {
         .param { font-size: 11px; color: #00ff4190; margin-top: 8px; }
         .copy-btn { margin-top: 12px; color: #00ff41; font-size: 10px; text-align: center; padding: 5px; border: 1px solid #00ff41; border-radius: 6px; }
         .footer { text-align: center; padding: 30px; margin-top: 40px; border-top: 1px solid #00ff4133; font-size: 11px; }
-        .toast { position: fixed; bottom: 20px; right: 20px; background: #00ff41; color: #0a0a0a; padding: 10px 20px; border-radius: 8px; animation: slideIn 0.3s; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #00ff41; color: #0a0a0a; padding: 10px 20px; border-radius: 8px; animation: slideIn 0.3s; z-index: 1000; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @media (max-width: 768px) { .header h1 { font-size: 28px; } .stat-num { font-size: 24px; } }
         a { color: #00ff41; }
@@ -211,31 +209,30 @@ module.exports = async (req, res) => {
     </script>
 </body>
 </html>`;
-        res.setHeader('Content-Type', 'text/html');
         return res.status(200).send(html);
     }
     
-    // TEST ROUTE
+    // ========== TEST ROUTE ==========
     if (url === '/test') {
         return res.status(200).json({ status: '✅ BRONX OSINT API Running', credit: '@BRONX_ULTRA', time: new Date().toISOString() });
     }
     
-    // QUOTA ROUTE
+    // ========== QUOTA ROUTE ==========
     if (url === '/quota') {
         const key = query.key;
         if (!key) return res.status(400).json({ error: "Missing key" });
         if (!VALID_KEYS.includes(key)) return res.status(403).json({ error: "Invalid key" });
         const today = getIndiaDate();
-        const used = requestCounts[key] && requestCounts[key].date === today ? requestCounts[key].count : 0;
+        const used = global.requestCounts[key] && global.requestCounts[key].date === today ? global.requestCounts[key].count : 0;
         return res.status(200).json({ success: true, key: key.substring(0,8)+'...', limit: 1000, used, remaining: 1000-used, reset: "2:00 AM IST" });
     }
     
-    // KEYS ROUTE
+    // ========== KEYS ROUTE ==========
     if (url === '/keys') {
         return res.status(200).json({ success: true, keys: VALID_KEYS, contact: "@BRONX_ULTRA" });
     }
     
-    // API PROXY
+    // ========== API PROXY ==========
     if (url.startsWith('/api/key-bronx/')) {
         const endpointName = url.replace('/api/key-bronx/', '').split('?')[0];
         const ep = endpoints.find(e => e.path.replace('/', '') === endpointName);
@@ -262,6 +259,6 @@ module.exports = async (req, res) => {
         }
     }
     
-    // 404
-    return res.status(404).json({ success: false, error: "Route not found. Use /docs for documentation" });
-};
+    // ========== 404 ==========
+    return res.status(404).json({ success: false, error: "Route not found. Visit / for documentation" });
+}
