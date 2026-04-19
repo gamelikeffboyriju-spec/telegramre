@@ -793,7 +793,7 @@ function serveHTML(res) {
         <div class="owner-section">
             <div class="owner-title">👑 BRONX ULTRA OWNER KEY 👑</div>
             <div>
-                <span class="owner-key">BRONX_ULTRA_MASTER_2026</span>
+                <span class="owner-key">YOUR-KEY</span>
                 <span class="unlimited-badge">∞ UNLIMITED ∞</span>
             </div>
             <div style="margin-top: 15px; color: #ffd700; font-size: 14px;">
@@ -826,7 +826,7 @@ function serveHTML(res) {
                 <select id="endpointSelect">
                     ${Object.entries(endpoints).map(([name, ep]) => `<option value="${name}">${name.toUpperCase()} - ${ep.desc}</option>`).join('')}
                 </select>
-                <input type="text" id="apiKeyInput" placeholder="Enter API Key" value="BRONX_ULTRA_MASTER_2026">
+                <input type="text" id="apiKeyInput" placeholder="Enter API Key" value="YOUR-KEY">
                 <input type="text" id="paramInput" placeholder="Parameter Value">
                 <button onclick="testAPI()">🚀 TEST API</button>
             </div>
@@ -891,7 +891,7 @@ function serveHTML(res) {
         const keyStorage = ${JSON.stringify(keyStorage)};
         
         function copyUrl(endpoint, param, example) {
-            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=BRONX_ULTRA_MASTER_2026&' + param + '=' + example;
+            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=YOUR-KEY&' + param + '=' + example;
             navigator.clipboard.writeText(url);
             showToast('✅ URL Copied! ' + endpoint.toUpperCase());
         }
