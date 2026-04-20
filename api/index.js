@@ -1050,7 +1050,7 @@ function serveHTML(res) {
             </h1>
             <div class="badge-container">
                 <span class="badge badge-1">🔐 NEON INTELLIGENCE</span>
-                <span class="badge badge-2">🌐 ${totalKeys}+ PREMIUM KEYS</span>
+                <span class="badge badge-2">🌐 ${totalapi}+ PREMIUM KEYS</span>
                 <span class="badge badge-3">🔧 CUSTOM APIs</span>
                 <span class="badge badge-4">⚡ REAL-TIME DATA</span>
             </div>
