@@ -1204,7 +1204,7 @@ function serveHTML(res) {
         ` : ''}
         
         <div class="key-info-section">
-            <div class="key-info-title">🔑 PREMIUM KEYS LIST</div>
+            <div class="info-title">🔑 PREMIUM KEYS LIST</div>
             <div class="key-table-container">
                 <table class="key-table">
                     <thead>
