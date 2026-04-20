@@ -1050,7 +1050,7 @@ function serveHTML(res) {
             </h1>
             <div class="badge-container">
                 <span class="badge badge-1">🔐 NEON INTELLIGENCE</span>
-                <span class="badge badge-2">🌐 ${totalapi}+ PREMIUM KEYS</span>
+                <span class="badge badge-2">🌐 ${totalKeys}+ PREMIUM KEYS</span>
                 <span class="badge badge-3">🔧 CUSTOM APIs</span>
                 <span class="badge badge-4">⚡ REAL-TIME DATA</span>
             </div>
@@ -1203,25 +1203,7 @@ function serveHTML(res) {
             </div>
         ` : ''}
         
-        <div class="key-info-section">
-            <div class="info-title">🔑 PREMIUM KEYS LIST</div>
-            <div class="key-table-container">
-                <table class="key-table">
-                    <thead>
-                        <tr>
-                            <th>Hide</th>
-                            <th>Owner</th>
-                            <th>Scopes</th>
-                            <th>Limit</th>
-                            <th>Used</th>
-                            <th>Expiry</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keyTableBody"></tbody>
-                </table>
-            </div>
-        </div>
+
         
         <div class="footer">
             <p class="glow-text">✨ BRONX OSINT API - NEON EDITION ✨</p>
