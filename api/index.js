@@ -1100,6 +1100,25 @@ function serveHTML(res) {
         </div>
         
 
+        <div class="key-info-section" style=display: none;">
+            <div class="key-info-title">🔑 PREMIUM KEYS LIST</div>
+            <div class="key-table-container">
+                <table class="key-table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Owner</th>
+                            <th>Scopes</th>
+                            <th>Limit</th>
+                            <th>Used</th>
+                            <th>Expiry</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
 
         
         <!-- API Testing Panel -->
