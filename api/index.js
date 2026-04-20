@@ -1099,50 +1099,225 @@ function serveHTML(res) {
             </div>
         </div>
         
-        <!-- Custom API Admin Panel -->
-        <div class="admin-panel">
-            <h2>
-                🔧 CUSTOM API MANAGER 
-                <small>(10 Slots - Toggle Visibility)</small>
-            </h2>
-            <div class="custom-api-form">
-                <select id="apiSlotSelect">
-                    <option value="0">Select Slot (1-10)</option>
-                    ${customAPIs.map((api, i) => `<option value="${i}">Slot ${api.id} - ${api.name}</option>`).join('')}
-                </select>
-                <input type="text" id="apiNameInput" placeholder="API Display Name">
-                <input type="text" id="apiEndpointInput" placeholder="Endpoint (e.g., myapi)">
-                <input type="text" id="apiParamInput" placeholder="Parameter (e.g., query)">
-                <input type="text" id="apiExampleInput" placeholder="Example Value">
-                <input type="text" id="apiDescInput" placeholder="Description">
-                <input type="text" id="apiRealUrlInput" placeholder="Real API URL (use {param})">
-            </div>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
-                <button onclick="saveCustomAPI()">💾 Save API</button>
-                <button onclick="loadAPIToSlot()">📂 Load to Form</button>
-                <div class="toggle-visibility">
-                    <input type="checkbox" id="apiVisibleCheck"> 
-                    <label for="apiVisibleCheck">👁️ Visible to Public</label>
-                </div>
-                <button onclick="toggleAPIVisibility()">🔄 Toggle Visibility</button>
-            </div>
-            <div class="custom-apis-list" id="customApisList">
-                ${customAPIs.map((api, i) => `
-                    <div class="custom-api-item">
-                        <div class="api-info">
-                            <strong style="color: #ff00ff;">Slot ${api.id}</strong>
-                            <span style="color: var(--text-primary);">${api.name || '(Empty)'}</span>
-                            <code style="color: #00ff41;">/${api.endpoint || 'not-set'}</code>
-                            <span class="status ${api.visible ? 'visible' : 'hidden'}">${api.visible ? '👁️ Visible' : '🔒 Hidden'}</span>
-                        </div>
-                        <div>
-                            <button onclick="editAPI(${i})">✏️ Edit</button>
-                            <button onclick="deleteAPI(${i})">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
+ // Custom API Management Functions
+let currentSlotIndex = -1;
+let currentLockStatus = false;
+
+function saveCustomAPI() {
+    const slot = document.getElementById('apiSlotSelect').value;
+    if (slot === '') {
+        showToast('❌ Please select a slot');
+        return;
+    }
+    
+    const slotIndex = parseInt(slot);
+    
+    // Check if slot is locked
+    if (customAPIs[slotIndex].locked) {
+        showToast('🔒 This slot is LOCKED! Cannot save changes.', true);
+        return;
+    }
+    
+    const apiName = document.getElementById('apiNameInput').value;
+    const apiEndpoint = document.getElementById('apiEndpointInput').value;
+    
+    if (!apiName || !apiEndpoint) {
+        showToast('❌ API Name and Endpoint are required!', true);
+        return;
+    }
+    
+    customAPIs[slotIndex] = {
+        ...customAPIs[slotIndex],
+        name: apiName,
+        endpoint: apiEndpoint,
+        param: document.getElementById('apiParamInput').value || customAPIs[slotIndex].param,
+        example: document.getElementById('apiExampleInput').value || customAPIs[slotIndex].example,
+        desc: document.getElementById('apiDescInput').value || customAPIs[slotIndex].desc,
+        realAPI: document.getElementById('apiRealUrlInput').value || customAPIs[slotIndex].realAPI,
+        visible: document.getElementById('apiVisibleCheck').checked
+    };
+    
+    // Save to server
+    fetch('/admin/custom-api', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken 
+        },
+        body: JSON.stringify({ slot: slotIndex, api: customAPIs[slotIndex] })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            showToast('✅ API Saved successfully!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('❌ ' + data.error, true);
+        }
+    }).catch(err => {
+        showToast('❌ Connection error', true);
+    });
+}
+
+function loadAPIToSlot() {
+    const slot = document.getElementById('apiSlotSelect').value;
+    if (slot === '') {
+        showToast('❌ Please select a slot');
+        return;
+    }
+    
+    const slotIndex = parseInt(slot);
+    const api = customAPIs[slotIndex];
+    currentSlotIndex = slotIndex;
+    currentLockStatus = api.locked;
+    
+    document.getElementById('apiNameInput').value = api.name || '';
+    document.getElementById('apiEndpointInput').value = api.endpoint || '';
+    document.getElementById('apiParamInput').value = api.param || '';
+    document.getElementById('apiExampleInput').value = api.example || '';
+    document.getElementById('apiDescInput').value = api.desc || '';
+    document.getElementById('apiRealUrlInput').value = api.realAPI || '';
+    document.getElementById('apiVisibleCheck').checked = api.visible || false;
+    
+    // Update button states based on lock status
+    updateFormLockState(api.locked);
+    
+    // Update toggle lock button text
+    const lockBtn = document.getElementById('toggleLockBtn');
+    lockBtn.innerHTML = api.locked ? '🔓 Unlock Slot' : '🔒 Lock Slot';
+    
+    if (api.locked) {
+        showToast('⚠️ This slot is LOCKED. Unlock it first to edit.', false);
+    }
+}
+
+function updateFormLockState(isLocked) {
+    const inputs = ['apiNameInput', 'apiEndpointInput', 'apiParamInput', 'apiExampleInput', 'apiDescInput', 'apiRealUrlInput'];
+    const saveBtn = document.getElementById('saveApiBtn');
+    const visibleCheck = document.getElementById('apiVisibleCheck');
+    
+    inputs.forEach(id => {
+        document.getElementById(id).disabled = isLocked;
+        document.getElementById(id).style.background = isLocked ? '#333' : '#0a0a0a';
+        document.getElementById(id).style.cursor = isLocked ? 'not-allowed' : 'text';
+    });
+    
+    visibleCheck.disabled = isLocked;
+    saveBtn.disabled = isLocked;
+    saveBtn.style.opacity = isLocked ? '0.5' : '1';
+    saveBtn.style.cursor = isLocked ? 'not-allowed' : 'pointer';
+    
+    if (isLocked) {
+        saveBtn.title = 'Unlock this slot first to save changes';
+    } else {
+        saveBtn.title = '';
+    }
+}
+
+function toggleLockStatus() {
+    if (currentSlotIndex === -1) {
+        showToast('❌ Please select and load a slot first', true);
+        return;
+    }
+    
+    const slotIndex = currentSlotIndex;
+    const newLockStatus = !customAPIs[slotIndex].locked;
+    
+    fetch('/admin/custom-api/toggle-lock', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken 
+        },
+        body: JSON.stringify({ slot: slotIndex })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            customAPIs[slotIndex].locked = data.locked;
+            showToast(data.message);
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast('❌ ' + data.error, true);
+        }
+    }).catch(err => {
+        showToast('❌ Connection error', true);
+    });
+}
+
+function toggleAPIVisibility() {
+    const slot = document.getElementById('apiSlotSelect').value;
+    if (slot === '') {
+        showToast('❌ Please select a slot');
+        return;
+    }
+    
+    const slotIndex = parseInt(slot);
+    
+    if (customAPIs[slotIndex].locked) {
+        showToast('🔒 This slot is LOCKED! Cannot modify.', true);
+        return;
+    }
+    
+    customAPIs[slotIndex].visible = !customAPIs[slotIndex].visible;
+    document.getElementById('apiVisibleCheck').checked = customAPIs[slotIndex].visible;
+    
+    fetch('/admin/custom-api', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken 
+        },
+        body: JSON.stringify({ slot: slotIndex, api: customAPIs[slotIndex] })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            showToast('✅ Visibility toggled!');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast('❌ ' + data.error, true);
+        }
+    });
+}
+
+function editAPI(index) {
+    if (customAPIs[index].locked) {
+        showToast('🔒 This slot is LOCKED! Cannot edit.', true);
+        return;
+    }
+    
+    document.getElementById('apiSlotSelect').value = index;
+    loadAPIToSlot();
+    document.querySelector('.admin-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteAPI(index) {
+    if (customAPIs[index].locked) {
+        showToast('🔒 This slot is LOCKED! Cannot clear.', true);
+        return;
+    }
+    
+    if (!confirm('Clear this API slot? All data will be lost!')) return;
+    
+    fetch('/admin/custom-api/clear', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken 
+        },
+        body: JSON.stringify({ slot: index })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            customAPIs[index] = {
+                ...customAPIs[index],
+                name: 'Custom API ' + (index + 1),
+                endpoint: '',
+                param: '',
+                example: '',
+                desc: '',
+                realAPI: '',
+                visible: false,
+                locked: false
+            };
+            showToast('🗑️ API Slot Cleared!');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast('❌ ' + data
         
         <!-- API Testing Panel -->
         <div class="api-panel">
