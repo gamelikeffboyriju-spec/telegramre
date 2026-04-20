@@ -5,7 +5,7 @@ const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
-const REAL_API_KEY = 'bronx';
+const REAL_API_KEY = 'nobita-neew';
 
 // ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
 let customAPIs = [
@@ -367,9 +367,9 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== ADMIN PANEL (ADD THIS BEFORE module.exports) ==========
+// ========== ADMIN PANEL COMPLETE (FIXED + FEATURES) ==========
 
-const ADMIN_PASSWORD = 'bronx2026'; // Change this password
+const ADMIN_PASSWORD = 'bronx2026';
 
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
@@ -451,7 +451,6 @@ app.get('/admin', (req, res) => {
             if (e.key === 'Enter') login();
         });
 
-        // Check if already logged in
         if (localStorage.getItem('bronx_admin_auth') === 'true') {
             window.location.href = '/admin/dashboard';
         }
@@ -498,11 +497,12 @@ app.get('/admin/dashboard', (req, res) => {
         .btn-danger { background: #ff000033; border: 2px solid #ff0000; color: #ff6b6b; }
         .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
         .btn-success { background: #00ff4120; border: 2px solid #00ff41; color: #00ff41; }
+        .btn-warning { background: #ffff0020; border: 2px solid #ffff00; color: #ffff00; }
         .btn:hover { transform: scale(1.05); }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 20px;
             margin-bottom: 25px;
         }
@@ -514,6 +514,7 @@ app.get('/admin/dashboard', (req, res) => {
         .stat-card:nth-child(2) { border-color: #00ff41; }
         .stat-card:nth-child(3) { border-color: #ffff00; }
         .stat-card:nth-child(4) { border-color: #ff0000; }
+        .stat-card:nth-child(5) { border-color: #00ffff; }
         .stat-value {
             font-size: 42px; font-weight: bold;
             background: linear-gradient(45deg, #ff00ff, #00ff41);
@@ -611,6 +612,28 @@ app.get('/admin/dashboard', (req, res) => {
             border-radius: 20px; color: #ff00ff; cursor: pointer; font-size: 12px;
         }
         .preset-btn:hover { background: #ff00ff20; }
+
+        .request-chart {
+            background: #0a0a0a; border-radius: 10px; padding: 20px;
+            margin-top: 20px; border: 1px solid #00ff41;
+        }
+        .bar-container {
+            display: flex; align-items: center; margin: 10px 0;
+        }
+        .bar-label {
+            width: 150px; color: #00ff41; font-size: 12px;
+        }
+        .bar {
+            flex: 1; height: 20px; background: #1a0033; border-radius: 10px;
+            overflow: hidden; margin: 0 10px;
+        }
+        .bar-fill {
+            height: 100%; background: linear-gradient(90deg, #ff00ff, #00ff41);
+            border-radius: 10px; transition: width 0.3s;
+        }
+        .bar-value {
+            color: #fff; font-size: 12px; min-width: 50px;
+        }
     </style>
 </head>
 <body>
@@ -618,6 +641,7 @@ app.get('/admin/dashboard', (req, res) => {
         <div class="header">
             <h1>⚡ BRONX ADMIN PANEL</h1>
             <div style="display: flex; gap: 15px;">
+                <button class="btn btn-warning" onclick="exportKeys()">📤 EXPORT</button>
                 <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
                 <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
             </div>
@@ -635,6 +659,10 @@ app.get('/admin/dashboard', (req, res) => {
             <div class="stat-card">
                 <div class="stat-value" id="totalRequests">0</div>
                 <div class="stat-label">TOTAL REQUESTS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="todayRequests">0</div>
+                <div class="stat-label">TODAY REQUESTS</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="customApisCount">0</div>
@@ -706,6 +734,12 @@ app.get('/admin/dashboard', (req, res) => {
             <button class="btn btn-primary" style="margin-top: 20px; width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
         
+        <!-- Top Keys Usage Chart -->
+        <div class="panel">
+            <div class="panel-title">📊 TOP KEYS BY USAGE</div>
+            <div class="request-chart" id="usageChart"></div>
+        </div>
+        
         <!-- Keys Table -->
         <div class="panel">
             <div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
@@ -718,6 +752,7 @@ app.get('/admin/dashboard', (req, res) => {
                             <th>SCOPES</th>
                             <th>LIMIT</th>
                             <th>USED</th>
+                            <th>REMAINING</th>
                             <th>EXPIRY</th>
                             <th>STATUS</th>
                             <th>ACTIONS</th>
@@ -875,10 +910,10 @@ app.get('/admin/dashboard', (req, res) => {
             }
             
             try {
-                const res = await fetch('/admin/api/generate-key', {
+                const res = await fetch('/admin/generate-key', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, name, scopes, limit, expiryDate: expiry, type, unlimited, hidden })
+                    body: JSON.stringify({ key, name, scopes, limit, expiry, type, unlimited, hidden })
                 });
                 
                 const data = await res.json();
@@ -892,14 +927,14 @@ app.get('/admin/dashboard', (req, res) => {
                     showToast(data.error || 'Failed to generate', true);
                 }
             } catch (err) {
-                showToast('❌ Server error', true);
+                showToast('❌ Server error: ' + err.message, true);
             }
         }
         
         async function refreshData() {
             try {
                 // Load keys
-                const keysRes = await fetch('/admin/api/keys');
+                const keysRes = await fetch('/admin/keys');
                 const keysData = await keysRes.json();
                 
                 if (keysData.success) {
@@ -909,41 +944,69 @@ app.get('/admin/dashboard', (req, res) => {
                     document.getElementById('totalKeys').textContent = keysArray.length;
                     
                     let active = 0, totalReqs = 0;
-                    keysArray.forEach(([_, k]) => {
+                    const usageData = [];
+                    
+                    keysArray.forEach(([keyName, k]) => {
                         totalReqs += k.used || 0;
                         const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
                         const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
                         if (notExpired && hasQuota) active++;
+                        
+                        if (k.used > 0) {
+                            usageData.push({ key: keyName, name: k.owner, used: k.used, limit: k.limit });
+                        }
                     });
                     
                     document.getElementById('activeKeys').textContent = active;
                     document.getElementById('totalRequests').textContent = totalReqs;
                     
+                    // Update usage chart
+                    usageData.sort((a, b) => b.used - a.used);
+                    const topUsage = usageData.slice(0, 10);
+                    const maxUsed = topUsage[0]?.used || 1;
+                    
+                    const chartDiv = document.getElementById('usageChart');
+                    if (topUsage.length > 0) {
+                        chartDiv.innerHTML = topUsage.map(item => {
+                            const percentage = (item.used / maxUsed) * 100;
+                            const limitDisplay = item.limit === 'Unlimited' ? '∞' : item.limit;
+                            return \`<div class="bar-container">
+                                <div class="bar-label">\${item.name || item.key.substring(0, 12)}</div>
+                                <div class="bar"><div class="bar-fill" style="width: \${percentage}%;"></div></div>
+                                <div class="bar-value">\${item.used} / \${limitDisplay}</div>
+                            </div>\`;
+                        }).join('');
+                    } else {
+                        chartDiv.innerHTML = '<div style="color: #fff; text-align: center;">No usage data yet</div>';
+                    }
+                    
                     const tbody = document.getElementById('keysTableBody');
-                    tbody.innerHTML = keysArray.map(([key, k]) => {
+                    tbody.innerHTML = keysArray.map(([keyName, k]) => {
                         const isExpired = k.expiry && k.expiry !== 'Never' && new Date(k.expiry.split('-').reverse().join('-')) < new Date();
                         const isExhausted = k.limit !== 'Unlimited' && k.used >= k.limit;
                         let status = '✅ Active', statusClass = 'status-active';
                         if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
                         else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
                         
-                        const displayKey = key.length > 20 ? key.substring(0, 17) + '...' : key;
+                        const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
                         const scopesDisplay = k.scopes.includes('*') ? 'ALL' : k.scopes.slice(0, 3).join(', ') + (k.scopes.length > 3 ? '...' : '');
                         const hiddenBadge = k.hidden ? ' 🔒' : '';
+                        const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
                         
                         return \`<tr>
                             <td><code style="color: #ff00ff;">\${displayKey}</code>\${hiddenBadge}</td>
                             <td>\${k.owner || '-'}</td>
                             <td style="font-size: 11px;">\${scopesDisplay}</td>
-                            <td>\${k.limit || '-'}</td>
+                            <td>\${k.limit === 'Unlimited' ? '∞' : k.limit}</td>
                             <td>\${k.used || 0}</td>
+                            <td style="color: \${remaining === 0 ? '#ff6b6b' : '#00ff41'};">\${remaining}</td>
                             <td>\${k.expiry || 'Never'}</td>
                             <td><span class="status-badge \${statusClass}">\${status}</span></td>
                             <td>
-                                <button class="action-btn copy" onclick="copyKey('\${key}')">📋</button>
-                                <button class="action-btn edit" onclick="openEditModal('\${key}')">✏️</button>
-                                <button class="action-btn reset" onclick="resetUsage('\${key}')">🔄</button>
-                                <button class="action-btn delete" onclick="deleteKey('\${key}')">🗑️</button>
+                                <button class="action-btn copy" onclick="copyKey('\${keyName}')">📋</button>
+                                <button class="action-btn edit" onclick="openEditModal('\${keyName}')">✏️</button>
+                                <button class="action-btn reset" onclick="resetUsage('\${keyName}')">🔄</button>
+                                <button class="action-btn delete" onclick="deleteKey('\${keyName}')">🗑️</button>
                             </td>
                         </tr>\`;
                     }).join('');
@@ -984,11 +1047,26 @@ app.get('/admin/dashboard', (req, res) => {
             showToast('📋 Key copied to clipboard!');
         }
         
+        function exportKeys() {
+            fetch('/admin/keys')
+                .then(r => r.json())
+                .then(data => {
+                    const keysText = JSON.stringify(data.keys, null, 2);
+                    const blob = new Blob([keysText], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'bronx_keys_' + new Date().toISOString().split('T')[0] + '.json';
+                    a.click();
+                    showToast('📤 Keys exported!');
+                });
+        }
+        
         let currentEditKey = '';
         
         async function openEditModal(key) {
             currentEditKey = key;
-            const res = await fetch('/admin/api/keys');
+            const res = await fetch('/admin/keys');
             const data = await res.json();
             
             if (data.keys[key]) {
@@ -1016,10 +1094,10 @@ app.get('/admin/dashboard', (req, res) => {
             const hidden = document.getElementById('editHidden').value === 'true';
             
             try {
-                const res = await fetch('/admin/api/update-key', {
+                const res = await fetch('/admin/update-key', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, name, limit, expiryDate: expiry, unlimited, hidden })
+                    body: JSON.stringify({ key, name, limit, expiry, unlimited, hidden })
                 });
                 
                 const data = await res.json();
@@ -1039,7 +1117,7 @@ app.get('/admin/dashboard', (req, res) => {
             if (!confirm('Reset usage for this key?')) return;
             
             try {
-                const res = await fetch('/admin/api/reset-usage', {
+                const res = await fetch('/admin/reset-usage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key })
@@ -1059,7 +1137,7 @@ app.get('/admin/dashboard', (req, res) => {
             if (!confirm('PERMANENTLY DELETE this key?')) return;
             
             try {
-                const res = await fetch('/admin/api/delete-key', {
+                const res = await fetch('/admin/delete-key', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key })
@@ -1125,16 +1203,19 @@ app.get('/admin/dashboard', (req, res) => {
         
         // Initial load
         refreshData();
+        
+        // Auto refresh every 30 seconds
+        setInterval(refreshData, 30000);
     </script>
 </body>
 </html>`;
     res.send(html);
 });
 
-// ========== ADMIN API ENDPOINTS ==========
+// ========== ADMIN API ENDPOINTS (FIXED ROUTES) ==========
 
-// Get all keys (including hidden)
-app.get('/admin/api/keys', (req, res) => {
+// Get all keys
+app.get('/admin/keys', (req, res) => {
     const allKeys = {};
     Object.entries(keyStorage).forEach(([key, data]) => {
         allKeys[key] = {
@@ -1153,102 +1234,119 @@ app.get('/admin/api/keys', (req, res) => {
     res.json({ success: true, keys: allKeys });
 });
 
-// Generate new key
-app.post('/admin/api/generate-key', (req, res) => {
-    const { key, name, scopes, limit, expiryDate, type, unlimited, hidden } = req.body;
-    
-    if (!key) {
-        return res.status(400).json({ success: false, error: 'Key required' });
-    }
-    
-    if (keyStorage[key]) {
-        return res.status(400).json({ success: false, error: 'Key already exists' });
-    }
-    
-    let expiry = null;
-    let expiryStr = null;
-    
-    if (expiryDate && expiryDate !== 'never') {
-        const [day, month, year] = expiryDate.split('-').map(Number);
-        if (day && month && year) {
-            expiry = new Date(year, month - 1, day, 23, 59, 59);
-            expiryStr = expiryDate;
+// Generate new key (FIXED ROUTE)
+app.post('/admin/generate-key', (req, res) => {
+    try {
+        const { key, name, scopes, limit, expiry, type, unlimited, hidden } = req.body;
+        
+        if (!key) {
+            return res.status(400).json({ success: false, error: 'Key required' });
         }
+        
+        if (keyStorage[key]) {
+            return res.status(400).json({ success: false, error: 'Key already exists' });
+        }
+        
+        let expiryDate = null;
+        let expiryStr = null;
+        
+        if (expiry && expiry !== 'never') {
+            const [day, month, year] = expiry.split('-').map(Number);
+            if (day && month && year) {
+                expiryDate = new Date(year, month - 1, day, 23, 59, 59);
+                expiryStr = expiry;
+            }
+        }
+        
+        keyStorage[key] = {
+            name: name || 'User',
+            scopes: scopes || ['number'],
+            type: type || 'premium',
+            limit: unlimited ? Infinity : (parseInt(limit) || 100),
+            used: 0,
+            expiry: expiryDate,
+            expiryStr: expiryStr,
+            created: getIndiaDateTime(),
+            resetType: 'never',
+            unlimited: unlimited || false,
+            hidden: hidden || false
+        };
+        
+        res.json({ success: true, message: 'Key generated!', key });
+    } catch (error) {
+        console.error('Generate key error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-    
-    keyStorage[key] = {
-        name: name || 'User',
-        scopes: scopes || ['number'],
-        type: type || 'premium',
-        limit: unlimited ? Infinity : (parseInt(limit) || 100),
-        used: 0,
-        expiry: expiry,
-        expiryStr: expiryStr,
-        created: getIndiaDateTime(),
-        resetType: 'never',
-        unlimited: unlimited || false,
-        hidden: hidden || false
-    };
-    
-    res.json({ success: true, message: 'Key generated!', key });
 });
 
 // Update key
-app.put('/admin/api/update-key', (req, res) => {
-    const { key, name, limit, expiryDate, unlimited, hidden } = req.body;
-    
-    if (!key || !keyStorage[key]) {
-        return res.status(404).json({ success: false, error: 'Key not found' });
-    }
-    
-    const keyData = keyStorage[key];
-    
-    if (name !== undefined) keyData.name = name;
-    if (limit !== undefined) keyData.limit = unlimited ? Infinity : parseInt(limit);
-    if (unlimited !== undefined) {
-        keyData.unlimited = unlimited;
-        if (unlimited) keyData.limit = Infinity;
-    }
-    if (hidden !== undefined) keyData.hidden = hidden;
-    
-    if (expiryDate !== undefined) {
-        if (expiryDate === 'never' || !expiryDate) {
-            keyData.expiry = null;
-            keyData.expiryStr = null;
-        } else {
-            const [day, month, year] = expiryDate.split('-').map(Number);
-            if (day && month && year) {
-                keyData.expiry = new Date(year, month - 1, day, 23, 59, 59);
-                keyData.expiryStr = expiryDate;
+app.put('/admin/update-key', (req, res) => {
+    try {
+        const { key, name, limit, expiry, unlimited, hidden } = req.body;
+        
+        if (!key || !keyStorage[key]) {
+            return res.status(404).json({ success: false, error: 'Key not found' });
+        }
+        
+        const keyData = keyStorage[key];
+        
+        if (name !== undefined) keyData.name = name;
+        if (limit !== undefined) keyData.limit = unlimited ? Infinity : parseInt(limit);
+        if (unlimited !== undefined) {
+            keyData.unlimited = unlimited;
+            if (unlimited) keyData.limit = Infinity;
+        }
+        if (hidden !== undefined) keyData.hidden = hidden;
+        
+        if (expiry !== undefined) {
+            if (expiry === 'never' || !expiry) {
+                keyData.expiry = null;
+                keyData.expiryStr = null;
+            } else {
+                const [day, month, year] = expiry.split('-').map(Number);
+                if (day && month && year) {
+                    keyData.expiry = new Date(year, month - 1, day, 23, 59, 59);
+                    keyData.expiryStr = expiry;
+                }
             }
         }
+        
+        res.json({ success: true, message: 'Key updated!' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
-    
-    res.json({ success: true, message: 'Key updated!' });
 });
 
 // Delete key
-app.delete('/admin/api/delete-key', (req, res) => {
-    const { key } = req.body;
-    
-    if (!key || !keyStorage[key]) {
-        return res.status(404).json({ success: false, error: 'Key not found' });
+app.delete('/admin/delete-key', (req, res) => {
+    try {
+        const { key } = req.body;
+        
+        if (!key || !keyStorage[key]) {
+            return res.status(404).json({ success: false, error: 'Key not found' });
+        }
+        
+        delete keyStorage[key];
+        res.json({ success: true, message: 'Key deleted!' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
-    
-    delete keyStorage[key];
-    res.json({ success: true, message: 'Key deleted!' });
 });
 
 // Reset usage
-app.post('/admin/api/reset-usage', (req, res) => {
-    const { key } = req.body;
-    
-    if (!key || !keyStorage[key]) {
-        return res.status(404).json({ success: false, error: 'Key not found' });
+app.post('/admin/reset-usage', (req, res) => {
+    try {
+        const { key } = req.body;
+        
+        if (!key || !keyStorage[key]) {
+            return res.status(404).json({ success: false, error: 'Key not found' });
+        }
+        
+        keyStorage[key].used = 0;
+        res.json({ success: true, message: 'Usage reset!' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
-    
-    keyStorage[key].used = 0;
-    res.json({ success: true, message: 'Usage reset!' });
 });
 
 console.log('✅ Admin Panel ready at /admin');
