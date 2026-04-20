@@ -5,7 +5,7 @@ const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
-const REAL_API_KEY = 'nobita';
+const REAL_API_KEY = 'bronx';
 
 // ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
 let customAPIs = [
@@ -367,201 +367,11 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== REPLACE YOUR ADMIN CODE WITH THIS SIMPLIFIED VERSION ==========
+// ========== ADMIN PANEL (ADD THIS BEFORE module.exports) ==========
 
-// ========== ADMIN CONFIG ==========
-const ADMIN_PASSWORD = 'bronx2026'; // Change this!
+const ADMIN_PASSWORD = 'bronx2026'; // Change this password
 
-// ========== ADMIN LOGIN (Simple version) ==========
-app.post('/admin/login', (req, res) => {
-    const { password } = req.body;
-    
-    console.log('Login attempt with password:', password); // Debug
-    
-    if (password === ADMIN_PASSWORD) {
-        res.json({ 
-            success: true, 
-            message: '✅ Admin logged in successfully',
-            token: 'admin_authenticated_' + Date.now()
-        });
-    } else {
-        res.status(401).json({ success: false, error: '❌ Invalid admin password' });
-    }
-});
-
-// ========== SIMPLE AUTH CHECK ==========
-function checkAdminAuth(req, res, next) {
-    const token = req.query.token || req.headers['x-admin-token'];
-    
-    // Simple token validation - any token starting with "admin_authenticated_" is valid for 24h
-    if (token && token.startsWith('admin_authenticated_')) {
-        const timestamp = parseInt(token.split('_')[2]);
-        if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
-            return next();
-        }
-    }
-    
-    res.status(401).json({ success: false, error: '🔐 Admin authentication required' });
-}
-
-// ========== GET ALL KEYS ==========
-app.get('/admin/keys', checkAdminAuth, (req, res) => {
-    const allKeys = {};
-    Object.entries(keyStorage).forEach(([key, data]) => {
-        allKeys[key] = {
-            name: data.name,
-            scopes: data.scopes,
-            type: data.type,
-            limit: data.unlimited ? 'Unlimited' : data.limit,
-            used: data.used,
-            remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
-            expiry: data.expiryStr || 'Never',
-            hidden: data.hidden || false,
-            created: data.created,
-            unlimited: data.unlimited || false
-        };
-    });
-    res.json({ success: true, total_keys: Object.keys(allKeys).length, keys: allKeys });
-});
-
-// ========== GENERATE NEW KEY ==========
-app.post('/admin/generate-key', checkAdminAuth, (req, res) => {
-    const { 
-        key, 
-        name, 
-        scopes = ['number'], 
-        limit = 100, 
-        expiryDate = '31-12-2026',
-        type = 'premium',
-        unlimited = false
-    } = req.body;
-    
-    if (!key) {
-        return res.status(400).json({ success: false, error: '❌ Key is required' });
-    }
-    
-    if (keyStorage[key]) {
-        return res.status(400).json({ success: false, error: '❌ Key already exists' });
-    }
-    
-    // Parse expiry date
-    let expiry = null;
-    if (expiryDate && expiryDate !== 'never') {
-        const [day, month, year] = expiryDate.split('-').map(Number);
-        expiry = new Date(year, month - 1, day, 23, 59, 59);
-    }
-    
-    keyStorage[key] = {
-        name: name || `🔑 ${type.toUpperCase()} User`,
-        scopes: Array.isArray(scopes) ? scopes : [scopes],
-        type: type,
-        limit: unlimited ? Infinity : parseInt(limit),
-        used: 0,
-        expiry: expiry,
-        expiryStr: expiryDate === 'never' ? null : expiryDate,
-        created: getIndiaDateTime(),
-        resetType: 'never',
-        unlimited: unlimited || false,
-        hidden: false
-    };
-    
-    res.json({ 
-        success: true, 
-        message: '✅ Key generated successfully!',
-        key_data: {
-            key: key,
-            name: keyStorage[key].name,
-            scopes: keyStorage[key].scopes,
-            limit: unlimited ? 'Unlimited' : limit,
-            expiry: expiryDate
-        }
-    });
-});
-
-// ========== UPDATE KEY ==========
-app.put('/admin/update-key', checkAdminAuth, (req, res) => {
-    const { key, name, scopes, limit, expiryDate, unlimited, resetUsage, hidden } = req.body;
-    
-    if (!key || !keyStorage[key]) {
-        return res.status(404).json({ success: false, error: '❌ Key not found' });
-    }
-    
-    const keyData = keyStorage[key];
-    
-    if (name !== undefined) keyData.name = name;
-    if (scopes !== undefined) keyData.scopes = Array.isArray(scopes) ? scopes : [scopes];
-    if (limit !== undefined) keyData.limit = parseInt(limit);
-    if (unlimited !== undefined) {
-        keyData.unlimited = unlimited;
-        if (unlimited) keyData.limit = Infinity;
-    }
-    if (hidden !== undefined) keyData.hidden = hidden;
-    
-    if (expiryDate !== undefined) {
-        if (expiryDate === 'never' || !expiryDate) {
-            keyData.expiry = null;
-            keyData.expiryStr = null;
-        } else {
-            const [day, month, year] = expiryDate.split('-').map(Number);
-            keyData.expiry = new Date(year, month - 1, day, 23, 59, 59);
-            keyData.expiryStr = expiryDate;
-        }
-    }
-    
-    if (resetUsage) {
-        keyData.used = 0;
-    }
-    
-    res.json({ success: true, message: '✅ Key updated successfully!' });
-});
-
-// ========== DELETE KEY ==========
-app.delete('/admin/delete-key', checkAdminAuth, (req, res) => {
-    const { key } = req.body;
-    
-    if (!key || !keyStorage[key]) {
-        return res.status(404).json({ success: false, error: '❌ Key not found' });
-    }
-    
-    delete keyStorage[key];
-    res.json({ success: true, message: `✅ Key deleted!` });
-});
-
-// ========== RESET USAGE ==========
-app.post('/admin/reset-usage', checkAdminAuth, (req, res) => {
-    const { key } = req.body;
-    
-    if (!key || !keyStorage[key]) {
-        return res.status(404).json({ success: false, error: '❌ Key not found' });
-    }
-    
-    keyStorage[key].used = 0;
-    res.json({ success: true, message: `✅ Usage reset!` });
-});
-
-// ========== GET STATS ==========
-app.get('/admin/stats', checkAdminAuth, (req, res) => {
-    const totalKeys = Object.keys(keyStorage).length;
-    const activeKeys = Object.values(keyStorage).filter(k => {
-        const notExpired = !k.expiry || !isKeyExpired(k.expiry);
-        const hasQuota = k.unlimited || k.used < k.limit;
-        return notExpired && hasQuota;
-    }).length;
-    
-    const totalRequests = Object.values(keyStorage).reduce((sum, k) => sum + k.used, 0);
-    
-    res.json({
-        success: true,
-        stats: {
-            total_keys: totalKeys,
-            active_keys: activeKeys,
-            total_requests: totalRequests,
-            custom_apis_count: customAPIs.filter(api => api.visible).length
-        }
-    });
-});
-
-// ========== SERVE ADMIN PANEL (SIMPLIFIED) ==========
+// ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -573,100 +383,122 @@ app.get('/admin', (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
         }
-        
-        /* Login Screen */
-        #loginScreen {
+        .login-box {
             background: #1a0033;
             border: 3px solid #ff00ff;
             border-radius: 30px;
             padding: 50px 40px;
             width: 400px;
             box-shadow: 0 0 80px #ff00ff66;
+            animation: glow 3s infinite;
         }
-        #loginScreen h1 {
-            color: #00ff41;
-            text-align: center;
-            font-size: 36px;
-            margin-bottom: 10px;
-            text-shadow: 0 0 30px #00ff41;
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 30px #ff00ff66, 0 0 60px #00ff4133; }
+            50% { box-shadow: 0 0 50px #00ff4166, 0 0 80px #ff00ff33; }
         }
-        #loginScreen .subtitle {
-            color: #ff00ff;
-            text-align: center;
-            margin-bottom: 30px;
+        h1 { color: #00ff41; text-align: center; font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 30px #00ff41; }
+        .subtitle { color: #ff00ff; text-align: center; margin-bottom: 30px; font-size: 14px; }
+        .input-group { margin-bottom: 25px; }
+        .input-group label { color: #00ff41; display: block; margin-bottom: 10px; font-size: 14px; }
+        .input-group input {
+            width: 100%; padding: 15px; background: #0a0a0a; border: 2px solid #00ff41;
+            border-radius: 15px; color: #00ff41; font-size: 16px; font-family: 'Courier New', monospace;
         }
-        #loginScreen input {
-            width: 100%;
-            padding: 15px;
-            background: #0a0a0a;
-            border: 2px solid #00ff41;
-            border-radius: 15px;
-            color: #00ff41;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-            margin-bottom: 20px;
+        .btn {
+            width: 100%; padding: 15px; background: linear-gradient(45deg, #ff00ff, #00ff41);
+            border: none; border-radius: 15px; color: #000; font-weight: bold; font-size: 18px;
+            cursor: pointer; transition: all 0.3s;
         }
-        #loginScreen button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            border: none;
-            border-radius: 15px;
-            color: #000;
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        #loginError {
-            color: #ff0000;
-            text-align: center;
-            margin-top: 15px;
+        .btn:hover { transform: scale(1.05); box-shadow: 0 0 40px #00ff41; }
+        .error { color: #ff0000; text-align: center; margin-top: 15px; }
+        .hint { color: #ffff00; text-align: center; margin-top: 20px; font-size: 12px; opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>⚡ BRONX</h1>
+        <div class="subtitle">ADMIN PANEL</div>
+        <div class="input-group">
+            <label>🔑 ADMIN PASSWORD</label>
+            <input type="password" id="password" placeholder="Enter password" autofocus>
+        </div>
+        <button class="btn" onclick="login()">🚀 LOGIN</button>
+        <div id="error" class="error"></div>
+        <div class="hint">Default: bronx2026</div>
+    </div>
+    <script>
+        const ADMIN_PASS = '${ADMIN_PASSWORD}';
+        
+        function login() {
+            const pass = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            
+            if (pass === ADMIN_PASS) {
+                localStorage.setItem('bronx_admin_auth', 'true');
+                window.location.href = '/admin/dashboard';
+            } else {
+                errorDiv.textContent = '❌ Invalid password!';
+            }
         }
         
-        /* Dashboard Screen */
-        #dashboardScreen {
-            display: none;
-            width: 100%;
-            max-width: 1400px;
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+
+        // Check if already logged in
+        if (localStorage.getItem('bronx_admin_auth') === 'true') {
+            window.location.href = '/admin/dashboard';
         }
+    </script>
+</body>
+</html>`;
+    res.send(html);
+});
+
+// ========== ADMIN DASHBOARD ==========
+app.get('/admin/dashboard', (req, res) => {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 BRONX ADMIN | DASHBOARD</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
         .header {
             background: #1a0033;
             border: 3px solid #ff00ff;
             border-radius: 20px;
-            padding: 25px;
+            padding: 25px 30px;
             margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 0 50px #ff00ff33;
         }
-        .header h1 {
-            color: #00ff41;
-            font-size: 32px;
-        }
+        .header h1 { color: #00ff41; font-size: 32px; text-shadow: 0 0 30px #00ff41; }
         .btn {
-            padding: 12px 25px;
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            font-family: 'Courier New', monospace;
+            padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer;
+            transition: all 0.3s; font-family: 'Courier New', monospace; border: none;
         }
-        .btn-primary {
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            color: #000;
-        }
-        .btn-danger {
-            background: #ff000033;
-            border: 2px solid #ff0000;
-            color: #ff6b6b;
-        }
+        .btn-danger { background: #ff000033; border: 2px solid #ff0000; color: #ff6b6b; }
+        .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
+        .btn-success { background: #00ff4120; border: 2px solid #00ff41; color: #00ff41; }
+        .btn:hover { transform: scale(1.05); }
         
         .stats-grid {
             display: grid;
@@ -675,138 +507,120 @@ app.get('/admin', (req, res) => {
             margin-bottom: 25px;
         }
         .stat-card {
-            background: #1a0033;
-            border: 2px solid #ff00ff;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
+            background: #1a0033; border: 2px solid; border-radius: 15px;
+            padding: 20px; text-align: center;
         }
+        .stat-card:nth-child(1) { border-color: #ff00ff; }
+        .stat-card:nth-child(2) { border-color: #00ff41; }
+        .stat-card:nth-child(3) { border-color: #ffff00; }
+        .stat-card:nth-child(4) { border-color: #ff0000; }
         .stat-value {
-            font-size: 42px;
-            font-weight: bold;
-            color: #00ff41;
+            font-size: 42px; font-weight: bold;
+            background: linear-gradient(45deg, #ff00ff, #00ff41);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .stat-label {
-            color: #fff;
-            font-size: 14px;
-        }
+        .stat-label { color: #fff; font-size: 14px; margin-top: 8px; }
         
         .panel {
-            background: #1a0033;
-            border: 2px solid #00ff41;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
+            background: #1a0033; border: 2px solid #00ff41; border-radius: 20px;
+            padding: 25px; margin-bottom: 25px;
         }
-        .panel-title {
-            color: #00ff41;
-            font-size: 22px;
-            margin-bottom: 20px;
-        }
+        .panel-title { color: #00ff41; font-size: 22px; margin-bottom: 20px; }
         
-        .form-row {
+        .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 15px; margin-bottom: 20px;
         }
-        .form-group label {
-            color: #00ff41;
-            display: block;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
+        .form-group label { color: #00ff41; display: block; margin-bottom: 8px; font-size: 13px; }
         .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            background: #0a0a0a;
-            border: 2px solid #00ff41;
-            border-radius: 10px;
-            color: #00ff41;
-            font-family: 'Courier New', monospace;
+            width: 100%; padding: 12px; background: #0a0a0a; border: 2px solid #00ff41;
+            border-radius: 10px; color: #00ff41; font-family: 'Courier New', monospace;
         }
         
         .scope-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin: 15px 0;
+            display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;
+            max-height: 200px; overflow-y: auto; padding: 10px;
+            background: #0a0a0a; border-radius: 10px;
         }
-        .scope-tag {
-            padding: 8px 15px;
-            background: #0a0a0a;
-            border: 1px solid #00ff41;
-            border-radius: 20px;
-            color: #00ff41;
-            cursor: pointer;
-            font-size: 12px;
+        .scope-item {
+            padding: 8px 15px; background: #1a0033; border: 1px solid #00ff41;
+            border-radius: 20px; color: #00ff41; cursor: pointer; font-size: 12px;
+            transition: all 0.2s;
         }
-        .scope-tag.selected {
-            background: #00ff41;
-            color: #000;
-        }
+        .scope-item.selected { background: #00ff41; color: #000; border-color: #00ff41; }
         
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
+        .key-table {
+            width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px;
         }
-        th {
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            color: #000;
-            padding: 12px;
-            text-align: left;
+        .key-table th {
+            background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000;
+            padding: 12px; text-align: left; position: sticky; top: 0;
         }
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #ffffff20;
-            color: #fff;
+        .key-table td { padding: 10px; border-bottom: 1px solid #ffffff20; color: #fff; }
+        .key-table tr:hover { background: #ffffff10; }
+        
+        .status-badge {
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;
         }
+        .status-active { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
+        .status-expired { background: #ff000020; color: #ff6b6b; border: 1px solid #ff0000; }
+        .status-exhausted { background: #ffff0020; color: #ffff00; border: 1px solid #ffff00; }
         
         .action-btn {
-            padding: 5px 12px;
-            margin: 0 3px;
-            border-radius: 8px;
-            font-size: 11px;
-            cursor: pointer;
-            background: transparent;
-            border: 1px solid #00ff41;
-            color: #00ff41;
+            padding: 5px 12px; margin: 0 3px; border-radius: 8px; font-size: 11px;
+            cursor: pointer; background: transparent; border: 1px solid;
         }
-        .action-btn.delete {
-            border-color: #ff0000;
-            color: #ff6b6b;
-        }
+        .action-btn.edit { border-color: #00ff41; color: #00ff41; }
+        .action-btn.reset { border-color: #ffff00; color: #ffff00; }
+        .action-btn.delete { border-color: #ff0000; color: #ff6b6b; }
+        .action-btn.copy { border-color: #ff00ff; color: #ff00ff; }
         
         .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #1a0033;
-            color: #00ff41;
-            padding: 15px 30px;
-            border-radius: 50px;
-            border: 2px solid #00ff41;
-            z-index: 9999;
+            position: fixed; bottom: 30px; right: 30px; background: #1a0033;
+            color: #00ff41; padding: 15px 30px; border-radius: 50px;
+            border: 2px solid #00ff41; box-shadow: 0 0 40px #00ff41;
+            z-index: 9999; animation: slideIn 0.3s;
         }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000000cc; z-index: 9998; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #1a0033; border: 3px solid #ff00ff; border-radius: 20px;
+            padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+        }
+        .modal-header {
+            color: #00ff41; font-size: 20px; margin-bottom: 20px;
+            display: flex; justify-content: space-between;
+        }
+        .modal-close { color: #ff6b6b; cursor: pointer; font-size: 24px; }
+        
+        .table-container { max-height: 500px; overflow-y: auto; }
+        
+        .preset-buttons {
+            display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;
+        }
+        .preset-btn {
+            padding: 8px 15px; background: #0a0a0a; border: 1px solid #ff00ff;
+            border-radius: 20px; color: #ff00ff; cursor: pointer; font-size: 12px;
+        }
+        .preset-btn:hover { background: #ff00ff20; }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
-    <div id="loginScreen">
-        <h1>⚡ BRONX</h1>
-        <div class="subtitle">ADMIN PANEL</div>
-        <input type="password" id="passwordInput" placeholder="Enter password" autofocus>
-        <button onclick="login()">🚀 LOGIN</button>
-        <div id="loginError"></div>
-        <div style="color: #ffff00; text-align: center; margin-top: 20px; font-size: 12px;">Default: bronx2026</div>
-    </div>
-    
-    <!-- Dashboard Screen -->
-    <div id="dashboardScreen">
+    <div class="container">
         <div class="header">
-            <h1>⚡ BRONX ADMIN</h1>
-            <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
+            <h1>⚡ BRONX ADMIN PANEL</h1>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
+                <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
+            </div>
         </div>
         
         <div class="stats-grid">
@@ -828,63 +642,80 @@ app.get('/admin', (req, res) => {
             </div>
         </div>
         
-        <!-- Key Generator -->
+        <!-- Key Generator Panel -->
         <div class="panel">
             <div class="panel-title">🔑 KEY GENERATOR</div>
-            <div class="form-row">
+            <div class="form-grid">
                 <div class="form-group">
-                    <label>API KEY (leave blank for auto)</label>
-                    <input type="text" id="newKey" placeholder="AUTO-GENERATED">
+                    <label>🔐 API KEY</label>
+                    <input type="text" id="newKey" placeholder="Leave blank for auto">
                 </div>
                 <div class="form-group">
-                    <label>OWNER NAME</label>
-                    <input type="text" id="newName" value="Premium User">
+                    <label>👤 OWNER NAME</label>
+                    <input type="text" id="newName" placeholder="e.g., Premium User">
                 </div>
                 <div class="form-group">
-                    <label>LIMIT</label>
-                    <input type="number" id="newLimit" value="100">
+                    <label>📊 REQUEST LIMIT</label>
+                    <input type="number" id="newLimit" value="100" min="1">
                 </div>
                 <div class="form-group">
-                    <label>EXPIRY (DD-MM-YYYY)</label>
-                    <input type="text" id="newExpiry" value="31-12-2026">
+                    <label>⏰ EXPIRY DATE</label>
+                    <input type="text" id="newExpiry" placeholder="DD-MM-YYYY" value="31-12-2026">
                 </div>
             </div>
             
-            <label style="color: #00ff41; margin: 10px 0; display: block;">SELECT SCOPES:</label>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>🏷️ KEY TYPE</label>
+                    <select id="newType">
+                        <option value="premium">Premium</option>
+                        <option value="demo">Demo</option>
+                        <option value="test">Test</option>
+                        <option value="business">Business</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>✨ UNLIMITED</label>
+                    <select id="newUnlimited">
+                        <option value="false">No (Use limit)</option>
+                        <option value="true">Yes (Unlimited)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>👁️ VISIBILITY</label>
+                    <select id="newHidden">
+                        <option value="false">Visible to public</option>
+                        <option value="true">Hidden</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="preset-buttons">
+                <span class="preset-btn" onclick="selectAllScopes()">✅ Select All</span>
+                <span class="preset-btn" onclick="clearAllScopes()">❌ Clear All</span>
+                <span class="preset-btn" onclick="selectPhoneScopes()">📱 Phone Pack</span>
+                <span class="preset-btn" onclick="selectFinanceScopes()">💰 Finance Pack</span>
+                <span class="preset-btn" onclick="selectVehicleScopes()">🚗 Vehicle Pack</span>
+                <span class="preset-btn" onclick="selectSocialScopes()">🌐 Social Pack</span>
+                <span class="preset-btn" onclick="selectGamingScopes()">🎮 Gaming Pack</span>
+            </div>
+            
+            <label style="color: #00ff41; margin: 10px 0; display: block;">📌 SELECT SCOPES:</label>
             <div class="scope-selector" id="scopeSelector"></div>
             
-            <div class="form-row">
-                <div class="form-group">
-                    <label>UNLIMITED</label>
-                    <select id="newUnlimited">
-                        <option value="false">No</option>
-                        <option value="true">Yes</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>PRESET</label>
-                    <select id="scopePreset" onchange="applyPreset()">
-                        <option value="">Custom</option>
-                        <option value="all">All Scopes</option>
-                        <option value="phone">Phone Pack</option>
-                        <option value="finance">Finance Pack</option>
-                        <option value="social">Social Pack</option>
-                    </select>
-                </div>
-            </div>
-            
-            <button class="btn btn-primary" style="width: 100%;" onclick="generateKey()">🚀 GENERATE KEY</button>
+            <button class="btn btn-primary" style="margin-top: 20px; width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
         
         <!-- Keys Table -->
         <div class="panel">
-            <div class="panel-title">📋 ALL KEYS</div>
-            <div style="max-height: 400px; overflow-y: auto;">
-                <table>
+            <div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
+            <div class="table-container">
+                <table class="key-table">
                     <thead>
                         <tr>
                             <th>KEY</th>
                             <th>OWNER</th>
+                            <th>SCOPES</th>
                             <th>LIMIT</th>
                             <th>USED</th>
                             <th>EXPIRY</th>
@@ -892,29 +723,73 @@ app.get('/admin', (req, res) => {
                             <th>ACTIONS</th>
                         </tr>
                     </thead>
-                    <tbody id="keysTable"></tbody>
+                    <tbody id="keysTableBody"></tbody>
                 </table>
             </div>
+        </div>
+        
+        <!-- Custom APIs Management -->
+        <div class="panel">
+            <div class="panel-title">🔧 CUSTOM APIs (10 Slots)</div>
+            <div id="customApisList"></div>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>✏️ EDIT KEY</span>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <input type="hidden" id="editKeyOriginal">
+            <div class="form-group">
+                <label>OWNER NAME</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>REQUEST LIMIT</label>
+                <input type="number" id="editLimit">
+            </div>
+            <div class="form-group">
+                <label>EXPIRY DATE (DD-MM-YYYY or 'never')</label>
+                <input type="text" id="editExpiry">
+            </div>
+            <div class="form-group">
+                <label>UNLIMITED</label>
+                <select id="editUnlimited">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>HIDDEN</label>
+                <select id="editHidden">
+                    <option value="false">No (Visible)</option>
+                    <option value="true">Yes (Hidden)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="updateKey()">💾 SAVE CHANGES</button>
         </div>
     </div>
     
     <div id="toastContainer"></div>
     
     <script>
-        let adminToken = localStorage.getItem('adminToken') || '';
-        const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
-        
-        // Check if already logged in
-        if (adminToken) {
-            checkAndLoadDashboard();
+        // Check authentication
+        if (localStorage.getItem('bronx_admin_auth') !== 'true') {
+            window.location.href = '/admin';
         }
+        
+        const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
         
         // Render scopes
         const scopeDiv = document.getElementById('scopeSelector');
         SCOPES.forEach(scope => {
             const span = document.createElement('span');
-            span.className = 'scope-tag';
+            span.className = 'scope-item';
             span.textContent = scope;
+            span.dataset.scope = scope;
             span.onclick = function() { this.classList.toggle('selected'); };
             scopeDiv.appendChild(span);
         });
@@ -928,210 +803,455 @@ app.get('/admin', (req, res) => {
             setTimeout(() => toast.remove(), 3000);
         }
         
-        async function login() {
-            const password = document.getElementById('passwordInput').value;
-            const errorDiv = document.getElementById('loginError');
-            
-            try {
-                const res = await fetch('/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    adminToken = data.token;
-                    localStorage.setItem('adminToken', adminToken);
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('dashboardScreen').style.display = 'block';
-                    loadDashboard();
-                    showToast('✅ Login successful!');
-                } else {
-                    errorDiv.textContent = data.error;
-                }
-            } catch (err) {
-                errorDiv.textContent = '❌ Connection error - check server';
-                console.error(err);
-            }
-        }
-        
-        async function checkAndLoadDashboard() {
-            try {
-                const res = await fetch('/admin/stats?token=' + adminToken);
-                const data = await res.json();
-                
-                if (data.success) {
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('dashboardScreen').style.display = 'block';
-                    loadDashboard();
-                } else {
-                    localStorage.removeItem('adminToken');
-                    adminToken = '';
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        
-        async function loadDashboard() {
-            // Load stats
-            const statsRes = await fetch('/admin/stats?token=' + adminToken);
-            const statsData = await statsRes.json();
-            if (statsData.success) {
-                document.getElementById('totalKeys').textContent = statsData.stats.total_keys;
-                document.getElementById('activeKeys').textContent = statsData.stats.active_keys;
-                document.getElementById('totalRequests').textContent = statsData.stats.total_requests;
-                document.getElementById('customApisCount').textContent = statsData.stats.custom_apis_count;
-            }
-            
-            // Load keys
-            const keysRes = await fetch('/admin/keys?token=' + adminToken);
-            const keysData = await keysRes.json();
-            if (keysData.success) {
-                const tbody = document.getElementById('keysTable');
-                tbody.innerHTML = Object.entries(keysData.keys).map(([key, data]) => {
-                    const isExpired = data.expiry !== 'Never' && new Date(data.expiry.split('-').reverse().join('-')) < new Date();
-                    const isExhausted = !data.unlimited && data.used >= data.limit;
-                    const status = isExpired ? '⏰ Expired' : (isExhausted ? '🛑 Exhausted' : '✅ Active');
-                    const statusColor = isExpired ? '#ff6b6b' : (isExhausted ? '#ffff00' : '#00ff41');
-                    
-                    return \`<tr>
-                        <td><code style="color: #ff00ff;">\${key.substring(0, 20)}\${key.length > 20 ? '...' : ''}</code></td>
-                        <td>\${data.name || '-'}</td>
-                        <td>\${data.limit}</td>
-                        <td>\${data.used}</td>
-                        <td>\${data.expiry || 'Never'}</td>
-                        <td style="color: \${statusColor};">\${status}</td>
-                        <td>
-                            <button class="action-btn" onclick="resetKey('\${key}')">🔄</button>
-                            <button class="action-btn delete" onclick="deleteKey('\${key}')">🗑️</button>
-                        </td>
-                    </tr>\`;
-                }).join('');
-            }
+        function generateRandomKey() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let key = 'BRONX_';
+            for (let i = 0; i < 12; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+            return key;
         }
         
         function getSelectedScopes() {
-            return Array.from(document.querySelectorAll('#scopeSelector .scope-tag.selected')).map(el => el.textContent);
+            return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(el => el.dataset.scope);
         }
         
-        function applyPreset() {
-            const preset = document.getElementById('scopePreset').value;
-            const allTags = document.querySelectorAll('#scopeSelector .scope-tag');
-            
-            allTags.forEach(tag => tag.classList.remove('selected'));
-            
-            const presets = {
-                'all': SCOPES,
-                'phone': ['number', 'numv2', 'adv', 'name', 'aadhar'],
-                'finance': ['upi', 'ifsc', 'pan'],
-                'social': ['insta', 'git', 'tg']
-            };
-            
-            if (presets[preset]) {
-                allTags.forEach(tag => {
-                    if (presets[preset].includes(tag.textContent)) {
-                        tag.classList.add('selected');
-                    }
-                });
-            }
+        function selectAllScopes() {
+            document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.add('selected'));
         }
         
-        function generateRandomKey() {
-            return 'BRONX_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase();
+        function clearAllScopes() {
+            document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected'));
+        }
+        
+        function selectPhoneScopes() {
+            clearAllScopes();
+            ['number', 'numv2', 'adv', 'name', 'aadhar'].forEach(s => {
+                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+            });
+        }
+        
+        function selectFinanceScopes() {
+            clearAllScopes();
+            ['upi', 'ifsc', 'pan'].forEach(s => {
+                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+            });
+        }
+        
+        function selectVehicleScopes() {
+            clearAllScopes();
+            ['vehicle', 'rc'].forEach(s => {
+                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+            });
+        }
+        
+        function selectSocialScopes() {
+            clearAllScopes();
+            ['insta', 'git', 'tg'].forEach(s => {
+                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+            });
+        }
+        
+        function selectGamingScopes() {
+            clearAllScopes();
+            ['ff', 'bgmi'].forEach(s => {
+                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+            });
         }
         
         async function generateKey() {
             let key = document.getElementById('newKey').value;
             if (!key) key = generateRandomKey();
             
+            const name = document.getElementById('newName').value || 'Premium User';
+            const limit = parseInt(document.getElementById('newLimit').value) || 100;
+            const expiry = document.getElementById('newExpiry').value || '31-12-2026';
+            const type = document.getElementById('newType').value;
+            const unlimited = document.getElementById('newUnlimited').value === 'true';
+            const hidden = document.getElementById('newHidden').value === 'true';
             const scopes = getSelectedScopes();
+            
             if (scopes.length === 0) {
                 showToast('❌ Select at least one scope!', true);
                 return;
             }
             
-            const data = {
-                key,
-                name: document.getElementById('newName').value,
-                scopes,
-                limit: parseInt(document.getElementById('newLimit').value),
-                expiryDate: document.getElementById('newExpiry').value,
-                unlimited: document.getElementById('newUnlimited').value === 'true'
-            };
-            
             try {
-                const res = await fetch('/admin/generate-key?token=' + adminToken, {
+                const res = await fetch('/admin/api/generate-key', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ key, name, scopes, limit, expiryDate: expiry, type, unlimited, hidden })
                 });
                 
-                const result = await res.json();
+                const data = await res.json();
                 
-                if (result.success) {
+                if (data.success) {
                     showToast('✅ Key generated: ' + key);
                     document.getElementById('newKey').value = '';
-                    loadDashboard();
+                    document.getElementById('newName').value = '';
+                    refreshData();
                 } else {
-                    showToast(result.error, true);
+                    showToast(data.error || 'Failed to generate', true);
                 }
             } catch (err) {
                 showToast('❌ Server error', true);
             }
         }
         
-        async function resetKey(key) {
+        async function refreshData() {
+            try {
+                // Load keys
+                const keysRes = await fetch('/admin/api/keys');
+                const keysData = await keysRes.json();
+                
+                if (keysData.success) {
+                    const keys = keysData.keys;
+                    const keysArray = Object.entries(keys);
+                    
+                    document.getElementById('totalKeys').textContent = keysArray.length;
+                    
+                    let active = 0, totalReqs = 0;
+                    keysArray.forEach(([_, k]) => {
+                        totalReqs += k.used || 0;
+                        const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
+                        const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
+                        if (notExpired && hasQuota) active++;
+                    });
+                    
+                    document.getElementById('activeKeys').textContent = active;
+                    document.getElementById('totalRequests').textContent = totalReqs;
+                    
+                    const tbody = document.getElementById('keysTableBody');
+                    tbody.innerHTML = keysArray.map(([key, k]) => {
+                        const isExpired = k.expiry && k.expiry !== 'Never' && new Date(k.expiry.split('-').reverse().join('-')) < new Date();
+                        const isExhausted = k.limit !== 'Unlimited' && k.used >= k.limit;
+                        let status = '✅ Active', statusClass = 'status-active';
+                        if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
+                        else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
+                        
+                        const displayKey = key.length > 20 ? key.substring(0, 17) + '...' : key;
+                        const scopesDisplay = k.scopes.includes('*') ? 'ALL' : k.scopes.slice(0, 3).join(', ') + (k.scopes.length > 3 ? '...' : '');
+                        const hiddenBadge = k.hidden ? ' 🔒' : '';
+                        
+                        return \`<tr>
+                            <td><code style="color: #ff00ff;">\${displayKey}</code>\${hiddenBadge}</td>
+                            <td>\${k.owner || '-'}</td>
+                            <td style="font-size: 11px;">\${scopesDisplay}</td>
+                            <td>\${k.limit || '-'}</td>
+                            <td>\${k.used || 0}</td>
+                            <td>\${k.expiry || 'Never'}</td>
+                            <td><span class="status-badge \${statusClass}">\${status}</span></td>
+                            <td>
+                                <button class="action-btn copy" onclick="copyKey('\${key}')">📋</button>
+                                <button class="action-btn edit" onclick="openEditModal('\${key}')">✏️</button>
+                                <button class="action-btn reset" onclick="resetUsage('\${key}')">🔄</button>
+                                <button class="action-btn delete" onclick="deleteKey('\${key}')">🗑️</button>
+                            </td>
+                        </tr>\`;
+                    }).join('');
+                }
+                
+                // Load custom APIs
+                const customRes = await fetch('/admin/custom-apis');
+                const customData = await customRes.json();
+                if (customData.success) {
+                    const visible = customData.customAPIs.filter(a => a.visible).length;
+                    document.getElementById('customApisCount').textContent = visible;
+                    
+                    const listDiv = document.getElementById('customApisList');
+                    listDiv.innerHTML = customData.customAPIs.map((api, i) => {
+                        const statusClass = api.visible ? 'status-active' : 'status-expired';
+                        const statusText = api.visible ? '👁️ Visible' : '🔒 Hidden';
+                        return \`<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0a0a0a; border: 1px solid #00ff41; border-radius: 10px; margin-bottom: 8px;">
+                            <div>
+                                <strong style="color: #00ff41;">Slot \${i+1}:</strong> 
+                                <span style="color: #fff;">\${api.name || 'Empty'}</span>
+                                <span class="status-badge \${statusClass}" style="margin-left: 10px;">\${statusText}</span>
+                                <code style="color: #ff00ff; margin-left: 10px;">/\${api.endpoint || 'not-set'}</code>
+                            </div>
+                            <div>
+                                <button class="action-btn edit" onclick="editCustomApi(\${i})">✏️</button>
+                                <button class="action-btn reset" onclick="toggleCustomApi(\${i})">👁️</button>
+                            </div>
+                        </div>\`;
+                    }).join('');
+                }
+            } catch (err) {
+                console.error('Refresh error:', err);
+            }
+        }
+        
+        function copyKey(key) {
+            navigator.clipboard.writeText(key);
+            showToast('📋 Key copied to clipboard!');
+        }
+        
+        let currentEditKey = '';
+        
+        async function openEditModal(key) {
+            currentEditKey = key;
+            const res = await fetch('/admin/api/keys');
+            const data = await res.json();
+            
+            if (data.keys[key]) {
+                const k = data.keys[key];
+                document.getElementById('editKeyOriginal').value = key;
+                document.getElementById('editName').value = k.owner || '';
+                document.getElementById('editLimit').value = k.limit === 'Unlimited' ? 100 : k.limit;
+                document.getElementById('editExpiry').value = k.expiry === 'Never' ? 'never' : (k.expiry || 'never');
+                document.getElementById('editUnlimited').value = k.limit === 'Unlimited' ? 'true' : 'false';
+                document.getElementById('editHidden').value = k.hidden ? 'true' : 'false';
+                document.getElementById('editModal').style.display = 'flex';
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        async function updateKey() {
+            const key = document.getElementById('editKeyOriginal').value;
+            const name = document.getElementById('editName').value;
+            const limit = parseInt(document.getElementById('editLimit').value);
+            const expiry = document.getElementById('editExpiry').value;
+            const unlimited = document.getElementById('editUnlimited').value === 'true';
+            const hidden = document.getElementById('editHidden').value === 'true';
+            
+            try {
+                const res = await fetch('/admin/api/update-key', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, name, limit, expiryDate: expiry, unlimited, hidden })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Key updated!');
+                    closeModal();
+                    refreshData();
+                } else {
+                    showToast(data.error, true);
+                }
+            } catch (err) {
+                showToast('❌ Server error', true);
+            }
+        }
+        
+        async function resetUsage(key) {
             if (!confirm('Reset usage for this key?')) return;
             
-            const res = await fetch('/admin/reset-usage?token=' + adminToken, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            
-            const data = await res.json();
-            if (data.success) {
-                showToast('✅ Usage reset!');
-                loadDashboard();
+            try {
+                const res = await fetch('/admin/api/reset-usage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Usage reset!');
+                    refreshData();
+                }
+            } catch (err) {
+                showToast('❌ Server error', true);
             }
         }
         
         async function deleteKey(key) {
             if (!confirm('PERMANENTLY DELETE this key?')) return;
             
-            const res = await fetch('/admin/delete-key?token=' + adminToken, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            
-            const data = await res.json();
-            if (data.success) {
-                showToast('✅ Key deleted!');
-                loadDashboard();
+            try {
+                const res = await fetch('/admin/api/delete-key', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Key deleted!');
+                    refreshData();
+                }
+            } catch (err) {
+                showToast('❌ Server error', true);
             }
         }
         
-        function logout() {
-            localStorage.removeItem('adminToken');
-            adminToken = '';
-            document.getElementById('loginScreen').style.display = 'block';
-            document.getElementById('dashboardScreen').style.display = 'none';
-            document.getElementById('passwordInput').value = '';
+        async function editCustomApi(slot) {
+            const res = await fetch('/admin/custom-apis');
+            const data = await res.json();
+            const api = data.customAPIs[slot];
+            
+            const newName = prompt('API Name:', api.name);
+            if (newName === null) return;
+            const newEndpoint = prompt('Endpoint:', api.endpoint);
+            if (newEndpoint === null) return;
+            const newParam = prompt('Parameter name:', api.param);
+            if (newParam === null) return;
+            const newExample = prompt('Example value:', api.example);
+            if (newExample === null) return;
+            const newDesc = prompt('Description:', api.desc);
+            if (newDesc === null) return;
+            const newUrl = prompt('Real API URL (use {param}):', api.realAPI);
+            if (newUrl === null) return;
+            
+            await fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot, api: { ...api, name: newName, endpoint: newEndpoint, param: newParam, example: newExample, desc: newDesc, realAPI: newUrl, visible: true } })
+            });
+            
+            showToast('✅ Custom API updated!');
+            refreshData();
         }
         
-        // Enter key to login
-        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
-        });
+        async function toggleCustomApi(slot) {
+            const res = await fetch('/admin/custom-apis');
+            const data = await res.json();
+            const api = data.customAPIs[slot];
+            
+            await fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot, api: { ...api, visible: !api.visible } })
+            });
+            
+            showToast('✅ Visibility toggled!');
+            refreshData();
+        }
+        
+        function logout() {
+            localStorage.removeItem('bronx_admin_auth');
+            window.location.href = '/admin';
+        }
+        
+        // Initial load
+        refreshData();
     </script>
 </body>
 </html>`;
     res.send(html);
 });
+
+// ========== ADMIN API ENDPOINTS ==========
+
+// Get all keys (including hidden)
+app.get('/admin/api/keys', (req, res) => {
+    const allKeys = {};
+    Object.entries(keyStorage).forEach(([key, data]) => {
+        allKeys[key] = {
+            owner: data.name,
+            scopes: data.scopes,
+            type: data.type,
+            limit: data.unlimited ? 'Unlimited' : data.limit,
+            used: data.used,
+            remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
+            expiry: data.expiryStr || 'Never',
+            hidden: data.hidden || false,
+            created: data.created,
+            unlimited: data.unlimited || false
+        };
+    });
+    res.json({ success: true, keys: allKeys });
+});
+
+// Generate new key
+app.post('/admin/api/generate-key', (req, res) => {
+    const { key, name, scopes, limit, expiryDate, type, unlimited, hidden } = req.body;
+    
+    if (!key) {
+        return res.status(400).json({ success: false, error: 'Key required' });
+    }
+    
+    if (keyStorage[key]) {
+        return res.status(400).json({ success: false, error: 'Key already exists' });
+    }
+    
+    let expiry = null;
+    let expiryStr = null;
+    
+    if (expiryDate && expiryDate !== 'never') {
+        const [day, month, year] = expiryDate.split('-').map(Number);
+        if (day && month && year) {
+            expiry = new Date(year, month - 1, day, 23, 59, 59);
+            expiryStr = expiryDate;
+        }
+    }
+    
+    keyStorage[key] = {
+        name: name || 'User',
+        scopes: scopes || ['number'],
+        type: type || 'premium',
+        limit: unlimited ? Infinity : (parseInt(limit) || 100),
+        used: 0,
+        expiry: expiry,
+        expiryStr: expiryStr,
+        created: getIndiaDateTime(),
+        resetType: 'never',
+        unlimited: unlimited || false,
+        hidden: hidden || false
+    };
+    
+    res.json({ success: true, message: 'Key generated!', key });
+});
+
+// Update key
+app.put('/admin/api/update-key', (req, res) => {
+    const { key, name, limit, expiryDate, unlimited, hidden } = req.body;
+    
+    if (!key || !keyStorage[key]) {
+        return res.status(404).json({ success: false, error: 'Key not found' });
+    }
+    
+    const keyData = keyStorage[key];
+    
+    if (name !== undefined) keyData.name = name;
+    if (limit !== undefined) keyData.limit = unlimited ? Infinity : parseInt(limit);
+    if (unlimited !== undefined) {
+        keyData.unlimited = unlimited;
+        if (unlimited) keyData.limit = Infinity;
+    }
+    if (hidden !== undefined) keyData.hidden = hidden;
+    
+    if (expiryDate !== undefined) {
+        if (expiryDate === 'never' || !expiryDate) {
+            keyData.expiry = null;
+            keyData.expiryStr = null;
+        } else {
+            const [day, month, year] = expiryDate.split('-').map(Number);
+            if (day && month && year) {
+                keyData.expiry = new Date(year, month - 1, day, 23, 59, 59);
+                keyData.expiryStr = expiryDate;
+            }
+        }
+    }
+    
+    res.json({ success: true, message: 'Key updated!' });
+});
+
+// Delete key
+app.delete('/admin/api/delete-key', (req, res) => {
+    const { key } = req.body;
+    
+    if (!key || !keyStorage[key]) {
+        return res.status(404).json({ success: false, error: 'Key not found' });
+    }
+    
+    delete keyStorage[key];
+    res.json({ success: true, message: 'Key deleted!' });
+});
+
+// Reset usage
+app.post('/admin/api/reset-usage', (req, res) => {
+    const { key } = req.body;
+    
+    if (!key || !keyStorage[key]) {
+        return res.status(404).json({ success: false, error: 'Key not found' });
+    }
+    
+    keyStorage[key].used = 0;
+    res.json({ success: true, message: 'Usage reset!' });
+});
+
+console.log('✅ Admin Panel ready at /admin');
 
 // ========== SERVE ENHANCED HTML UI WITH DARK/LIGHT MODE ==========
 function serveHTML(res) {
