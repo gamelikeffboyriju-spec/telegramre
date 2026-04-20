@@ -1,14 +1,11 @@
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 
 const app = express();
 
 // ========== CONFIG ==========
-const REAL_API_BASE = 'https://ft-osint.onrender.com/api';
+const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
 const REAL_API_KEY = 'nobita';
-const KEYS_FILE = path.join('/tmp', 'keys.json'); // Vercel pe /tmp use karo
 const ADMIN_PASSWORD = 'BRONX2026'; // Change this!
 
 // Available scopes
@@ -33,29 +30,45 @@ let customAPIs = [
     { id: 10, name: 'Custom API 10', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' }
 ];
 
-// ========== LOAD/SAVE KEYS ==========
-function loadKeys() {
-    try {
-        if (fs.existsSync(KEYS_FILE)) {
-            return JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8'));
-        }
-    } catch (e) {}
-    
-    // Default keys
-    return {
-        'BRONX_ULTRA_MASTER_2026': { name: '👑 BRONX ULTRA OWNER', scopes: ['*'], type: 'owner', limit: Infinity, used: 0, expiry: null, expiryStr: 'Never', created: new Date().toISOString(), unlimited: true, hidden: true },
-        'DEMO_KEY_2026': { name: '🎁 Demo User', scopes: ['number', 'aadhar', 'pincode'], type: 'demo', limit: 10, used: 0, expiry: '2026-12-31T23:59:59.000Z', expiryStr: '31-12-2026', created: new Date().toISOString(), unlimited: false, hidden: false },
-        'PREMIUM_TEST_001': { name: '⭐ Test Premium', scopes: ['number', 'aadhar', 'pan'], type: 'premium', limit: 100, used: 0, expiry: '2026-12-31T23:59:59.000Z', expiryStr: '31-12-2026', created: new Date().toISOString(), unlimited: false, hidden: false }
-    };
-}
-
-function saveKeys(keys) {
-    try {
-        fs.writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2));
-    } catch (e) {}
-}
-
-let keyStorage = loadKeys();
+// ========== KEY STORAGE (In-Memory) ==========
+let keyStorage = {
+    'BRONX_ULTRA_MASTER_2026': { 
+        name: '👑 BRONX ULTRA OWNER', 
+        scopes: ['*'], 
+        type: 'owner', 
+        limit: Infinity, 
+        used: 0, 
+        expiry: null, 
+        expiryStr: 'Never', 
+        created: new Date().toISOString(), 
+        unlimited: true, 
+        hidden: true 
+    },
+    'DEMO_KEY_2026': { 
+        name: '🎁 Demo User', 
+        scopes: ['number', 'aadhar', 'pincode'], 
+        type: 'demo', 
+        limit: 10, 
+        used: 0, 
+        expiry: '2026-12-31T23:59:59.000Z', 
+        expiryStr: '31-12-2026', 
+        created: new Date().toISOString(), 
+        unlimited: false, 
+        hidden: false 
+    },
+    'PREMIUM_TEST_001': { 
+        name: '⭐ Test Premium', 
+        scopes: ['number', 'aadhar', 'pan'], 
+        type: 'premium', 
+        limit: 100, 
+        used: 0, 
+        expiry: '2026-12-31T23:59:59.000Z', 
+        expiryStr: '31-12-2026', 
+        created: new Date().toISOString(), 
+        unlimited: false, 
+        hidden: false 
+    }
+};
 
 // ========== INDIA TIME HELPERS ==========
 function getIndiaTime() {
@@ -83,7 +96,6 @@ function checkKeyValid(apiKey) {
 function incrementKeyUsage(apiKey) {
     if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) {
         keyStorage[apiKey].used++;
-        saveKeys(keyStorage);
     }
     return keyStorage[apiKey];
 }
@@ -147,45 +159,64 @@ app.get('/admin/scopes', (req, res) => {
 app.post('/admin/generate-key', (req, res) => {
     const { password, keyName, ownerName, scopes, limit, expiryDate } = req.body;
     
-    if (password !== ADMIN_PASSWORD) return res.status(401).json({ success: false, error: 'Invalid password' });
-    if (!keyName || !ownerName || !scopes || scopes.length === 0) return res.status(400).json({ success: false, error: 'Missing fields' });
-    if (keyStorage[keyName]) return res.status(400).json({ success: false, error: 'Key already exists' });
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, error: 'Invalid password' });
+    }
+    if (!keyName || !ownerName || !scopes || scopes.length === 0) {
+        return res.status(400).json({ success: false, error: 'Missing fields' });
+    }
+    if (keyStorage[keyName]) {
+        return res.status(400).json({ success: false, error: 'Key already exists' });
+    }
     
     let expiry = null, expiryStr = 'Never';
     if (expiryDate) {
         const [year, month, day] = expiryDate.split('-').map(Number);
-        expiry = new Date(year, month - 1, day, 23, 59, 59).toISOString();
+        expiry = new Date(Date.UTC(year, month - 1, day, 23, 59, 59)).toISOString();
         expiryStr = `${day}-${month}-${year}`;
     }
     
     keyStorage[keyName] = {
-        name: ownerName, scopes: scopes, type: 'custom',
+        name: ownerName,
+        scopes: scopes,
+        type: 'custom',
         limit: limit === 'unlimited' ? Infinity : parseInt(limit) || 100,
-        used: 0, expiry: expiry, expiryStr: expiryStr,
-        created: new Date().toISOString(), unlimited: limit === 'unlimited', hidden: false
+        used: 0,
+        expiry: expiry,
+        expiryStr: expiryStr,
+        created: new Date().toISOString(),
+        unlimited: limit === 'unlimited',
+        hidden: false
     };
     
-    saveKeys(keyStorage);
     res.json({ success: true, message: 'Key generated!', key: keyName });
 });
 
 app.delete('/admin/delete-key', (req, res) => {
     const { password, keyName } = req.body;
-    if (password !== ADMIN_PASSWORD) return res.status(401).json({ success: false, error: 'Invalid password' });
-    if (!keyStorage[keyName]) return res.status(404).json({ success: false, error: 'Key not found' });
+    
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, error: 'Invalid password' });
+    }
+    if (!keyStorage[keyName]) {
+        return res.status(404).json({ success: false, error: 'Key not found' });
+    }
     
     delete keyStorage[keyName];
-    saveKeys(keyStorage);
     res.json({ success: true, message: 'Key deleted!' });
 });
 
 app.post('/admin/reset-usage', (req, res) => {
     const { password, keyName } = req.body;
-    if (password !== ADMIN_PASSWORD) return res.status(401).json({ success: false, error: 'Invalid password' });
-    if (!keyStorage[keyName]) return res.status(404).json({ success: false, error: 'Key not found' });
+    
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, error: 'Invalid password' });
+    }
+    if (!keyStorage[keyName]) {
+        return res.status(404).json({ success: false, error: 'Key not found' });
+    }
     
     keyStorage[keyName].used = 0;
-    saveKeys(keyStorage);
     res.json({ success: true, message: 'Usage reset!' });
 });
 
@@ -211,26 +242,26 @@ function serveHTML(res) {
         .theme-btn { padding: 10px 18px; border-radius: 50px; border: 2px solid; cursor: pointer; font-weight: bold; }
         .theme-btn.dark { background: #0a0a0a; color: #00ff41; border-color: #00ff41; }
         .theme-btn.light { background: #f5f5f5; color: #0066cc; border-color: #0066cc; }
-        .admin-btn { position: fixed; bottom: 20px; left: 20px; z-index: 9999; padding: 12px 25px; background: #ff00ff; color: #000; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; }
+        .admin-btn { position: fixed; bottom: 20px; left: 20px; z-index: 9999; padding: 12px 25px; background: #ff00ff; color: #000; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 0 30px #ff00ff66; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; }
         .modal-content { background: var(--card); backdrop-filter: blur(10px); border: 3px solid var(--border); border-radius: 30px; padding: 30px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .modal-header h2 { color: var(--accent); font-size: 28px; }
         .close-btn { font-size: 30px; cursor: pointer; color: var(--text); }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; color: var(--accent); font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 12px 15px; background: #0a0a0a; border: 2px solid var(--accent); border-radius: 10px; color: var(--accent); font-family: inherit; }
-        body.light-mode .form-group input, body.light-mode .form-group select { background: #fff; color: #1a1a1a; }
+        .form-group input { width: 100%; padding: 12px 15px; background: #0a0a0a; border: 2px solid var(--accent); border-radius: 10px; color: var(--accent); font-family: inherit; }
+        body.light-mode .form-group input { background: #fff; color: #1a1a1a; }
         .scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; padding: 15px; background: #0a0a0a; border-radius: 10px; }
-        .scope-item { display: flex; align-items: center; gap: 8px; }
-        .btn { padding: 12px 25px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; }
+        .scope-item { display: flex; align-items: center; gap: 8px; color: var(--text); }
+        .btn { padding: 10px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; font-family: inherit; }
         .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
         .btn-danger { background: #ff0000; color: #fff; }
         .btn-success { background: #00ff41; color: #000; }
         .keys-table-container { max-height: 400px; overflow-y: auto; margin-top: 20px; }
         .keys-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .keys-table th { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; padding: 10px; position: sticky; top: 0; }
-        .keys-table td { padding: 8px; border-bottom: 1px solid #ffffff20; }
+        .keys-table td { padding: 8px; border-bottom: 1px solid #ffffff20; color: var(--text); }
         .header { text-align: center; padding: 40px; border: 3px solid; border-image: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1; border-radius: 30px; margin-bottom: 30px; background: var(--card); }
         .header h1 { font-size: 48px; background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff6b6b, #00ffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .stats { display: flex; justify-content: center; gap: 30px; margin: 30px 0; flex-wrap: wrap; }
@@ -248,7 +279,7 @@ function serveHTML(res) {
         .input-group input, .input-group select { flex: 1; padding: 15px; background: #0a0a0a; border: 2px solid var(--accent); border-radius: 50px; color: var(--accent); }
         .api-result { margin-top: 20px; padding: 20px; background: #000; border-radius: 12px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #00ff41; }
         .footer { text-align: center; padding: 40px; margin-top: 50px; border-top: 2px solid; border-image: linear-gradient(90deg, #ff00ff, #00ff41) 1; }
-        .toast { position: fixed; bottom: 30px; right: 30px; z-index: 9999; background: #0a0a0a; color: #00ff41; padding: 15px 30px; border-radius: 50px; border: 2px solid #00ff41; }
+        .toast { position: fixed; bottom: 30px; right: 30px; z-index: 99999; background: #0a0a0a; color: #00ff41; padding: 15px 30px; border-radius: 50px; border: 2px solid #00ff41; }
     </style>
 </head>
 <body>
@@ -267,17 +298,18 @@ function serveHTML(res) {
             <div id="loginSection">
                 <div class="form-group"><label>🔑 Admin Password</label><input type="password" id="adminPassword" placeholder="Enter admin password"></div>
                 <button class="btn btn-primary" onclick="adminLogin()">Login</button>
+                <p style="color:#ffff00; margin-top:10px; font-size:12px;">Default: BRONX2026</p>
             </div>
             <div id="adminContent" style="display:none;">
                 <h3 style="color: #00ff41; margin: 20px 0;">✨ Generate New Key</h3>
-                <div class="form-group"><label>🔐 Key Name</label><input type="text" id="newKeyName" placeholder="e.g., PREMIUM_USER_001"></div>
+                <div class="form-group"><label>🔐 Key Name (Unique)</label><input type="text" id="newKeyName" placeholder="e.g., PREMIUM_USER_001"></div>
                 <div class="form-group"><label>👤 Owner Name</label><input type="text" id="newOwnerName" placeholder="e.g., John Doe"></div>
                 <div class="form-group"><label>📋 Select Scopes</label>
-                    <button class="btn btn-success" onclick="selectAllScopes()" style="padding:5px 15px;">Select All</button>
-                    <button class="btn btn-danger" onclick="clearAllScopes()" style="padding:5px 15px;">Clear All</button>
+                    <button type="button" class="btn btn-success" onclick="selectAllScopes()" style="padding:5px 15px;">Select All</button>
+                    <button type="button" class="btn btn-danger" onclick="clearAllScopes()" style="padding:5px 15px;">Clear All</button>
                     <div class="scope-grid" id="scopeGrid"></div>
                 </div>
-                <div class="form-group"><label>📊 Request Limit</label><input type="text" id="newLimit" placeholder="100 (or 'unlimited')" value="100"></div>
+                <div class="form-group"><label>📊 Request Limit</label><input type="text" id="newLimit" placeholder="100 (or type 'unlimited')" value="100"></div>
                 <div class="form-group"><label>📅 Expiry Date</label><input type="date" id="newExpiry"></div>
                 <button class="btn btn-primary" onclick="generateKey()">🚀 Generate Key</button>
                 <h3 style="color: #00ff41; margin: 30px 0 20px;">📋 Existing Keys</h3>
@@ -324,21 +356,28 @@ function serveHTML(res) {
         setTheme(localStorage.getItem('theme')||'dark');
         
         function showToast(m){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
-        function copyUrl(e,p,ex){ navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+e+'?key=YOUR_KEY&'+p+'='+ex); showToast('✅ Copied!'); }
-        function copyCustomUrl(e,p,ex){ navigator.clipboard.writeText(location.origin+'/api/custom/'+e+'?key=YOUR_KEY&'+p+'='+ex); showToast('✅ Copied!'); }
+        function copyUrl(e,p,ex){ navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+e+'?key=YOUR_KEY&'+p+'='+ex); showToast('✅ URL Copied!'); }
+        function copyCustomUrl(e,p,ex){ navigator.clipboard.writeText(location.origin+'/api/custom/'+e+'?key=YOUR_KEY&'+p+'='+ex); showToast('✅ URL Copied!'); }
         
         async function testAPI(){
             const s=document.getElementById('endpointSelect'), o=s.options[s.selectedIndex], is=o.value.startsWith('custom_');
             const k=document.getElementById('apiKeyInput').value, v=document.getElementById('paramInput').value, r=document.getElementById('apiResult');
-            if(!k||!v){ showToast('❌ Fill all'); return; }
+            if(!k||!v){ showToast('❌ Fill all fields'); return; }
             let u=is?'/api/custom/'+o.dataset.endpoint+'?key='+k+'&'+o.dataset.param+'='+v:'/api/key-bronx/'+s.value+'?key='+k+'&'+endpoints[s.value].param+'='+v;
             r.style.display='block'; r.innerHTML='⏳ Loading...';
             try{ const d=await(await fetch(u)).json(); r.innerHTML='<pre style="color:#00ff41;">'+JSON.stringify(d,null,2)+'</pre>'; }
             catch(e){ r.innerHTML='<pre style="color:#ff0000;">Error: '+e.message+'</pre>'; }
         }
         
-        function openAdminPanel(){ document.getElementById('adminModal').style.display='flex'; populateScopeGrid(); }
+        function openAdminPanel(){ 
+            document.getElementById('adminModal').style.display='flex'; 
+            populateScopeGrid();
+            document.getElementById('loginSection').style.display='block';
+            document.getElementById('adminContent').style.display='none';
+            document.getElementById('adminPassword').value='';
+        }
         function closeAdminPanel(){ document.getElementById('adminModal').style.display='none'; }
+        
         function populateScopeGrid(){
             const g=document.getElementById('scopeGrid');
             g.innerHTML=SCOPES.map(s=>'<div class="scope-item"><input type="checkbox" value="'+s+'" id="sc_'+s+'"><label for="sc_'+s+'">'+s+'</label></div>').join('');
@@ -349,8 +388,14 @@ function serveHTML(res) {
         async function adminLogin(){
             adminPass=document.getElementById('adminPassword').value;
             const r=await fetch('/admin/keys');
-            if(r.ok){ document.getElementById('loginSection').style.display='none'; document.getElementById('adminContent').style.display='block'; loadKeysTable(); }
-            else showToast('❌ Wrong password');
+            if(r.ok){ 
+                document.getElementById('loginSection').style.display='none'; 
+                document.getElementById('adminContent').style.display='block'; 
+                loadKeysTable(); 
+                showToast('✅ Logged in!');
+            } else {
+                showToast('❌ Wrong password! Default: BRONX2026');
+            }
         }
         
         async function loadKeysTable(){
@@ -362,15 +407,15 @@ function serveHTML(res) {
             const n=document.getElementById('newKeyName').value, o=document.getElementById('newOwnerName').value;
             const l=document.getElementById('newLimit').value, e=document.getElementById('newExpiry').value;
             const s=Array.from(document.querySelectorAll('#scopeGrid input:checked')).map(c=>c.value);
-            if(!n||!o||!s.length){ showToast('❌ Fill all'); return; }
+            if(!n||!o||!s.length){ showToast('❌ Fill all required fields'); return; }
             const r=await fetch('/admin/generate-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:adminPass,keyName:n,ownerName:o,scopes:s,limit:l,expiryDate:e})});
             const d=await r.json();
-            showToast(d.success?'✅ Generated: '+n:'❌ '+d.error);
+            showToast(d.success?'✅ Key Generated: '+n:'❌ '+d.error);
             if(d.success){ loadKeysTable(); document.getElementById('newKeyName').value=''; document.getElementById('newOwnerName').value=''; clearAllScopes(); }
         }
         
-        async function resetUsage(k){ if(!confirm('Reset '+k+'?')) return; const r=await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:adminPass,keyName:k})}); const d=await r.json(); showToast(d.success?'✅ Reset!':'❌ Failed'); if(d.success) loadKeysTable(); }
-        async function deleteKey(k){ if(!confirm('Delete '+k+'?')) return; const r=await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:adminPass,keyName:k})}); const d=await r.json(); showToast(d.success?'✅ Deleted!':'❌ Failed'); if(d.success) loadKeysTable(); }
+        async function resetUsage(k){ if(!confirm('Reset usage for '+k+'?')) return; const r=await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:adminPass,keyName:k})}); const d=await r.json(); showToast(d.success?'✅ Usage Reset!':'❌ Failed'); if(d.success) loadKeysTable(); }
+        async function deleteKey(k){ if(!confirm('Delete '+k+'?')) return; const r=await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:adminPass,keyName:k})}); const d=await r.json(); showToast(d.success?'✅ Key Deleted!':'❌ Failed'); if(d.success) loadKeysTable(); }
         
         document.getElementById('endpointSelect').addEventListener('change',function(){
             const o=this.options[this.selectedIndex];
