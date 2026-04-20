@@ -1099,225 +1099,66 @@ function serveHTML(res) {
             </div>
         </div>
         
- // Custom API Management Functions
-let currentSlotIndex = -1;
-let currentLockStatus = false;
 
-function saveCustomAPI() {
-    const slot = document.getElementById('apiSlotSelect').value;
-    if (slot === '') {
-        showToast('❌ Please select a slot');
-        return;
-    }
+    <!-- Custom API Manager Section with Lock Feature -->
+<div class="admin-panel">
+    <h2>
+        🔧 CUSTOM API MANAGER 
+        <small>(10 Slots - Lock/Unlock System)</small>
+    </h2>
+    <p style="color: #ffff00; margin-bottom: 15px; font-size: 14px;">
+        ⚠️ Slots 1-5 are LOCKED by default (cannot edit/delete). Use slots 6-10 for custom APIs.
+    </p>
+    <div class="custom-api-form">
+        <select id="apiSlotSelect">
+            <option value="">Select Slot (1-10)</option>
+            ${customAPIs.map((api, i) => `<option value="${i}">Slot ${api.id} - ${api.name} ${api.locked ? '🔒' : '🔓'}</option>`).join('')}
+        </select>
+        <input type="text" id="apiNameInput" placeholder="API Display Name">
+        <input type="text" id="apiEndpointInput" placeholder="Endpoint (e.g., myapi)">
+        <input type="text" id="apiParamInput" placeholder="Parameter (e.g., query)">
+        <input type="text" id="apiExampleInput" placeholder="Example Value">
+        <input type="text" id="apiDescInput" placeholder="Description">
+        <input type="text" id="apiRealUrlInput" placeholder="Real API URL (use {param})">
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+        <button onclick="saveCustomAPI()" id="saveApiBtn">💾 Save API</button>
+        <button onclick="loadAPIToSlot()">📂 Load to Form</button>
+        <div class="toggle-visibility">
+            <input type="checkbox" id="apiVisibleCheck"> 
+            <label for="apiVisibleCheck">👁️ Visible to Public</label>
+        </div>
+        <button onclick="toggleAPIVisibility()">🔄 Toggle Visibility</button>
+        <button onclick="toggleLockStatus()" id="toggleLockBtn" style="background: #ff00ff20; border: 1px solid #ff00ff; color: #ff00ff;">🔒 Toggle Lock</button>
+    </div>
+    <div class="custom-apis-list" id="customApisList">
+        ${customAPIs.map((api, i) => `
+            <div class="custom-api-item ${api.locked ? 'locked-slot' : ''}" style="${api.locked ? 'border-left: 4px solid #ff0000; opacity: 0.9;' : ''}">
+                <div class="api-info">
+                    <strong style="color: #ff00ff;">Slot ${api.id}</strong>
+                    ${api.locked ? '<span style="background: #ff0000; color: #fff; padding: 2px 8px; border-radius: 20px; font-size: 10px; margin-left: 8px;">🔒 LOCKED</span>' : '<span style="background: #00ff41; color: #000; padding: 2px 8px; border-radius: 20px; font-size: 10px; margin-left: 8px;">🔓 UNLOCKED</span>'}
+                    <span style="color: var(--text-primary); margin-left: 8px;">${api.name || '(Empty Slot)'}</span>
+                    <code style="color: #00ff41; margin-left: 8px;">/${api.endpoint || 'not-set'}</code>
+                    <span class="status ${api.visible ? 'visible' : 'hidden'}" style="margin-left: 8px;">${api.visible ? '👁️ Visible' : '🔒 Hidden'}</span>
+                </div>
+                <div>
+                    ${!api.locked ? `
+                        <button onclick="editAPI(${i})" class="edit-btn">✏️ Edit</button>
+                        <button onclick="deleteAPI(${i})" class="delete-btn">🗑️ Clear</button>
+                    ` : `
+                        <button style="background: #555; color: #888; cursor: not-allowed; border: 1px solid #777;" disabled title="This slot is locked">🔒 Locked</button>
+                        <button style="background: #555; color: #888; cursor: not-allowed; border: 1px solid #777;" disabled title="This slot is locked">🔒 Locked</button>
+                    `}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+    <div style="margin-top: 15px; padding: 10px; background: #1a0033; border-radius: 10px; color: #00ff41; font-size: 13px;">
+        💡 <strong>Tip:</strong> Slots 1-5 are pre-configured and LOCKED for protection. Use slots 6-10 for your custom APIs. Admin can toggle lock status.
+    </div>
+</div>
     
-    const slotIndex = parseInt(slot);
     
-    // Check if slot is locked
-    if (customAPIs[slotIndex].locked) {
-        showToast('🔒 This slot is LOCKED! Cannot save changes.', true);
-        return;
-    }
-    
-    const apiName = document.getElementById('apiNameInput').value;
-    const apiEndpoint = document.getElementById('apiEndpointInput').value;
-    
-    if (!apiName || !apiEndpoint) {
-        showToast('❌ API Name and Endpoint are required!', true);
-        return;
-    }
-    
-    customAPIs[slotIndex] = {
-        ...customAPIs[slotIndex],
-        name: apiName,
-        endpoint: apiEndpoint,
-        param: document.getElementById('apiParamInput').value || customAPIs[slotIndex].param,
-        example: document.getElementById('apiExampleInput').value || customAPIs[slotIndex].example,
-        desc: document.getElementById('apiDescInput').value || customAPIs[slotIndex].desc,
-        realAPI: document.getElementById('apiRealUrlInput').value || customAPIs[slotIndex].realAPI,
-        visible: document.getElementById('apiVisibleCheck').checked
-    };
-    
-    // Save to server
-    fetch('/admin/custom-api', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-token': adminToken 
-        },
-        body: JSON.stringify({ slot: slotIndex, api: customAPIs[slotIndex] })
-    }).then(res => res.json()).then(data => {
-        if (data.success) {
-            showToast('✅ API Saved successfully!');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast('❌ ' + data.error, true);
-        }
-    }).catch(err => {
-        showToast('❌ Connection error', true);
-    });
-}
-
-function loadAPIToSlot() {
-    const slot = document.getElementById('apiSlotSelect').value;
-    if (slot === '') {
-        showToast('❌ Please select a slot');
-        return;
-    }
-    
-    const slotIndex = parseInt(slot);
-    const api = customAPIs[slotIndex];
-    currentSlotIndex = slotIndex;
-    currentLockStatus = api.locked;
-    
-    document.getElementById('apiNameInput').value = api.name || '';
-    document.getElementById('apiEndpointInput').value = api.endpoint || '';
-    document.getElementById('apiParamInput').value = api.param || '';
-    document.getElementById('apiExampleInput').value = api.example || '';
-    document.getElementById('apiDescInput').value = api.desc || '';
-    document.getElementById('apiRealUrlInput').value = api.realAPI || '';
-    document.getElementById('apiVisibleCheck').checked = api.visible || false;
-    
-    // Update button states based on lock status
-    updateFormLockState(api.locked);
-    
-    // Update toggle lock button text
-    const lockBtn = document.getElementById('toggleLockBtn');
-    lockBtn.innerHTML = api.locked ? '🔓 Unlock Slot' : '🔒 Lock Slot';
-    
-    if (api.locked) {
-        showToast('⚠️ This slot is LOCKED. Unlock it first to edit.', false);
-    }
-}
-
-function updateFormLockState(isLocked) {
-    const inputs = ['apiNameInput', 'apiEndpointInput', 'apiParamInput', 'apiExampleInput', 'apiDescInput', 'apiRealUrlInput'];
-    const saveBtn = document.getElementById('saveApiBtn');
-    const visibleCheck = document.getElementById('apiVisibleCheck');
-    
-    inputs.forEach(id => {
-        document.getElementById(id).disabled = isLocked;
-        document.getElementById(id).style.background = isLocked ? '#333' : '#0a0a0a';
-        document.getElementById(id).style.cursor = isLocked ? 'not-allowed' : 'text';
-    });
-    
-    visibleCheck.disabled = isLocked;
-    saveBtn.disabled = isLocked;
-    saveBtn.style.opacity = isLocked ? '0.5' : '1';
-    saveBtn.style.cursor = isLocked ? 'not-allowed' : 'pointer';
-    
-    if (isLocked) {
-        saveBtn.title = 'Unlock this slot first to save changes';
-    } else {
-        saveBtn.title = '';
-    }
-}
-
-function toggleLockStatus() {
-    if (currentSlotIndex === -1) {
-        showToast('❌ Please select and load a slot first', true);
-        return;
-    }
-    
-    const slotIndex = currentSlotIndex;
-    const newLockStatus = !customAPIs[slotIndex].locked;
-    
-    fetch('/admin/custom-api/toggle-lock', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-token': adminToken 
-        },
-        body: JSON.stringify({ slot: slotIndex })
-    }).then(res => res.json()).then(data => {
-        if (data.success) {
-            customAPIs[slotIndex].locked = data.locked;
-            showToast(data.message);
-            setTimeout(() => location.reload(), 800);
-        } else {
-            showToast('❌ ' + data.error, true);
-        }
-    }).catch(err => {
-        showToast('❌ Connection error', true);
-    });
-}
-
-function toggleAPIVisibility() {
-    const slot = document.getElementById('apiSlotSelect').value;
-    if (slot === '') {
-        showToast('❌ Please select a slot');
-        return;
-    }
-    
-    const slotIndex = parseInt(slot);
-    
-    if (customAPIs[slotIndex].locked) {
-        showToast('🔒 This slot is LOCKED! Cannot modify.', true);
-        return;
-    }
-    
-    customAPIs[slotIndex].visible = !customAPIs[slotIndex].visible;
-    document.getElementById('apiVisibleCheck').checked = customAPIs[slotIndex].visible;
-    
-    fetch('/admin/custom-api', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-token': adminToken 
-        },
-        body: JSON.stringify({ slot: slotIndex, api: customAPIs[slotIndex] })
-    }).then(res => res.json()).then(data => {
-        if (data.success) {
-            showToast('✅ Visibility toggled!');
-            setTimeout(() => location.reload(), 800);
-        } else {
-            showToast('❌ ' + data.error, true);
-        }
-    });
-}
-
-function editAPI(index) {
-    if (customAPIs[index].locked) {
-        showToast('🔒 This slot is LOCKED! Cannot edit.', true);
-        return;
-    }
-    
-    document.getElementById('apiSlotSelect').value = index;
-    loadAPIToSlot();
-    document.querySelector('.admin-panel').scrollIntoView({ behavior: 'smooth' });
-}
-
-function deleteAPI(index) {
-    if (customAPIs[index].locked) {
-        showToast('🔒 This slot is LOCKED! Cannot clear.', true);
-        return;
-    }
-    
-    if (!confirm('Clear this API slot? All data will be lost!')) return;
-    
-    fetch('/admin/custom-api/clear', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-token': adminToken 
-        },
-        body: JSON.stringify({ slot: index })
-    }).then(res => res.json()).then(data => {
-        if (data.success) {
-            customAPIs[index] = {
-                ...customAPIs[index],
-                name: 'Custom API ' + (index + 1),
-                endpoint: '',
-                param: '',
-                example: '',
-                desc: '',
-                realAPI: '',
-                visible: false,
-                locked: false
-            };
-            showToast('🗑️ API Slot Cleared!');
-            setTimeout(() => location.reload(), 800);
-        } else {
-            showToast('❌ ' + data
         
         <!-- API Testing Panel -->
         <div class="api-panel">
