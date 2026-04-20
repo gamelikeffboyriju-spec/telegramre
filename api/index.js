@@ -169,9 +169,9 @@ keyStorage['BRONX_ULTRA_MASTER_2026'] = {
 
 // ========== 49 PREMIUM KEYS ==========
 const premiumKeys = [
-    { key: 'PREMIUM_NUMBER_001', name: '📱 Number Hunter Pro', scopes: ['number', 'numv2', 'adv'], limit: 100, expiry: '31-12-2026' },
-    { key: 'PREMIUM_AADHAR_001', name: '🆔 Aadhar Master', scopes: ['aadhar'], limit: 50, expiry: '30-06-2026' },
-    { key: 'PREMIUM_SOCIAL_001', name: '🌐 Social Intel', scopes: ['insta', 'git', 'tg'], limit: 200, expiry: '31-12-2026' },
+    { key: 'demo1', name: '📱 Number Hunter Pro', scopes: ['number', 'numv2', 'adv'], limit: 10, expiry: '31-12-2026' },
+    { key: 'demo2', name: '🆔 Aadhar Master', scopes: ['aadhar'], limit: 5, expiry: '30-06-2026' },
+    { key: 'demo3', name: '🌐 Social Intel', scopes: ['insta', 'git', 'tg'], limit: 20, expiry: '31-12-2026' },
     { key: 'PREMIUM_VEHICLE_001', name: '🚗 Vehicle Tracker Pro', scopes: ['vehicle', 'rc'], limit: 75, expiry: '31-10-2026' },
     { key: 'PREMIUM_GAMING_001', name: '🎮 Gaming Intel', scopes: ['ff', 'bgmi'], limit: 150, expiry: '31-12-2026' },
     { key: 'PREMIUM_FINANCE_001', name: '💰 Finance Pro', scopes: ['upi', 'ifsc', 'pan'], limit: 60, expiry: '30-09-2026' },
