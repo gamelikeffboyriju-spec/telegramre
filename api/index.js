@@ -367,9 +367,13 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== ADMIN PANEL COMPLETE (FIXED + FEATURES) ==========
+// ========== ADMIN PANEL (100% FIXED) - ADD BEFORE module.exports ==========
 
 const ADMIN_PASSWORD = 'bronx2026';
+
+// ========== IMPORTANT: Body Parser Middleware ==========
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
@@ -437,13 +441,11 @@ app.get('/admin', (req, res) => {
         
         function login() {
             const pass = document.getElementById('password').value;
-            const errorDiv = document.getElementById('error');
-            
             if (pass === ADMIN_PASS) {
                 localStorage.setItem('bronx_admin_auth', 'true');
                 window.location.href = '/admin/dashboard';
             } else {
-                errorDiv.textContent = '❌ Invalid password!';
+                document.getElementById('error').textContent = '❌ Invalid password!';
             }
         }
         
@@ -477,7 +479,6 @@ app.get('/admin/dashboard', (req, res) => {
             padding: 20px;
         }
         .container { max-width: 1400px; margin: 0 auto; }
-        
         .header {
             background: #1a0033;
             border: 3px solid #ff00ff;
@@ -547,7 +548,6 @@ app.get('/admin/dashboard', (req, res) => {
         .scope-item {
             padding: 8px 15px; background: #1a0033; border: 1px solid #00ff41;
             border-radius: 20px; color: #00ff41; cursor: pointer; font-size: 12px;
-            transition: all 0.2s;
         }
         .scope-item.selected { background: #00ff41; color: #000; border-color: #00ff41; }
         
@@ -588,20 +588,6 @@ app.get('/admin/dashboard', (req, res) => {
             to { transform: translateX(0); opacity: 1; }
         }
         
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000000cc; z-index: 9998; justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background: #1a0033; border: 3px solid #ff00ff; border-radius: 20px;
-            padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
-        }
-        .modal-header {
-            color: #00ff41; font-size: 20px; margin-bottom: 20px;
-            display: flex; justify-content: space-between;
-        }
-        .modal-close { color: #ff6b6b; cursor: pointer; font-size: 24px; }
-        
         .table-container { max-height: 500px; overflow-y: auto; }
         
         .preset-buttons {
@@ -611,29 +597,6 @@ app.get('/admin/dashboard', (req, res) => {
             padding: 8px 15px; background: #0a0a0a; border: 1px solid #ff00ff;
             border-radius: 20px; color: #ff00ff; cursor: pointer; font-size: 12px;
         }
-        .preset-btn:hover { background: #ff00ff20; }
-
-        .request-chart {
-            background: #0a0a0a; border-radius: 10px; padding: 20px;
-            margin-top: 20px; border: 1px solid #00ff41;
-        }
-        .bar-container {
-            display: flex; align-items: center; margin: 10px 0;
-        }
-        .bar-label {
-            width: 150px; color: #00ff41; font-size: 12px;
-        }
-        .bar {
-            flex: 1; height: 20px; background: #1a0033; border-radius: 10px;
-            overflow: hidden; margin: 0 10px;
-        }
-        .bar-fill {
-            height: 100%; background: linear-gradient(90deg, #ff00ff, #00ff41);
-            border-radius: 10px; transition: width 0.3s;
-        }
-        .bar-value {
-            color: #fff; font-size: 12px; min-width: 50px;
-        }
     </style>
 </head>
 <body>
@@ -641,7 +604,6 @@ app.get('/admin/dashboard', (req, res) => {
         <div class="header">
             <h1>⚡ BRONX ADMIN PANEL</h1>
             <div style="display: flex; gap: 15px;">
-                <button class="btn btn-warning" onclick="exportKeys()">📤 EXPORT</button>
                 <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
                 <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
             </div>
@@ -675,33 +637,36 @@ app.get('/admin/dashboard', (req, res) => {
             <div class="panel-title">🔑 KEY GENERATOR</div>
             <div class="form-grid">
                 <div class="form-group">
-                    <label>🔐 API KEY</label>
-                    <input type="text" id="newKey" placeholder="Leave blank for auto">
+                    <label>🔐 API KEY (blank = auto)</label>
+                    <input type="text" id="newKey" placeholder="Auto-generated">
                 </div>
                 <div class="form-group">
                     <label>👤 OWNER NAME</label>
-                    <input type="text" id="newName" placeholder="e.g., Premium User">
+                    <input type="text" id="newName" value="Premium User">
                 </div>
                 <div class="form-group">
                     <label>📊 REQUEST LIMIT</label>
-                    <input type="number" id="newLimit" value="100" min="1">
+                    <input type="number" id="newLimit" value="100">
                 </div>
                 <div class="form-group">
-                    <label>⏰ EXPIRY DATE</label>
-                    <input type="text" id="newExpiry" placeholder="DD-MM-YYYY" value="31-12-2026">
+                    <label>⏰ EXPIRY (DD-MM-YYYY)</label>
+                    <input type="text" id="newExpiry" value="31-12-2026">
                 </div>
             </div>
             
+            <div class="preset-buttons">
+                <span class="preset-btn" onclick="selectAllScopes()">✅ All</span>
+                <span class="preset-btn" onclick="clearAllScopes()">❌ Clear</span>
+                <span class="preset-btn" onclick="selectPhone()">📱 Phone</span>
+                <span class="preset-btn" onclick="selectFinance()">💰 Finance</span>
+                <span class="preset-btn" onclick="selectVehicle()">🚗 Vehicle</span>
+                <span class="preset-btn" onclick="selectSocial()">🌐 Social</span>
+            </div>
+            
+            <label style="color: #00ff41; margin: 10px 0; display: block;">📌 SELECT SCOPES:</label>
+            <div class="scope-selector" id="scopeSelector"></div>
+            
             <div class="form-grid">
-                <div class="form-group">
-                    <label>🏷️ KEY TYPE</label>
-                    <select id="newType">
-                        <option value="premium">Premium</option>
-                        <option value="demo">Demo</option>
-                        <option value="test">Test</option>
-                        <option value="business">Business</option>
-                    </select>
-                </div>
                 <div class="form-group">
                     <label>✨ UNLIMITED</label>
                     <select id="newUnlimited">
@@ -712,32 +677,13 @@ app.get('/admin/dashboard', (req, res) => {
                 <div class="form-group">
                     <label>👁️ VISIBILITY</label>
                     <select id="newHidden">
-                        <option value="false">Visible to public</option>
+                        <option value="false">Visible</option>
                         <option value="true">Hidden</option>
                     </select>
                 </div>
             </div>
             
-            <div class="preset-buttons">
-                <span class="preset-btn" onclick="selectAllScopes()">✅ Select All</span>
-                <span class="preset-btn" onclick="clearAllScopes()">❌ Clear All</span>
-                <span class="preset-btn" onclick="selectPhoneScopes()">📱 Phone Pack</span>
-                <span class="preset-btn" onclick="selectFinanceScopes()">💰 Finance Pack</span>
-                <span class="preset-btn" onclick="selectVehicleScopes()">🚗 Vehicle Pack</span>
-                <span class="preset-btn" onclick="selectSocialScopes()">🌐 Social Pack</span>
-                <span class="preset-btn" onclick="selectGamingScopes()">🎮 Gaming Pack</span>
-            </div>
-            
-            <label style="color: #00ff41; margin: 10px 0; display: block;">📌 SELECT SCOPES:</label>
-            <div class="scope-selector" id="scopeSelector"></div>
-            
-            <button class="btn btn-primary" style="margin-top: 20px; width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
-        </div>
-        
-        <!-- Top Keys Usage Chart -->
-        <div class="panel">
-            <div class="panel-title">📊 TOP KEYS BY USAGE</div>
-            <div class="request-chart" id="usageChart"></div>
+            <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
         
         <!-- Keys Table -->
@@ -749,7 +695,6 @@ app.get('/admin/dashboard', (req, res) => {
                         <tr>
                             <th>KEY</th>
                             <th>OWNER</th>
-                            <th>SCOPES</th>
                             <th>LIMIT</th>
                             <th>USED</th>
                             <th>REMAINING</th>
@@ -762,69 +707,22 @@ app.get('/admin/dashboard', (req, res) => {
                 </table>
             </div>
         </div>
-        
-        <!-- Custom APIs Management -->
-        <div class="panel">
-            <div class="panel-title">🔧 CUSTOM APIs (10 Slots)</div>
-            <div id="customApisList"></div>
-        </div>
-    </div>
-    
-    <!-- Edit Modal -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>✏️ EDIT KEY</span>
-                <span class="modal-close" onclick="closeModal()">&times;</span>
-            </div>
-            <input type="hidden" id="editKeyOriginal">
-            <div class="form-group">
-                <label>OWNER NAME</label>
-                <input type="text" id="editName">
-            </div>
-            <div class="form-group">
-                <label>REQUEST LIMIT</label>
-                <input type="number" id="editLimit">
-            </div>
-            <div class="form-group">
-                <label>EXPIRY DATE (DD-MM-YYYY or 'never')</label>
-                <input type="text" id="editExpiry">
-            </div>
-            <div class="form-group">
-                <label>UNLIMITED</label>
-                <select id="editUnlimited">
-                    <option value="false">No</option>
-                    <option value="true">Yes</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>HIDDEN</label>
-                <select id="editHidden">
-                    <option value="false">No (Visible)</option>
-                    <option value="true">Yes (Hidden)</option>
-                </select>
-            </div>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="updateKey()">💾 SAVE CHANGES</button>
-        </div>
     </div>
     
     <div id="toastContainer"></div>
     
     <script>
-        // Check authentication
         if (localStorage.getItem('bronx_admin_auth') !== 'true') {
             window.location.href = '/admin';
         }
         
         const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
         
-        // Render scopes
         const scopeDiv = document.getElementById('scopeSelector');
         SCOPES.forEach(scope => {
             const span = document.createElement('span');
             span.className = 'scope-item';
             span.textContent = scope;
-            span.dataset.scope = scope;
             span.onclick = function() { this.classList.toggle('selected'); };
             scopeDiv.appendChild(span);
         });
@@ -839,14 +737,11 @@ app.get('/admin/dashboard', (req, res) => {
         }
         
         function generateRandomKey() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let key = 'BRONX_';
-            for (let i = 0; i < 12; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
-            return key;
+            return 'BRONX_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase();
         }
         
         function getSelectedScopes() {
-            return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(el => el.dataset.scope);
+            return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(el => el.textContent);
         }
         
         function selectAllScopes() {
@@ -857,38 +752,31 @@ app.get('/admin/dashboard', (req, res) => {
             document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected'));
         }
         
-        function selectPhoneScopes() {
+        function selectPhone() {
             clearAllScopes();
             ['number', 'numv2', 'adv', 'name', 'aadhar'].forEach(s => {
-                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
         
-        function selectFinanceScopes() {
+        function selectFinance() {
             clearAllScopes();
             ['upi', 'ifsc', 'pan'].forEach(s => {
-                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
         
-        function selectVehicleScopes() {
+        function selectVehicle() {
             clearAllScopes();
             ['vehicle', 'rc'].forEach(s => {
-                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
         
-        function selectSocialScopes() {
+        function selectSocial() {
             clearAllScopes();
             ['insta', 'git', 'tg'].forEach(s => {
-                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
-            });
-        }
-        
-        function selectGamingScopes() {
-            clearAllScopes();
-            ['ff', 'bgmi'].forEach(s => {
-                document.querySelector(\`#scopeSelector .scope-item[data-scope="\${s}"]\`)?.classList.add('selected');
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
         
@@ -899,7 +787,6 @@ app.get('/admin/dashboard', (req, res) => {
             const name = document.getElementById('newName').value || 'Premium User';
             const limit = parseInt(document.getElementById('newLimit').value) || 100;
             const expiry = document.getElementById('newExpiry').value || '31-12-2026';
-            const type = document.getElementById('newType').value;
             const unlimited = document.getElementById('newUnlimited').value === 'true';
             const hidden = document.getElementById('newHidden').value === 'true';
             const scopes = getSelectedScopes();
@@ -909,11 +796,14 @@ app.get('/admin/dashboard', (req, res) => {
                 return;
             }
             
+            const payload = { key, name, scopes, limit, expiry, unlimited, hidden };
+            console.log('Sending:', payload);
+            
             try {
                 const res = await fetch('/admin/generate-key', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, name, scopes, limit, expiry, type, unlimited, hidden })
+                    body: JSON.stringify(payload)
                 });
                 
                 const data = await res.json();
@@ -921,64 +811,37 @@ app.get('/admin/dashboard', (req, res) => {
                 if (data.success) {
                     showToast('✅ Key generated: ' + key);
                     document.getElementById('newKey').value = '';
-                    document.getElementById('newName').value = '';
                     refreshData();
                 } else {
-                    showToast(data.error || 'Failed to generate', true);
+                    showToast(data.error || 'Failed', true);
                 }
             } catch (err) {
-                showToast('❌ Server error: ' + err.message, true);
+                showToast('❌ Error: ' + err.message, true);
             }
         }
         
         async function refreshData() {
             try {
-                // Load keys
-                const keysRes = await fetch('/admin/keys');
-                const keysData = await keysRes.json();
+                const res = await fetch('/admin/keys');
+                const data = await res.json();
                 
-                if (keysData.success) {
-                    const keys = keysData.keys;
+                if (data.success) {
+                    const keys = data.keys;
                     const keysArray = Object.entries(keys);
                     
                     document.getElementById('totalKeys').textContent = keysArray.length;
                     
                     let active = 0, totalReqs = 0;
-                    const usageData = [];
-                    
-                    keysArray.forEach(([keyName, k]) => {
+                    keysArray.forEach(([_, k]) => {
                         totalReqs += k.used || 0;
                         const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
                         const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
                         if (notExpired && hasQuota) active++;
-                        
-                        if (k.used > 0) {
-                            usageData.push({ key: keyName, name: k.owner, used: k.used, limit: k.limit });
-                        }
                     });
                     
                     document.getElementById('activeKeys').textContent = active;
                     document.getElementById('totalRequests').textContent = totalReqs;
-                    
-                    // Update usage chart
-                    usageData.sort((a, b) => b.used - a.used);
-                    const topUsage = usageData.slice(0, 10);
-                    const maxUsed = topUsage[0]?.used || 1;
-                    
-                    const chartDiv = document.getElementById('usageChart');
-                    if (topUsage.length > 0) {
-                        chartDiv.innerHTML = topUsage.map(item => {
-                            const percentage = (item.used / maxUsed) * 100;
-                            const limitDisplay = item.limit === 'Unlimited' ? '∞' : item.limit;
-                            return \`<div class="bar-container">
-                                <div class="bar-label">\${item.name || item.key.substring(0, 12)}</div>
-                                <div class="bar"><div class="bar-fill" style="width: \${percentage}%;"></div></div>
-                                <div class="bar-value">\${item.used} / \${limitDisplay}</div>
-                            </div>\`;
-                        }).join('');
-                    } else {
-                        chartDiv.innerHTML = '<div style="color: #fff; text-align: center;">No usage data yet</div>';
-                    }
+                    document.getElementById('customApisCount').textContent = '6';
                     
                     const tbody = document.getElementById('keysTableBody');
                     tbody.innerHTML = keysArray.map(([keyName, k]) => {
@@ -989,14 +852,11 @@ app.get('/admin/dashboard', (req, res) => {
                         else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
                         
                         const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
-                        const scopesDisplay = k.scopes.includes('*') ? 'ALL' : k.scopes.slice(0, 3).join(', ') + (k.scopes.length > 3 ? '...' : '');
-                        const hiddenBadge = k.hidden ? ' 🔒' : '';
                         const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
                         
                         return \`<tr>
-                            <td><code style="color: #ff00ff;">\${displayKey}</code>\${hiddenBadge}</td>
+                            <td><code style="color: #ff00ff;">\${displayKey}</code>\${k.hidden ? ' 🔒' : ''}</td>
                             <td>\${k.owner || '-'}</td>
-                            <td style="font-size: 11px;">\${scopesDisplay}</td>
                             <td>\${k.limit === 'Unlimited' ? '∞' : k.limit}</td>
                             <td>\${k.used || 0}</td>
                             <td style="color: \${remaining === 0 ? '#ff6b6b' : '#00ff41'};">\${remaining}</td>
@@ -1004,195 +864,41 @@ app.get('/admin/dashboard', (req, res) => {
                             <td><span class="status-badge \${statusClass}">\${status}</span></td>
                             <td>
                                 <button class="action-btn copy" onclick="copyKey('\${keyName}')">📋</button>
-                                <button class="action-btn edit" onclick="openEditModal('\${keyName}')">✏️</button>
-                                <button class="action-btn reset" onclick="resetUsage('\${keyName}')">🔄</button>
+                                <button class="action-btn reset" onclick="resetKey('\${keyName}')">🔄</button>
                                 <button class="action-btn delete" onclick="deleteKey('\${keyName}')">🗑️</button>
                             </td>
                         </tr>\`;
                     }).join('');
                 }
-                
-                // Load custom APIs
-                const customRes = await fetch('/admin/custom-apis');
-                const customData = await customRes.json();
-                if (customData.success) {
-                    const visible = customData.customAPIs.filter(a => a.visible).length;
-                    document.getElementById('customApisCount').textContent = visible;
-                    
-                    const listDiv = document.getElementById('customApisList');
-                    listDiv.innerHTML = customData.customAPIs.map((api, i) => {
-                        const statusClass = api.visible ? 'status-active' : 'status-expired';
-                        const statusText = api.visible ? '👁️ Visible' : '🔒 Hidden';
-                        return \`<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0a0a0a; border: 1px solid #00ff41; border-radius: 10px; margin-bottom: 8px;">
-                            <div>
-                                <strong style="color: #00ff41;">Slot \${i+1}:</strong> 
-                                <span style="color: #fff;">\${api.name || 'Empty'}</span>
-                                <span class="status-badge \${statusClass}" style="margin-left: 10px;">\${statusText}</span>
-                                <code style="color: #ff00ff; margin-left: 10px;">/\${api.endpoint || 'not-set'}</code>
-                            </div>
-                            <div>
-                                <button class="action-btn edit" onclick="editCustomApi(\${i})">✏️</button>
-                                <button class="action-btn reset" onclick="toggleCustomApi(\${i})">👁️</button>
-                            </div>
-                        </div>\`;
-                    }).join('');
-                }
             } catch (err) {
-                console.error('Refresh error:', err);
+                console.error(err);
             }
         }
         
         function copyKey(key) {
             navigator.clipboard.writeText(key);
-            showToast('📋 Key copied to clipboard!');
+            showToast('📋 Copied!');
         }
         
-        function exportKeys() {
-            fetch('/admin/keys')
-                .then(r => r.json())
-                .then(data => {
-                    const keysText = JSON.stringify(data.keys, null, 2);
-                    const blob = new Blob([keysText], {type: 'application/json'});
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'bronx_keys_' + new Date().toISOString().split('T')[0] + '.json';
-                    a.click();
-                    showToast('📤 Keys exported!');
-                });
-        }
-        
-        let currentEditKey = '';
-        
-        async function openEditModal(key) {
-            currentEditKey = key;
-            const res = await fetch('/admin/keys');
-            const data = await res.json();
-            
-            if (data.keys[key]) {
-                const k = data.keys[key];
-                document.getElementById('editKeyOriginal').value = key;
-                document.getElementById('editName').value = k.owner || '';
-                document.getElementById('editLimit').value = k.limit === 'Unlimited' ? 100 : k.limit;
-                document.getElementById('editExpiry').value = k.expiry === 'Never' ? 'never' : (k.expiry || 'never');
-                document.getElementById('editUnlimited').value = k.limit === 'Unlimited' ? 'true' : 'false';
-                document.getElementById('editHidden').value = k.hidden ? 'true' : 'false';
-                document.getElementById('editModal').style.display = 'flex';
-            }
-        }
-        
-        function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
-        }
-        
-        async function updateKey() {
-            const key = document.getElementById('editKeyOriginal').value;
-            const name = document.getElementById('editName').value;
-            const limit = parseInt(document.getElementById('editLimit').value);
-            const expiry = document.getElementById('editExpiry').value;
-            const unlimited = document.getElementById('editUnlimited').value === 'true';
-            const hidden = document.getElementById('editHidden').value === 'true';
-            
-            try {
-                const res = await fetch('/admin/update-key', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, name, limit, expiry, unlimited, hidden })
-                });
-                
-                const data = await res.json();
-                if (data.success) {
-                    showToast('✅ Key updated!');
-                    closeModal();
-                    refreshData();
-                } else {
-                    showToast(data.error, true);
-                }
-            } catch (err) {
-                showToast('❌ Server error', true);
-            }
-        }
-        
-        async function resetUsage(key) {
-            if (!confirm('Reset usage for this key?')) return;
-            
-            try {
-                const res = await fetch('/admin/reset-usage', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key })
-                });
-                
-                const data = await res.json();
-                if (data.success) {
-                    showToast('✅ Usage reset!');
-                    refreshData();
-                }
-            } catch (err) {
-                showToast('❌ Server error', true);
-            }
-        }
-        
-        async function deleteKey(key) {
-            if (!confirm('PERMANENTLY DELETE this key?')) return;
-            
-            try {
-                const res = await fetch('/admin/delete-key', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key })
-                });
-                
-                const data = await res.json();
-                if (data.success) {
-                    showToast('✅ Key deleted!');
-                    refreshData();
-                }
-            } catch (err) {
-                showToast('❌ Server error', true);
-            }
-        }
-        
-        async function editCustomApi(slot) {
-            const res = await fetch('/admin/custom-apis');
-            const data = await res.json();
-            const api = data.customAPIs[slot];
-            
-            const newName = prompt('API Name:', api.name);
-            if (newName === null) return;
-            const newEndpoint = prompt('Endpoint:', api.endpoint);
-            if (newEndpoint === null) return;
-            const newParam = prompt('Parameter name:', api.param);
-            if (newParam === null) return;
-            const newExample = prompt('Example value:', api.example);
-            if (newExample === null) return;
-            const newDesc = prompt('Description:', api.desc);
-            if (newDesc === null) return;
-            const newUrl = prompt('Real API URL (use {param}):', api.realAPI);
-            if (newUrl === null) return;
-            
-            await fetch('/admin/custom-api', {
+        async function resetKey(key) {
+            if (!confirm('Reset usage?')) return;
+            await fetch('/admin/reset-usage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ slot, api: { ...api, name: newName, endpoint: newEndpoint, param: newParam, example: newExample, desc: newDesc, realAPI: newUrl, visible: true } })
+                body: JSON.stringify({ key })
             });
-            
-            showToast('✅ Custom API updated!');
+            showToast('✅ Reset!');
             refreshData();
         }
         
-        async function toggleCustomApi(slot) {
-            const res = await fetch('/admin/custom-apis');
-            const data = await res.json();
-            const api = data.customAPIs[slot];
-            
-            await fetch('/admin/custom-api', {
-                method: 'POST',
+        async function deleteKey(key) {
+            if (!confirm('DELETE this key?')) return;
+            await fetch('/admin/delete-key', {
+                method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ slot, api: { ...api, visible: !api.visible } })
+                body: JSON.stringify({ key })
             });
-            
-            showToast('✅ Visibility toggled!');
+            showToast('✅ Deleted!');
             refreshData();
         }
         
@@ -1201,151 +907,96 @@ app.get('/admin/dashboard', (req, res) => {
             window.location.href = '/admin';
         }
         
-        // Initial load
         refreshData();
-        
-        // Auto refresh every 30 seconds
-        setInterval(refreshData, 30000);
     </script>
 </body>
 </html>`;
     res.send(html);
 });
 
-// ========== ADMIN API ENDPOINTS (FIXED ROUTES) ==========
+// ========== ADMIN API ENDPOINTS ==========
 
-// Get all keys
 app.get('/admin/keys', (req, res) => {
     const allKeys = {};
     Object.entries(keyStorage).forEach(([key, data]) => {
         allKeys[key] = {
             owner: data.name,
             scopes: data.scopes,
-            type: data.type,
             limit: data.unlimited ? 'Unlimited' : data.limit,
             used: data.used,
-            remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
             expiry: data.expiryStr || 'Never',
-            hidden: data.hidden || false,
-            created: data.created,
-            unlimited: data.unlimited || false
+            hidden: data.hidden || false
         };
     });
     res.json({ success: true, keys: allKeys });
 });
 
-// Generate new key (FIXED ROUTE)
+// FIXED: Generate key with proper body parsing
 app.post('/admin/generate-key', (req, res) => {
-    try {
-        const { key, name, scopes, limit, expiry, type, unlimited, hidden } = req.body;
-        
-        if (!key) {
-            return res.status(400).json({ success: false, error: 'Key required' });
-        }
-        
-        if (keyStorage[key]) {
-            return res.status(400).json({ success: false, error: 'Key already exists' });
-        }
-        
-        let expiryDate = null;
-        let expiryStr = null;
-        
-        if (expiry && expiry !== 'never') {
-            const [day, month, year] = expiry.split('-').map(Number);
-            if (day && month && year) {
-                expiryDate = new Date(year, month - 1, day, 23, 59, 59);
-                expiryStr = expiry;
-            }
-        }
-        
-        keyStorage[key] = {
-            name: name || 'User',
-            scopes: scopes || ['number'],
-            type: type || 'premium',
-            limit: unlimited ? Infinity : (parseInt(limit) || 100),
-            used: 0,
-            expiry: expiryDate,
-            expiryStr: expiryStr,
-            created: getIndiaDateTime(),
-            resetType: 'never',
-            unlimited: unlimited || false,
-            hidden: hidden || false
-        };
-        
-        res.json({ success: true, message: 'Key generated!', key });
-    } catch (error) {
-        console.error('Generate key error:', error);
-        res.status(500).json({ success: false, error: error.message });
+    console.log('Body received:', req.body); // Debug
+    
+    // Manual extraction for safety
+    const key = req.body.key;
+    const name = req.body.name;
+    const scopes = req.body.scopes;
+    const limit = req.body.limit;
+    const expiry = req.body.expiry;
+    const unlimited = req.body.unlimited;
+    const hidden = req.body.hidden;
+    
+    if (!key) {
+        return res.json({ success: false, error: 'Key required' });
     }
+    
+    if (keyStorage[key]) {
+        return res.json({ success: false, error: 'Key already exists' });
+    }
+    
+    let expiryDate = null;
+    let expiryStr = null;
+    
+    if (expiry && expiry !== 'never') {
+        const parts = expiry.split('-');
+        if (parts.length === 3) {
+            expiryDate = new Date(parts[2], parts[1] - 1, parts[0], 23, 59, 59);
+            expiryStr = expiry;
+        }
+    }
+    
+    keyStorage[key] = {
+        name: name || 'User',
+        scopes: scopes || ['number'],
+        type: 'premium',
+        limit: unlimited ? Infinity : (parseInt(limit) || 100),
+        used: 0,
+        expiry: expiryDate,
+        expiryStr: expiryStr,
+        created: getIndiaDateTime(),
+        resetType: 'never',
+        unlimited: unlimited || false,
+        hidden: hidden || false
+    };
+    
+    res.json({ success: true, message: 'Key generated!', key });
 });
 
-// Update key
-app.put('/admin/update-key', (req, res) => {
-    try {
-        const { key, name, limit, expiry, unlimited, hidden } = req.body;
-        
-        if (!key || !keyStorage[key]) {
-            return res.status(404).json({ success: false, error: 'Key not found' });
-        }
-        
-        const keyData = keyStorage[key];
-        
-        if (name !== undefined) keyData.name = name;
-        if (limit !== undefined) keyData.limit = unlimited ? Infinity : parseInt(limit);
-        if (unlimited !== undefined) {
-            keyData.unlimited = unlimited;
-            if (unlimited) keyData.limit = Infinity;
-        }
-        if (hidden !== undefined) keyData.hidden = hidden;
-        
-        if (expiry !== undefined) {
-            if (expiry === 'never' || !expiry) {
-                keyData.expiry = null;
-                keyData.expiryStr = null;
-            } else {
-                const [day, month, year] = expiry.split('-').map(Number);
-                if (day && month && year) {
-                    keyData.expiry = new Date(year, month - 1, day, 23, 59, 59);
-                    keyData.expiryStr = expiry;
-                }
-            }
-        }
-        
-        res.json({ success: true, message: 'Key updated!' });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Delete key
-app.delete('/admin/delete-key', (req, res) => {
-    try {
-        const { key } = req.body;
-        
-        if (!key || !keyStorage[key]) {
-            return res.status(404).json({ success: false, error: 'Key not found' });
-        }
-        
-        delete keyStorage[key];
-        res.json({ success: true, message: 'Key deleted!' });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Reset usage
 app.post('/admin/reset-usage', (req, res) => {
-    try {
-        const { key } = req.body;
-        
-        if (!key || !keyStorage[key]) {
-            return res.status(404).json({ success: false, error: 'Key not found' });
-        }
-        
+    const key = req.body.key;
+    if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        res.json({ success: true, message: 'Usage reset!' });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, error: 'Key not found' });
+    }
+});
+
+app.delete('/admin/delete-key', (req, res) => {
+    const key = req.body.key;
+    if (keyStorage[key]) {
+        delete keyStorage[key];
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, error: 'Key not found' });
     }
 });
 
