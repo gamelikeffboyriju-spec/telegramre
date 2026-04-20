@@ -7,25 +7,7 @@ const app = express();
 const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
 const REAL_API_KEY = 'nobita';
 
-// ========== ADMIN CREDENTIALS (Hardcoded for Vercel) ==========
-const ADMIN_CREDENTIALS = {
-    username: 'BRONX_ADMIN',
-    password: 'Bronx@2026Ultra'
-};
-
-// ========== SIMPLE TOKEN AUTH FOR VERCEL ==========
-// Generate a simple token for admin authentication
-let adminTokens = new Map(); // Store tokens in memory (resets on cold start)
-
-function generateAdminToken() {
-    return crypto.randomBytes(32).toString('hex');
-}
-
-function verifyAdminToken(token) {
-    return adminTokens.has(token);
-}
-
-// ========== EXTRA CUSTOM APIS (10 Slots - with LOCK) ==========
+// ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
 let customAPIs = [
     { 
         id: 1, 
@@ -36,8 +18,7 @@ let customAPIs = [
         desc: 'india Number Lookup Vip Bronx api',
         category: '🔧 Custom APIs',
         visible: true,
-        locked: true,
-        realAPI: 'https://rajput-api.vercel.app/search?num={param}'
+        realAPI: 'https://rajput-api.vercel.app/search?num={parma}'
     },
     { 
         id: 2, 
@@ -48,19 +29,17 @@ let customAPIs = [
         desc: 'Vehicle RC Details Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        locked: true,
-        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}'
+        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={parma}'
     },
     { 
         id: 3, 
-        name: 'Adhar Detail api', 
+        name: 'Adhar Detail api ', 
         endpoint: 'aadhar-details', 
         param: 'aadhar', 
         example: '393933081942', 
         desc: 'Aadhar Number Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        locked: true,
         realAPI: 'https://bronx-adhar-api.vercel.app/aadhar={param}'
     },
     { 
@@ -72,8 +51,7 @@ let customAPIs = [
         desc: 'Email Information Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        locked: true,
-        realAPI: 'https://bronx-mail-api.vercel.app/mail={param}'
+        realAPI: 'https://bronx-mail-api.vercel.app/mail={parma}'
     },
     { 
         id: 5, 
@@ -84,14 +62,63 @@ let customAPIs = [
         desc: 'Telegram Number Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        locked: true,
-        realAPI: 'http://45.91.248.51:3000/api/tgnum?id={param}'
+        realAPI: 'http://45.91.248.51:3000/api/tgnum?id={parma}'
     },
-    { id: 6, name: 'Custom API 6', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, locked: false, realAPI: '' },
-    { id: 7, name: 'Custom API 7', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, locked: false, realAPI: '' },
-    { id: 8, name: 'Custom API 8', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, locked: false, realAPI: '' },
-    { id: 9, name: 'Custom API 9', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, locked: false, realAPI: '' },
-    { id: 10, name: 'Custom API 10', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, locked: false, realAPI: '' }
+    { 
+        id: 6, 
+        name: 'Custom API 6', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 7, 
+        name: 'Custom API 7', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 8, 
+        name: 'Custom API 8', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 9, 
+        name: 'Custom API 9', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    },
+    { 
+        id: 10, 
+        name: 'Custom API 10', 
+        endpoint: '', 
+        param: '', 
+        example: '', 
+        desc: '',
+        category: '🔧 Custom APIs',
+        visible: false,
+        realAPI: ''
+    }
 ];
 
 // ========== INDIA TIME HELPER ==========
@@ -99,6 +126,10 @@ function getIndiaTime() {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
     return new Date(now.getTime() + istOffset);
+}
+
+function getIndiaDate() {
+    return getIndiaTime().toISOString().split('T')[0];
 }
 
 function getIndiaDateTime() {
@@ -122,7 +153,7 @@ function parseExpiryDate(dateStr) {
 // ========== ENHANCED KEY STORAGE ==========
 let keyStorage = {};
 
-// ========== UNLIMITED MASTER KEY (HIDDEN) ==========
+// ========== UNLIMITED MASTER KEY (HIDDEN FROM PUBLIC) ==========
 keyStorage['BRONX_ULTRA_MASTER_2026'] = {
     name: '👑 BRONX ULTRA OWNER',
     scopes: ['*'],
@@ -133,10 +164,10 @@ keyStorage['BRONX_ULTRA_MASTER_2026'] = {
     created: getIndiaDateTime(),
     resetType: 'never',
     unlimited: true,
-    hidden: true
+    hidden: true // HIDE FROM PUBLIC
 };
 
-// ========== 49 PREMIUM KEYS (ALL HIDDEN) ==========
+// ========== 49 PREMIUM KEYS ==========
 const premiumKeys = [
     { key: 'demo1', name: '📱 Number Hunter Pro', scopes: ['number', 'numv2', 'adv'], limit: 10, expiry: '31-12-2026' },
     { key: 'demo2', name: '🆔 Aadhar Master', scopes: ['aadhar'], limit: 5, expiry: '30-06-2026' },
@@ -188,7 +219,7 @@ const premiumKeys = [
     { key: 'PREMIUM_VIP_001', name: '👑 VIP Member', scopes: ['number', 'numv2', 'adv', 'aadhar', 'name', 'insta', 'git', 'tg'], limit: 500, expiry: '31-12-2026' }
 ];
 
-// Initialize premium keys (all hidden)
+// Initialize premium keys
 premiumKeys.forEach(keyData => {
     keyStorage[keyData.key] = {
         name: keyData.name,
@@ -201,12 +232,11 @@ premiumKeys.forEach(keyData => {
         created: getIndiaDateTime(),
         resetType: 'never',
         unlimited: false,
-        hidden: true,
-        isCustom: false
+        hidden: false
     };
 });
 
-// Demo keys (hidden)
+// Demo/Test keys
 keyStorage['DEMO_KEY_2026'] = {
     name: '🎁 Demo User',
     scopes: ['number', 'aadhar', 'pincode'],
@@ -218,8 +248,7 @@ keyStorage['DEMO_KEY_2026'] = {
     created: getIndiaDateTime(),
     resetType: 'never',
     unlimited: false,
-    hidden: true,
-    isCustom: false
+    hidden: false
 };
 
 keyStorage['TEST_KEY_2026'] = {
@@ -233,16 +262,12 @@ keyStorage['TEST_KEY_2026'] = {
     created: getIndiaDateTime(),
     resetType: 'never',
     unlimited: false,
-    hidden: true,
-    isCustom: false
+    hidden: false
 };
-
-// ========== CUSTOM GENERATED KEYS STORAGE ==========
-let customGeneratedKeys = {};
 
 // ========== KEY MANAGEMENT FUNCTIONS ==========
 function checkKeyValid(apiKey) {
-    const keyData = keyStorage[apiKey] || customGeneratedKeys[apiKey];
+    const keyData = keyStorage[apiKey];
     if (!keyData) {
         return { valid: false, error: '❌ Invalid API Key. Contact @BRONX_ULTRA to purchase.' };
     }
@@ -250,7 +275,7 @@ function checkKeyValid(apiKey) {
     if (keyData.expiry && isKeyExpired(keyData.expiry)) {
         return { 
             valid: false, 
-            error: '⏰ Your Key has EXPIRED! Please purchase a new key.',
+            error: '⏰ Your Key has EXPIRED! Please purchase a new key. Contact @BRONX_ULTRA on Telegram.',
             expired: true,
             expiredDate: keyData.expiryStr
         };
@@ -259,7 +284,7 @@ function checkKeyValid(apiKey) {
     if (!keyData.unlimited && keyData.used >= keyData.limit) {
         return {
             valid: false,
-            error: `🛑 Limit Exhausted! You have used ${keyData.used}/${keyData.limit} requests.`,
+            error: `🛑 Limit Exhausted! You have used ${keyData.used}/${keyData.limit} requests. Contact @BRONX_ULTRA for more.`,
             limitExhausted: true
         };
     }
@@ -268,19 +293,17 @@ function checkKeyValid(apiKey) {
 }
 
 function incrementKeyUsage(apiKey) {
-    if (keyStorage[apiKey]) {
-        if (!keyStorage[apiKey].unlimited) {
-            keyStorage[apiKey].used++;
-        }
-        return keyStorage[apiKey];
+    if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) {
+        keyStorage[apiKey].used++;
     }
-    if (customGeneratedKeys[apiKey]) {
-        if (!customGeneratedKeys[apiKey].unlimited) {
-            customGeneratedKeys[apiKey].used++;
-        }
-        return customGeneratedKeys[apiKey];
-    }
-    return null;
+    return keyStorage[apiKey];
+}
+
+function getRemainingQuota(apiKey) {
+    const keyData = keyStorage[apiKey];
+    if (!keyData) return 0;
+    if (keyData.unlimited) return Infinity;
+    return Math.max(0, keyData.limit - keyData.used);
 }
 
 function checkKeyScope(keyData, endpoint) {
@@ -290,15 +313,6 @@ function checkKeyScope(keyData, endpoint) {
         valid: false, 
         error: `❌ This key cannot access '${endpoint}'. Allowed scopes: ${keyData.scopes.join(', ')}` 
     };
-}
-
-function generateAPIKey(prefix = 'BRONX') {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let key = prefix + '_';
-    for (let i = 0; i < 16; i++) {
-        key += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return key;
 }
 
 // ========== ENDPOINTS ==========
@@ -353,887 +367,12 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== MIDDLEWARE ==========
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Admin auth middleware using token
-function requireAdminAuth(req, res, next) {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!token || !verifyAdminToken(token)) {
-        return res.status(401).json({ success: false, error: 'Unauthorized. Invalid or missing admin token.' });
-    }
-    next();
-}
-
-// ========== AUTH ROUTES ==========
-app.post('/admin/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-        const token = generateAdminToken();
-        adminTokens.set(token, { username, loginTime: getIndiaDateTime() });
-        
-        // Clean old tokens (keep last 5)
-        if (adminTokens.size > 5) {
-            const firstKey = adminTokens.keys().next().value;
-            adminTokens.delete(firstKey);
-        }
-        
-        return res.json({ 
-            success: true, 
-            message: '✅ Login successful!',
-            token: token
-        });
-    }
-    
-    res.status(401).json({ success: false, error: '❌ Invalid username or password!' });
-});
-
-app.post('/admin/logout', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (token) {
-        adminTokens.delete(token);
-    }
-    res.json({ success: true, message: 'Logged out successfully' });
-});
-
-// ========== CUSTOM KEY GENERATOR ROUTES ==========
-app.post('/admin/generate-key', requireAdminAuth, (req, res) => {
-    const { name, expiryDate, requestLimit, scopes, unlimited } = req.body;
-    
-    if (!name) {
-        return res.status(400).json({ success: false, error: 'Owner name is required' });
-    }
-    
-    if (!scopes || !Array.isArray(scopes) || scopes.length === 0) {
-        return res.status(400).json({ success: false, error: 'At least one scope is required' });
-    }
-    
-    const newKey = generateAPIKey('BRONX');
-    const expiry = expiryDate ? parseExpiryDate(expiryDate) : null;
-    const limit = unlimited ? Infinity : (parseInt(requestLimit) || 100);
-    
-    customGeneratedKeys[newKey] = {
-        name: name,
-        scopes: scopes,
-        type: 'custom',
-        limit: limit,
-        used: 0,
-        expiry: expiry,
-        expiryStr: expiryDate || 'Never',
-        created: getIndiaDateTime(),
-        resetType: 'never',
-        unlimited: unlimited || false,
-        hidden: false,
-        isCustom: true
-    };
-    
-    res.json({
-        success: true,
-        message: '✅ Custom key generated successfully!',
-        key: newKey,
-        details: customGeneratedKeys[newKey]
-    });
-});
-
-app.get('/admin/custom-keys', requireAdminAuth, (req, res) => {
-    const keysList = Object.entries(customGeneratedKeys).map(([key, data]) => ({
-        key: key,
-        name: data.name,
-        scopes: data.scopes,
-        limit: data.unlimited ? 'Unlimited' : data.limit,
-        used: data.used,
-        remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
-        expiry: data.expiryStr || 'Never',
-        created: data.created,
-        unlimited: data.unlimited,
-        status: (() => {
-            if (data.expiry && isKeyExpired(data.expiry)) return 'expired';
-            if (!data.unlimited && data.used >= data.limit) return 'exhausted';
-            return 'active';
-        })()
-    }));
-    
-    res.json({ success: true, total: keysList.length, keys: keysList });
-});
-
-app.delete('/admin/custom-key/:key', requireAdminAuth, (req, res) => {
-    const keyToDelete = req.params.key;
-    
-    if (customGeneratedKeys[keyToDelete]) {
-        delete customGeneratedKeys[keyToDelete];
-        return res.json({ success: true, message: '✅ Key deleted successfully!' });
-    }
-    
-    res.status(404).json({ success: false, error: 'Key not found' });
-});
-
-app.post('/admin/reset-key-usage/:key', requireAdminAuth, (req, res) => {
-    const keyToReset = req.params.key;
-    
-    if (customGeneratedKeys[keyToReset]) {
-        customGeneratedKeys[keyToReset].used = 0;
-        return res.json({ success: true, message: '✅ Key usage reset successfully!' });
-    }
-    
-    res.status(404).json({ success: false, error: 'Key not found' });
-});
-
-// ========== CUSTOM API MANAGEMENT ==========
-app.post('/admin/custom-api', requireAdminAuth, (req, res) => {
-    const { slot, api } = req.body;
-    
-    if (slot === undefined || slot < 0 || slot >= customAPIs.length) {
-        return res.status(400).json({ success: false, error: "Invalid slot" });
-    }
-    
-    if (customAPIs[slot].locked) {
-        return res.status(403).json({ 
-            success: false, 
-            error: "🔒 This API slot is LOCKED and cannot be modified!" 
-        });
-    }
-    
-    customAPIs[slot] = { ...customAPIs[slot], ...api };
-    
-    res.json({ success: true, message: "Custom API updated", api: customAPIs[slot] });
-});
-
-app.post('/admin/custom-api/clear', requireAdminAuth, (req, res) => {
-    const { slot } = req.body;
-    
-    if (slot === undefined || slot < 0 || slot >= customAPIs.length) {
-        return res.status(400).json({ success: false, error: "Invalid slot" });
-    }
-    
-    if (customAPIs[slot].locked) {
-        return res.status(403).json({ 
-            success: false, 
-            error: "🔒 This API slot is LOCKED and cannot be cleared!" 
-        });
-    }
-    
-    customAPIs[slot] = {
-        ...customAPIs[slot],
-        name: `Custom API ${slot + 1}`,
-        endpoint: '',
-        param: '',
-        example: '',
-        desc: '',
-        realAPI: '',
-        visible: false,
-        locked: false
-    };
-    
-    res.json({ success: true, message: "✅ Custom API slot cleared", api: customAPIs[slot] });
-});
-
-app.post('/admin/custom-api/toggle-lock', requireAdminAuth, (req, res) => {
-    const { slot } = req.body;
-    
-    if (slot === undefined || slot < 0 || slot >= customAPIs.length) {
-        return res.status(400).json({ success: false, error: "Invalid slot" });
-    }
-    
-    customAPIs[slot].locked = !customAPIs[slot].locked;
-    
-    res.json({ 
-        success: true, 
-        message: `🔒 Slot ${slot + 1} is now ${customAPIs[slot].locked ? 'LOCKED' : 'UNLOCKED'}`,
-        locked: customAPIs[slot].locked 
-    });
-});
-
-app.get('/admin/custom-apis', requireAdminAuth, (req, res) => {
-    res.json({ success: true, customAPIs });
-});
-
-// ========== PUBLIC HTML PAGES ==========
-
-function getAdminLoginPage() {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 BRONX ADMIN LOGIN</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
-            font-family: 'Courier New', monospace;
-        }
-        .login-container {
-            background: rgba(10,10,10,0.95);
-            border: 3px solid;
-            border-image: linear-gradient(45deg, #ff00ff, #00ff41) 1;
-            border-radius: 30px;
-            padding: 50px 40px;
-            width: 400px;
-            box-shadow: 0 0 60px #ff00ff66;
-        }
-        h1 {
-            text-align: center;
-            color: #00ff41;
-            font-size: 32px;
-            margin-bottom: 10px;
-            text-shadow: 0 0 30px #00ff41;
-        }
-        .subtitle {
-            text-align: center;
-            color: #ff00ff;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        .input-group {
-            margin-bottom: 25px;
-        }
-        .input-group label {
-            display: block;
-            color: #ffff00;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 15px;
-            background: #000;
-            border: 2px solid #00ff41;
-            border-radius: 12px;
-            color: #00ff41;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-            outline: none;
-        }
-        .input-group input:focus {
-            border-color: #ff00ff;
-            box-shadow: 0 0 20px #ff00ff66;
-        }
-        button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            border: none;
-            border-radius: 12px;
-            color: #000;
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 30px #ff00ff66;
-        }
-        button:hover {
-            transform: scale(1.02);
-            box-shadow: 0 0 50px #00ff41;
-        }
-        .error-message {
-            color: #ff0000;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .back-link a {
-            color: #00ff41;
-            text-decoration: none;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>🔐 BRONX ADMIN</h1>
-        <div class="subtitle">CUSTOM KEY GENERATOR ACCESS</div>
-        
-        <div class="input-group">
-            <label>👤 USERNAME</label>
-            <input type="text" id="username" placeholder="Enter admin username">
-        </div>
-        
-        <div class="input-group">
-            <label>🔑 PASSWORD</label>
-            <input type="password" id="password" placeholder="Enter admin password">
-        </div>
-        
-        <button onclick="login()">🚀 LOGIN TO PANEL</button>
-        
-        <div id="error" class="error-message"></div>
-        
-        <div class="back-link">
-            <a href="/">← Back to API Home</a>
-        </div>
-    </div>
-    
-    <script>
-        async function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('error');
-            
-            if (!username || !password) {
-                errorDiv.textContent = '❌ Please enter username and password';
-                return;
-            }
-            
-            try {
-                const response = await fetch('/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    localStorage.setItem('adminToken', data.token);
-                    window.location.href = '/admin-panel?token=' + data.token;
-                } else {
-                    errorDiv.textContent = data.error || '❌ Login failed';
-                }
-            } catch (err) {
-                errorDiv.textContent = '❌ Connection error';
-            }
-        }
-        
-        document.getElementById('password').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
-        });
-    </script>
-</body>
-</html>`;
-}
-
-function getAdminPanelPage(token) {
-    const availableScopes = Object.keys(endpoints);
-    const keysList = Object.entries(customGeneratedKeys).map(([key, data]) => ({
-        key,
-        ...data,
-        status: (() => {
-            if (data.expiry && isKeyExpired(data.expiry)) return 'expired';
-            if (!data.unlimited && data.used >= data.limit) return 'exhausted';
-            return 'active';
-        })()
-    }));
-    
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔧 BRONX ADMIN PANEL</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
-            font-family: 'Courier New', monospace;
-            min-height: 100vh;
-            color: #fff;
-        }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 30px;
-            background: rgba(10,10,10,0.9);
-            border: 2px solid #ff00ff;
-            border-radius: 20px;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            color: #00ff41;
-            text-shadow: 0 0 20px #00ff41;
-        }
-        .logout-btn {
-            padding: 12px 25px;
-            background: #ff000020;
-            border: 2px solid #ff0000;
-            border-radius: 50px;
-            color: #ff6b6b;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .logout-btn:hover {
-            background: #ff000040;
-            box-shadow: 0 0 20px #ff000066;
-        }
-        .section {
-            background: rgba(10,10,10,0.9);
-            border: 2px solid #00ff41;
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-        }
-        .section h2 {
-            color: #ffff00;
-            margin-bottom: 25px;
-            font-size: 24px;
-            border-bottom: 2px solid #ff00ff;
-            padding-bottom: 10px;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-group label {
-            color: #00ff41;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        .form-group input {
-            padding: 12px;
-            background: #000;
-            border: 2px solid #00ff41;
-            border-radius: 10px;
-            color: #00ff41;
-            font-size: 14px;
-            font-family: 'Courier New', monospace;
-        }
-        .scope-checkboxes {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 15px;
-            background: #000;
-            border: 2px solid #00ff41;
-            border-radius: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .scope-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #fff;
-            padding: 5px 10px;
-            background: #1a0033;
-            border-radius: 20px;
-        }
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-        .btn-primary {
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            color: #000;
-        }
-        .btn-danger {
-            background: #ff0000;
-            color: #fff;
-        }
-        .btn-warning {
-            background: #ffff00;
-            color: #000;
-        }
-        .btn-success {
-            background: #00ff41;
-            color: #000;
-        }
-        .btn:hover {
-            transform: scale(1.02);
-        }
-        .key-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 13px;
-        }
-        .key-table th {
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            color: #000;
-            padding: 12px;
-        }
-        .key-table td {
-            padding: 10px;
-            border-bottom: 1px solid #ffffff20;
-        }
-        .status-active { color: #00ff41; }
-        .status-expired { color: #ff0000; }
-        .status-exhausted { color: #ffff00; }
-        .key-code {
-            font-family: monospace;
-            background: #000;
-            padding: 3px 8px;
-            border-radius: 5px;
-            color: #ff00ff;
-        }
-        .api-slot {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 15px;
-            background: #1a0033;
-            border: 1px solid #00ff41;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-        .api-slot.locked {
-            border-color: #ff0000;
-            background: #33000020;
-        }
-        .api-info {
-            flex: 1;
-        }
-        .api-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .locked-badge {
-            background: #ff0000;
-            color: #fff;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-        }
-        .unlocked-badge {
-            background: #00ff41;
-            color: #000;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-        }
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #0a0a0a;
-            color: #00ff41;
-            padding: 15px 30px;
-            border-radius: 50px;
-            border: 2px solid #00ff41;
-            z-index: 9999;
-        }
-        .token-info {
-            background: #1a0033;
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #ffff00;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔧 BRONX ADMIN PANEL</h1>
-            <button class="logout-btn" onclick="logout()">🚪 LOGOUT</button>
-        </div>
-        
-        <div class="token-info">
-            🔑 Admin Token: ${token.substring(0, 20)}... (stored in localStorage)
-        </div>
-        
-        <div class="section">
-            <h2>🔑 CUSTOM KEY GENERATOR</h2>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>👤 Owner Name *</label>
-                    <input type="text" id="keyName" placeholder="e.g., John Doe">
-                </div>
-                
-                <div class="form-group">
-                    <label>📅 Expiry Date (DD-MM-YYYY)</label>
-                    <input type="text" id="keyExpiry" placeholder="31-12-2026">
-                </div>
-                
-                <div class="form-group">
-                    <label>📊 Request Limit</label>
-                    <input type="number" id="keyLimit" placeholder="100" value="100">
-                </div>
-                
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 10px;">
-                        <input type="checkbox" id="keyUnlimited"> ♾️ Unlimited Requests
-                    </label>
-                </div>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label>🎯 Select Scopes *</label>
-                <div class="scope-checkboxes" id="scopeCheckboxes">
-                    ${availableScopes.map(scope => `
-                        <label class="scope-item">
-                            <input type="checkbox" value="${scope}"> ${scope}
-                        </label>
-                    `).join('')}
-                    <label class="scope-item">
-                        <input type="checkbox" value="*" id="allScopes"> ⭐ ALL SCOPES
-                    </label>
-                </div>
-            </div>
-            
-            <button class="btn btn-primary" onclick="generateKey()">🔨 GENERATE CUSTOM KEY</button>
-            
-            <div style="margin-top: 30px;">
-                <h3 style="color: #00ff41; margin-bottom: 15px;">📋 GENERATED KEYS LIST</h3>
-                <button class="btn btn-success" style="margin-bottom: 15px;" onclick="loadKeys()">🔄 Refresh Keys</button>
-                <table class="key-table">
-                    <thead>
-                        <tr>
-                            <th>API Key</th>
-                            <th>Owner</th>
-                            <th>Scopes</th>
-                            <th>Limit</th>
-                            <th>Used</th>
-                            <th>Remaining</th>
-                            <th>Expiry</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keysTableBody">
-                        <tr><td colspan="9" style="text-align: center; padding: 30px;">Click Refresh to load keys</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>🔧 CUSTOM API MANAGER (10 Slots)</h2>
-            <p style="color: #ffff00; margin-bottom: 20px;">⚠️ Slots 1-5 are LOCKED. Slots 6-10 are editable.</p>
-            
-            <button class="btn btn-success" style="margin-bottom: 15px;" onclick="loadAPIs()">🔄 Refresh APIs</button>
-            
-            <div id="apiSlotsContainer">
-                <p style="color: #888;">Click Refresh to load API slots...</p>
-            </div>
-            
-            <div id="editForm" style="display: none; margin-top: 30px; padding: 20px; background: #1a0033; border-radius: 15px;">
-                <h3 style="color: #00ff41; margin-bottom: 20px;">✏️ Edit API Slot</h3>
-                <input type="hidden" id="editSlotIndex">
-                <div class="form-grid">
-                    <div class="form-group"><label>API Name</label><input type="text" id="editApiName"></div>
-                    <div class="form-group"><label>Endpoint</label><input type="text" id="editApiEndpoint"></div>
-                    <div class="form-group"><label>Parameter</label><input type="text" id="editApiParam"></div>
-                    <div class="form-group"><label>Example Value</label><input type="text" id="editApiExample"></div>
-                    <div class="form-group"><label>Description</label><input type="text" id="editApiDesc"></div>
-                    <div class="form-group"><label>Real API URL</label><input type="text" id="editApiRealUrl"></div>
-                </div>
-                <button class="btn btn-primary" onclick="saveAPIEdit()">💾 Save Changes</button>
-                <button class="btn" onclick="cancelEdit()">❌ Cancel</button>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        const adminToken = localStorage.getItem('adminToken') || '${token}';
-        let currentAPIs = [];
-        
-        function showToast(message, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.style.color = isError ? '#ff0000' : '#00ff41';
-            toast.innerHTML = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        async function logout() {
-            await fetch('/admin/logout', {
-                method: 'POST',
-                headers: { 'x-admin-token': adminToken }
-            });
-            localStorage.removeItem('adminToken');
-            window.location.href = '/';
-        }
-        
-        async function apiCall(endpoint, method = 'GET', body = null) {
-            const options = {
-                method,
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken }
-            };
-            if (body) options.body = JSON.stringify(body);
-            
-            const response = await fetch(endpoint, options);
-            return response.json();
-        }
-        
-        async function generateKey() {
-            const name = document.getElementById('keyName').value;
-            const expiryDate = document.getElementById('keyExpiry').value;
-            const requestLimit = document.getElementById('keyLimit').value;
-            const unlimited = document.getElementById('keyUnlimited').checked;
-            
-            const scopes = Array.from(document.querySelectorAll('#scopeCheckboxes input[type="checkbox"]:checked'))
-                .map(cb => cb.value);
-            
-            if (!name) return showToast('❌ Owner name required!', true);
-            if (scopes.length === 0) return showToast('❌ Select at least one scope!', true);
-            
-            const data = await apiCall('/admin/generate-key', 'POST', { name, expiryDate, requestLimit, scopes, unlimited });
-            
-            if (data.success) {
-                showToast('✅ Key generated: ' + data.key);
-                loadKeys();
-            } else {
-                showToast('❌ ' + data.error, true);
-            }
-        }
-        
-        async function loadKeys() {
-            const data = await apiCall('/admin/custom-keys');
-            const tbody = document.getElementById('keysTableBody');
-            
-            if (data.success && data.keys.length > 0) {
-                tbody.innerHTML = data.keys.map(k => `
-                    <tr>
-                        <td><code class="key-code">${k.key}</code></td>
-                        <td>${k.name}</td>
-                        <td>${k.scopes.includes('*') ? 'ALL' : k.scopes.slice(0, 2).join(', ') + (k.scopes.length > 2 ? '...' : '')}</td>
-                        <td>${k.unlimited ? '∞' : k.limit}</td>
-                        <td>${k.used}</td>
-                        <td>${k.unlimited ? '∞' : k.remaining}</td>
-                        <td>${k.expiry}</td>
-                        <td class="status-${k.status}">${k.status.toUpperCase()}</td>
-                        <td>
-                            <button class="btn btn-warning" style="padding: 5px 10px;" onclick="resetKey('${k.key}')">🔄</button>
-                            <button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteKey('${k.key}')">🗑️</button>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px;">No custom keys yet</td></tr>';
-            }
-        }
-        
-        async function deleteKey(key) {
-            if (!confirm('Delete this key?')) return;
-            const data = await apiCall('/admin/custom-key/' + encodeURIComponent(key), 'DELETE');
-            if (data.success) { showToast('✅ Key deleted!'); loadKeys(); }
-            else showToast('❌ ' + data.error, true);
-        }
-        
-        async function resetKey(key) {
-            const data = await apiCall('/admin/reset-key-usage/' + encodeURIComponent(key), 'POST');
-            if (data.success) { showToast('✅ Usage reset!'); loadKeys(); }
-            else showToast('❌ ' + data.error, true);
-        }
-        
-        async function loadAPIs() {
-            const data = await apiCall('/admin/custom-apis');
-            const container = document.getElementById('apiSlotsContainer');
-            
-            if (data.success) {
-                currentAPIs = data.customAPIs;
-                container.innerHTML = currentAPIs.map((api, i) => `
-                    <div class="api-slot ${api.locked ? 'locked' : ''}">
-                        <div class="api-info">
-                            <strong style="color: #ff00ff;">Slot ${api.id}</strong> - 
-                            <span style="color: #fff;">${api.name}</span>
-                            <code style="color: #00ff41; margin-left: 10px;">/${api.endpoint || 'not-set'}</code>
-                            <span style="margin-left: 10px;">${api.visible ? '👁️ Visible' : '🔒 Hidden'}</span>
-                            <span class="${api.locked ? 'locked-badge' : 'unlocked-badge'}" style="margin-left: 10px;">
-                                ${api.locked ? '🔒 LOCKED' : '🔓 UNLOCKED'}
-                            </span>
-                        </div>
-                        <div class="api-actions">
-                            ${!api.locked ? `
-                                <button class="btn btn-primary" style="padding: 8px 15px;" onclick="editAPISlot(${i})">✏️ Edit</button>
-                                <button class="btn btn-danger" style="padding: 8px 15px;" onclick="clearAPISlot(${i})">🗑️ Clear</button>
-                            ` : ''}
-                            <button class="btn btn-warning" style="padding: 8px 15px;" onclick="toggleLock(${i})">
-                                ${api.locked ? '🔓 Unlock' : '🔒 Lock'}
-                            </button>
-                            <button class="btn btn-success" style="padding: 8px 15px;" onclick="toggleVisibility(${i})">
-                                ${api.visible ? '👁️ Hide' : '👁️ Show'}
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-        
-        function editAPISlot(index) {
-            const api = currentAPIs[index];
-            document.getElementById('editSlotIndex').value = index;
-            document.getElementById('editApiName').value = api.name || '';
-            document.getElementById('editApiEndpoint').value = api.endpoint || '';
-            document.getElementById('editApiParam').value = api.param || '';
-            document.getElementById('editApiExample').value = api.example || '';
-            document.getElementById('editApiDesc').value = api.desc || '';
-            document.getElementById('editApiRealUrl').value = api.realAPI || '';
-            document.getElementById('editForm').style.display = 'block';
-        }
-        
-        function cancelEdit() {
-            document.getElementById('editForm').style.display = 'none';
-        }
-        
-        async function saveAPIEdit() {
-            const index = parseInt(document.getElementById('editSlotIndex').value);
-            const api = {
-                name: document.getElementById('editApiName').value,
-                endpoint: document.getElementById('editApiEndpoint').value,
-                param: document.getElementById('editApiParam').value,
-                example: document.getElementById('editApiExample').value,
-                desc: document.getElementById('editApiDesc').value,
-                realAPI: document.getElementById('editApiRealUrl').value
-            };
-            
-            const data = await apiCall('/admin/custom-api', 'POST', { slot: index, api });
-            if (data.success) { showToast('✅ API saved!'); loadAPIs(); cancelEdit(); }
-            else showToast('❌ ' + data.error, true);
-        }
-        
-        async function clearAPISlot(index) {
-            if (!confirm('Clear this API slot?')) return;
-            const data = await apiCall('/admin/custom-api/clear', 'POST', { slot: index });
-            if (data.success) { showToast('✅ Slot cleared!'); loadAPIs(); }
-            else showToast('❌ ' + data.error, true);
-        }
-        
-        async function toggleLock(index) {
-            const data = await apiCall('/admin/custom-api/toggle-lock', 'POST', { slot: index });
-            if (data.success) { showToast(data.message); loadAPIs(); }
-            else showToast('❌ ' + data.error, true);
-        }
-        
-        async function toggleVisibility(index) {
-            const api = { ...currentAPIs[index], visible: !currentAPIs[index].visible };
-            const data = await apiCall('/admin/custom-api', 'POST', { slot: index, api });
-            if (data.success) { showToast('✅ Visibility toggled!'); loadAPIs(); }
-            else showToast('❌ ' + data.error, true);
-        }
-        
-        document.getElementById('allScopes').addEventListener('change', function() {
-            document.querySelectorAll('#scopeCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = this.checked);
-        });
-        
-        // Initial load
-        loadKeys();
-        loadAPIs();
-    </script>
-</body>
-</html>`;
-}
-
-// Main homepage (simplified, keys hidden)
+// ========== SERVE ENHANCED HTML UI WITH DARK/LIGHT MODE ==========
 function serveHTML(res) {
+    const totalKeys = Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length;
+    const premiumCount = Object.values(keyStorage).filter(k => k.type === 'premium' && !k.hidden).length;
+    
+    // Get visible custom APIs
     const visibleCustomAPIs = customAPIs.filter(api => api.visible && api.endpoint);
     
     const html = `<!DOCTYPE html>
@@ -1243,46 +382,162 @@ function serveHTML(res) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚡ BRONX OSINT | NEON API</title>
     <style>
+        /* ========== LIGHT MODE VARIABLES ========== */
         :root {
             --bg-primary: #0a0a0a;
+            --bg-secondary: #1a0033;
             --bg-card: rgba(10,10,10,0.9);
             --text-primary: #fff;
+            --text-secondary: #00ff41;
+            --border-glow: #ff00ff;
+            --header-gradient: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            --card-border: 2px solid;
+            --code-bg: #000;
+            --table-header: linear-gradient(45deg, #ff00ff, #00ff41);
         }
+        
+        /* ========== LIGHT MODE ========== */
+        body.light-mode {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #e0e0e0;
+            --bg-card: rgba(255,255,255,0.95);
+            --text-primary: #1a1a1a;
+            --text-secondary: #0066cc;
+            --border-glow: #0066cc;
+            --header-gradient: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 50%, #f5f5f5 100%);
+            --card-border: 2px solid #0066cc;
+            --code-bg: #1e1e1e;
+            --table-header: linear-gradient(45deg, #0066cc, #00aa00);
+        }
+        
+        body.light-mode .header h1 {
+            background: linear-gradient(45deg, #0066cc, #00aa00, #cc6600, #cc0000, #009999);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.light-mode .stat-num {
+            background: linear-gradient(45deg, #0066cc, #00aa00, #cc6600);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.light-mode .badge-1 { background: #0066cc20; color: #0066cc; border-color: #0066cc; }
+        body.light-mode .badge-2 { background: #00aa0020; color: #00aa00; border-color: #00aa00; }
+        body.light-mode .badge-3 { background: #cc660020; color: #cc6600; border-color: #cc6600; }
+        body.light-mode .badge-4 { background: #cc000020; color: #cc0000; border-color: #cc0000; }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
+            background: var(--header-gradient);
             font-family: 'Courier New', monospace;
             min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
             color: var(--text-primary);
+            transition: all 0.3s ease;
         }
-        .container { max-width: 1300px; margin: 0 auto; padding: 20px; }
-        .admin-link {
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,255,65,0.03) 0px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .container { max-width: 1300px; margin: 0 auto; padding: 20px; position: relative; z-index: 2; }
+        
+        /* Theme Toggle */
+        .theme-toggle {
             position: fixed;
             top: 20px;
-            left: 20px;
+            right: 20px;
             z-index: 9999;
+            display: flex;
+            gap: 10px;
+        }
+        .theme-btn {
             padding: 12px 20px;
             border-radius: 50px;
-            border: 2px solid #ff00ff;
-            background: #1a0033;
-            color: #ff00ff;
-            text-decoration: none;
+            border: 2px solid;
+            cursor: pointer;
             font-weight: bold;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
         }
+        .theme-btn.dark {
+            background: #0a0a0a;
+            color: #00ff41;
+            border-color: #00ff41;
+            box-shadow: 0 0 20px #00ff4166;
+        }
+        .theme-btn.light {
+            background: #f5f5f5;
+            color: #0066cc;
+            border-color: #0066cc;
+            box-shadow: 0 0 20px #0066cc66;
+        }
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Animated Background */
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 20px #ff00ff33, 0 0 40px #00ff4133, 0 0 60px #ffff0033; }
+            33% { box-shadow: 0 0 30px #00ff4133, 0 0 50px #ff00ff33, 0 0 70px #00ffff33; }
+            66% { box-shadow: 0 0 25px #ffff0033, 0 0 45px #ff000033, 0 0 65px #00ff4133; }
+        }
+        
+        /* Header */
         .header {
             text-align: center;
             padding: 40px;
             border: 3px solid;
-            border-image: linear-gradient(45deg, #ff00ff, #00ff41) 1;
+            border-image: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
             border-radius: 30px;
             margin-bottom: 30px;
             background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            animation: glowPulse 3s infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, #ff00ff10, #00ff4110, #ffff0010, transparent);
+            animation: rotate 10s linear infinite;
+        }
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         .header h1 {
             font-size: 56px;
-            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00, #ff6b6b, #00ffff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px #ff00ff66;
+            letter-spacing: 5px;
+            position: relative;
+            z-index: 2;
+        }
+        .header h1 span {
+            display: inline-block;
+            animation: flicker 2s infinite;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         .badge-container {
             display: flex;
@@ -1290,32 +545,96 @@ function serveHTML(res) {
             gap: 15px;
             margin-top: 20px;
             flex-wrap: wrap;
+            position: relative;
+            z-index: 2;
         }
         .badge {
             padding: 10px 25px;
             border-radius: 50px;
             font-size: 14px;
             font-weight: bold;
+            letter-spacing: 2px;
             border: 2px solid;
+            animation: badgeGlow 2s infinite;
         }
-        .badge-1 { background: #ff00ff20; color: #ff00ff; border-color: #ff00ff; }
-        .badge-2 { background: #00ff4120; color: #00ff41; border-color: #00ff41; }
-        .badge-3 { background: #ffff0020; color: #ffff00; border-color: #ffff00; }
+        .badge-1 { background: #ff00ff20; color: #ff00ff; border-color: #ff00ff; box-shadow: 0 0 20px #ff00ff66; }
+        .badge-2 { background: #00ff4120; color: #00ff41; border-color: #00ff41; box-shadow: 0 0 20px #00ff4166; }
+        .badge-3 { background: #ffff0020; color: #ffff00; border-color: #ffff00; box-shadow: 0 0 20px #ffff0066; }
+        .badge-4 { background: #ff000020; color: #ff6b6b; border-color: #ff0000; box-shadow: 0 0 20px #ff000066; }
+        @keyframes badgeGlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        /* Stats */
         .stats {
             display: flex;
             justify-content: center;
             gap: 30px;
             margin: 30px 0;
+            flex-wrap: wrap;
         }
         .stat-card {
             background: var(--bg-card);
-            border: 2px solid;
+            backdrop-filter: blur(10px);
+            border: var(--card-border);
             border-radius: 20px;
             padding: 20px 35px;
             text-align: center;
+            transition: all 0.3s;
         }
-        .stat-num { font-size: 42px; font-weight: bold; color: #00ff41; }
-        .stat-label { font-size: 12px; letter-spacing: 3px; }
+        .stat-card:nth-child(1) { border-color: #ff00ff; box-shadow: 0 0 30px #ff00ff33; }
+        .stat-card:nth-child(2) { border-color: #00ff41; box-shadow: 0 0 30px #00ff4133; }
+        .stat-card:nth-child(3) { border-color: #ffff00; box-shadow: 0 0 30px #ffff0033; }
+        .stat-card:nth-child(4) { border-color: #ff0000; box-shadow: 0 0 30px #ff000033; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-num { 
+            font-size: 42px; 
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label { 
+            font-size: 12px; 
+            letter-spacing: 3px;
+            color: var(--text-primary);
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        /* Limit Alert */
+        .limit-alert {
+            background: linear-gradient(135deg, #ff00ff10, #00ff4110, #ffff0010);
+            border: 2px solid;
+            border-image: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00) 1;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .limit-alert div:first-child {
+            font-size: 20px;
+            background: linear-gradient(45deg, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+        .reset-time {
+            font-weight: bold;
+            font-size: 20px;
+            color: #00ff41;
+            text-shadow: 0 0 20px #00ff41;
+        }
+        
+        /* Owner Section - HIDDEN */
+        .owner-section {
+            display: none;
+        }
+        
+        /* Auth Grid */
         .auth-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -1324,23 +643,47 @@ function serveHTML(res) {
         }
         .auth-card {
             background: var(--bg-card);
-            border: 2px solid;
+            backdrop-filter: blur(10px);
+            border: var(--card-border);
             border-radius: 20px;
             padding: 25px;
+            transition: all 0.3s;
+        }
+        .auth-card:nth-child(1) { border-color: #ff00ff; }
+        .auth-card:nth-child(2) { border-color: #00ff41; }
+        .auth-card:nth-child(3) { border-color: #ffff00; }
+        .auth-card:hover { transform: translateY(-3px); box-shadow: 0 0 40px currentColor; }
+        .auth-card h3 {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            font-size: 20px;
         }
         .code {
-            background: #000;
+            background: var(--code-bg);
             border: 1px solid #00ff41;
             border-radius: 12px;
             padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
             color: #00ff41;
+            box-shadow: inset 0 0 20px #00ff4133;
         }
+        
+        /* Categories */
         .category {
             font-size: 28px;
             font-weight: bold;
             margin: 40px 0 20px;
-            color: #ff00ff;
+            padding-left: 20px;
+            border-left: 6px solid;
+            background: linear-gradient(90deg, currentColor 0%, transparent 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
+        
+        /* Endpoint Grid */
         .endpoint-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1348,17 +691,42 @@ function serveHTML(res) {
         }
         .endpoint {
             background: var(--bg-card);
+            backdrop-filter: blur(10px);
             border: 2px solid;
             border-radius: 16px;
             padding: 20px;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
         }
-        .endpoint:hover { transform: translateY(-5px); }
+        .endpoint::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+        .endpoint:hover::before { left: 100%; }
+        .endpoint:hover { transform: translateY(-5px) scale(1.02); }
+        .endpoint[data-category="📱 Phone Intelligence"] { border-color: #ff00ff; }
+        .endpoint[data-category="💰 Financial"] { border-color: #00ff41; }
+        .endpoint[data-category="📍 Location"] { border-color: #ffff00; }
+        .endpoint[data-category="🚗 Vehicle"] { border-color: #ff0000; }
+        .endpoint[data-category="🎮 Gaming"] { border-color: #00ffff; }
+        .endpoint[data-category="🌐 Social"] { border-color: #ff8800; }
+        .endpoint[data-category="🇵🇰 Pakistan"] { border-color: #00ff88; }
+        .endpoint[data-category="🔧 Custom APIs"] { border-color: #ff00ff; background: linear-gradient(135deg, var(--bg-card), #ff00ff10); }
+        
         .method {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
         .method.get { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
         .method.custom { background: #ff00ff20; color: #ff00ff; border: 1px solid #ff00ff; }
@@ -1366,11 +734,17 @@ function serveHTML(res) {
             font-size: 22px;
             font-weight: bold;
             margin: 12px 0 8px;
-            color: #fff;
+            background: linear-gradient(45deg, var(--text-primary), #00ff41);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .endpoint-url {
+            font-family: 'Courier New', monospace;
             font-size: 11px;
             color: #ff00ff;
+            word-break: break-all;
+            opacity: 0.9;
         }
         .param { 
             font-size: 12px; 
@@ -1379,14 +753,138 @@ function serveHTML(res) {
             padding-top: 10px;
             border-top: 1px dashed #ffffff30;
         }
+        
+        /* Custom API Admin Panel */
+        .admin-panel {
+            background: linear-gradient(135deg, #1a0033, #0a0a0a);
+            border: 3px solid #ff00ff;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 40px 0;
+            box-shadow: 0 0 60px #ff00ff66;
+        }
+        body.light-mode .admin-panel {
+            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+            border-color: #0066cc;
+            box-shadow: 0 0 60px #0066cc66;
+        }
+        .admin-panel h2 {
+            color: #00ff41;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px #00ff41;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .admin-panel h2 small {
+            font-size: 14px;
+            color: #ffff00;
+        }
+        .custom-api-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .custom-api-form input, .custom-api-form select {
+            padding: 12px 15px;
+            background: #0a0a0a;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            color: #00ff41;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+        body.light-mode .custom-api-form input,
+        body.light-mode .custom-api-form select {
+            background: #fff;
+            border-color: #0066cc;
+            color: #1a1a1a;
+        }
+        .custom-api-form button {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #ff00ff, #00ff41);
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .custom-api-form button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px #00ff41;
+        }
+        .toggle-visibility {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+        .toggle-visibility input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .custom-apis-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .custom-api-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .custom-api-item .api-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .custom-api-item .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+        }
+        .status.visible { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
+        .status.hidden { background: #ff000020; color: #ff6b6b; border: 1px solid #ff0000; }
+        .custom-api-item button {
+            padding: 6px 15px;
+            background: #ff00ff20;
+            border: 1px solid #ff00ff;
+            border-radius: 8px;
+            color: #ff00ff;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        /* API Testing Panel */
         .api-panel {
             background: linear-gradient(135deg, #1a0033, #0a0a0a);
             border: 3px solid #ff00ff;
             border-radius: 20px;
             padding: 30px;
             margin: 40px 0;
+            box-shadow: 0 0 60px #ff00ff66;
         }
-        .api-panel h2 { color: #00ff41; margin-bottom: 20px; }
+        body.light-mode .api-panel {
+            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+            border-color: #0066cc;
+            box-shadow: 0 0 60px #0066cc66;
+        }
+        .api-panel h2 {
+            color: #00ff41;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px #00ff41;
+        }
         .api-panel .input-group {
             display: flex;
             gap: 15px;
@@ -1394,12 +892,19 @@ function serveHTML(res) {
         }
         .api-panel input, .api-panel select {
             flex: 1;
-            padding: 15px;
+            padding: 15px 20px;
             background: #0a0a0a;
             border: 2px solid #00ff41;
             border-radius: 50px;
             color: #00ff41;
             font-size: 16px;
+            font-family: 'Courier New', monospace;
+        }
+        body.light-mode .api-panel input,
+        body.light-mode .api-panel select {
+            background: #fff;
+            border-color: #0066cc;
+            color: #1a1a1a;
         }
         .api-panel button {
             padding: 15px 30px;
@@ -1408,7 +913,14 @@ function serveHTML(res) {
             border-radius: 50px;
             color: #000;
             font-weight: bold;
+            font-size: 16px;
             cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px #ff00ff66;
+        }
+        .api-panel button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px #00ff41;
         }
         .api-result {
             margin-top: 20px;
@@ -1418,49 +930,129 @@ function serveHTML(res) {
             border-radius: 12px;
             max-height: 300px;
             overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
             color: #00ff41;
         }
+        body.light-mode .api-result {
+            background: #1e1e1e;
+        }
+        
+        /* Key Table */
+        .key-info-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 2px solid #ff00ff;
+            border-radius: 20px;
+        }
+        .key-info-title {
+            font-size: 24px;
+            color: #00ff41;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00ff41;
+        }
+        .key-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 12px;
+        }
+        .key-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .key-table th {
+            background: var(--table-header);
+            color: #000;
+            padding: 12px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .key-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ffffff20;
+            color: var(--text-primary);
+        }
+        .key-table tr:hover { background: #ffffff10; }
+        .status-active { color: #00ff41; }
+        .status-expired { color: #ff0000; }
+        .status-exhausted { color: #ffff00; }
+        
+        /* Footer */
         .footer {
             text-align: center;
             padding: 40px;
             margin-top: 50px;
-            border-top: 2px solid #ff00ff;
+            border-top: 2px solid;
+            border-image: linear-gradient(90deg, #ff00ff, #00ff41, #ffff00, #ff0000) 1;
+            background: linear-gradient(180deg, transparent, var(--bg-primary));
         }
-        .key-notice {
-            background: linear-gradient(135deg, #ff00ff10, #00ff4110);
-            border: 2px solid #ff00ff;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-            color: #00ff41;
+        .footer p {
+            margin: 10px 0;
+            font-size: 14px;
+            color: var(--text-primary);
         }
+        .footer .glow-text {
+            background: linear-gradient(45deg, #ff00ff, #00ff41, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: #0a0a0a;
+            background: linear-gradient(135deg, #0a0a0a, #1a0033);
             color: #00ff41;
             padding: 15px 30px;
             border-radius: 50px;
+            font-weight: bold;
             border: 2px solid #00ff41;
+            box-shadow: 0 0 40px #00ff41;
+            animation: slideIn 0.3s, glowPulse 2s infinite;
             z-index: 9999;
         }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(#ff00ff, #00ff41, #ffff00); border-radius: 10px; }
+        
         @media (max-width: 768px) {
             .header h1 { font-size: 32px; }
+            .stat-num { font-size: 28px; }
+            .theme-toggle { top: 10px; right: 10px; }
+            .theme-btn { padding: 8px 15px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
-    <a href="/admin-panel" class="admin-link">🔐 ADMIN PANEL</a>
+    <div class="theme-toggle">
+        <button class="theme-btn dark" onclick="setTheme('dark')">🌙 DARK</button>
+        <button class="theme-btn light" onclick="setTheme('light')">☀️ LIGHT</button>
+    </div>
 
     <div class="container">
         <div class="header">
-            <h1>⚡ BRONX OSINT ⚡</h1>
+            <h1>
+                <span>⚡</span> BRONX OSINT <span>⚡</span>
+            </h1>
             <div class="badge-container">
                 <span class="badge badge-1">🔐 NEON INTELLIGENCE</span>
-                <span class="badge badge-2">🌐 PREMIUM API</span>
+                <span class="badge badge-2">🌐 ${totalKeys}+ PREMIUM KEYS</span>
                 <span class="badge badge-3">🔧 CUSTOM APIs</span>
+                <span class="badge badge-4">⚡ REAL-TIME DATA</span>
             </div>
         </div>
         
@@ -1470,31 +1062,89 @@ function serveHTML(res) {
                 <div class="stat-label">ENDPOINTS</div>
             </div>
             <div class="stat-card">
+                <div class="stat-num">${totalKeys}</div>
+                <div class="stat-label">ACTIVE KEYS</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-num">10</div>
                 <div class="stat-label">CUSTOM SLOTS</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-num">JSON</div>
+                <div class="stat-label">RESPONSE</div>
+            </div>
         </div>
         
-        <div class="key-notice">
-            <div>🔑 CONTACT @BRONX_ULTRA ON TELEGRAM TO GET API KEY</div>
-            <div style="margin-top: 10px; font-size: 14px;">Use /key-info?key=YOUR_KEY to check your key details</div>
+        <div class="limit-alert">
+            <div>⚡ KEY-BASED LIMIT SYSTEM</div>
+            <div style="margin-top: 10px;">🔑 Premium Keys: Fixed Lifetime Limits | Custom APIs Available</div>
+            <div style="margin-top: 10px;">⏰ Key Expiry: Auto-checked | 🇮🇳 India Time Zone</div>
         </div>
         
         <div class="auth-grid">
             <div class="auth-card">
                 <h3>🔐 AUTHENTICATION</h3>
                 <div class="code">GET /api/key-bronx/number?key=YOUR_KEY&num=9876543210</div>
+                <div style="margin-top: 15px; color: #ffff00; font-size: 12px;">Header: x-api-key also supported</div>
             </div>
             <div class="auth-card">
                 <h3>📊 CHECK QUOTA</h3>
                 <div class="code">GET /quota?key=YOUR_KEY</div>
+                <div style="margin-top: 15px; color: #00ff41; font-size: 12px;">Returns remaining requests</div>
             </div>
             <div class="auth-card">
                 <h3>🔑 KEY INFO</h3>
                 <div class="code">GET /key-info?key=YOUR_KEY</div>
+                <div style="margin-top: 15px; color: #ff00ff; font-size: 12px;">Check expiry & limits</div>
             </div>
         </div>
         
+        <!-- Custom API Admin Panel -->
+        <div class="admin-panel">
+            <h2>
+                🔧 CUSTOM API MANAGER 
+                <small>(10 Slots - Toggle Visibility)</small>
+            </h2>
+            <div class="custom-api-form">
+                <select id="apiSlotSelect">
+                    <option value="0">Select Slot (1-10)</option>
+                    ${customAPIs.map((api, i) => `<option value="${i}">Slot ${api.id} - ${api.name}</option>`).join('')}
+                </select>
+                <input type="text" id="apiNameInput" placeholder="API Display Name">
+                <input type="text" id="apiEndpointInput" placeholder="Endpoint (e.g., myapi)">
+                <input type="text" id="apiParamInput" placeholder="Parameter (e.g., query)">
+                <input type="text" id="apiExampleInput" placeholder="Example Value">
+                <input type="text" id="apiDescInput" placeholder="Description">
+                <input type="text" id="apiRealUrlInput" placeholder="Real API URL (use {param})">
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                <button onclick="saveCustomAPI()">💾 Save API</button>
+                <button onclick="loadAPIToSlot()">📂 Load to Form</button>
+                <div class="toggle-visibility">
+                    <input type="checkbox" id="apiVisibleCheck"> 
+                    <label for="apiVisibleCheck">👁️ Visible to Public</label>
+                </div>
+                <button onclick="toggleAPIVisibility()">🔄 Toggle Visibility</button>
+            </div>
+            <div class="custom-apis-list" id="customApisList">
+                ${customAPIs.map((api, i) => `
+                    <div class="custom-api-item">
+                        <div class="api-info">
+                            <strong style="color: #ff00ff;">Slot ${api.id}</strong>
+                            <span style="color: var(--text-primary);">${api.name || '(Empty)'}</span>
+                            <code style="color: #00ff41;">/${api.endpoint || 'not-set'}</code>
+                            <span class="status ${api.visible ? 'visible' : 'hidden'}">${api.visible ? '👁️ Visible' : '🔒 Hidden'}</span>
+                        </div>
+                        <div>
+                            <button onclick="editAPI(${i})">✏️ Edit</button>
+                            <button onclick="deleteAPI(${i})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <!-- API Testing Panel -->
         <div class="api-panel">
             <h2>🧪 API TESTING PANEL</h2>
             <div class="input-group">
@@ -1504,7 +1154,7 @@ function serveHTML(res) {
                     </optgroup>
                     ${visibleCustomAPIs.length > 0 ? `
                         <optgroup label="🔧 Custom APIs">
-                            ${visibleCustomAPIs.map(api => `<option value="custom_${api.id}" data-custom="true" data-endpoint="${api.endpoint}" data-param="${api.param}">🔧 ${api.name}</option>`).join('')}
+                            ${visibleCustomAPIs.map(api => `<option value="custom_${api.id}" data-custom="true" data-endpoint="${api.endpoint}" data-param="${api.param}" data-real="${api.realAPI}">🔧 ${api.name} - ${api.desc}</option>`).join('')}
                         </optgroup>
                     ` : ''}
                 </select>
@@ -1516,27 +1166,25 @@ function serveHTML(res) {
         </div>
         
         ${Object.entries({
-            '📱 Phone Intelligence': ['number', 'aadhar', 'name', 'numv2', 'adv'],
-            '💰 Financial': ['upi', 'ifsc', 'pan'],
-            '📍 Location': ['pincode', 'ip'],
-            '🚗 Vehicle': ['vehicle', 'rc'],
-            '🎮 Gaming': ['ff', 'bgmi'],
-            '🌐 Social': ['insta', 'git', 'tg'],
-            '🇵🇰 Pakistan': ['pk', 'pkv2']
-        }).map(([cat, names]) => `
-            <div class="category">${cat}</div>
+            '📱 Phone Intelligence': '📱 Phone Intelligence',
+            '💰 Financial': '💰 Financial',
+            '📍 Location': '📍 Location',
+            '🚗 Vehicle': '🚗 Vehicle',
+            '🎮 Gaming': '🎮 Gaming',
+            '🌐 Social': '🌐 Social',
+            '🇵🇰 Pakistan': '🇵🇰 Pakistan'
+        }).filter(([_, cat]) => Object.values(endpoints).some(e => e.category === cat)).map(([display, cat]) => `
+            <div class="category">${display}</div>
             <div class="endpoint-grid">
-                ${names.filter(n => endpoints[n]).map(name => {
-                    const ep = endpoints[name];
-                    return `
-                    <div class="endpoint" onclick="copyUrl('${name}', '${ep.param}', '${ep.example}')">
+                ${Object.entries(endpoints).filter(([_, e]) => e.category === cat).map(([name, ep]) => `
+                    <div class="endpoint" data-category="${cat}" onclick="copyUrl('${name}', '${ep.param}', '${ep.example}')">
                         <span class="method get">GET</span>
                         <div class="endpoint-name">/${name}</div>
                         <div class="endpoint-url">/api/key-bronx/${name}</div>
                         <div class="param">📝 ${ep.desc}</div>
                         <div class="param">🔑 ${ep.param}=${ep.example}</div>
                     </div>
-                `}).join('')}
+                `).join('')}
             </div>
         `).join('')}
         
@@ -1544,7 +1192,7 @@ function serveHTML(res) {
             <div class="category">🔧 Custom APIs</div>
             <div class="endpoint-grid">
                 ${visibleCustomAPIs.map(api => `
-                    <div class="endpoint" onclick="copyCustomUrl('${api.endpoint}', '${api.param}', '${api.example}')">
+                    <div class="endpoint" data-category="🔧 Custom APIs" onclick="copyCustomUrl('${api.endpoint}', '${api.param}', '${api.example}')">
                         <span class="method custom">CUSTOM</span>
                         <div class="endpoint-name">/${api.endpoint}</div>
                         <div class="endpoint-url">/api/custom/${api.endpoint}</div>
@@ -1555,23 +1203,62 @@ function serveHTML(res) {
             </div>
         ` : ''}
         
+        <div class="key-info-section">
+            <div class="key-info-title">🔑 PREMIUM KEYS LIST</div>
+            <div class="key-table-container">
+                <table class="key-table">
+                    <thead>
+                        <tr>
+                            <th>Hide</th>
+                            <th>Owner</th>
+                            <th>Scopes</th>
+                            <th>Limit</th>
+                            <th>Used</th>
+                            <th>Expiry</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
         <div class="footer">
+            <p class="glow-text">✨ BRONX OSINT API - NEON EDITION ✨</p>
             <p style="color: #ff00ff;">Powered by @BRONX_ULTRA</p>
             <p style="color: #00ff41;">🇮🇳 India Time Zone | Premium Keys | Custom API Support</p>
+            <p style="color: #ffff00; margin-top: 15px;">⚠️ Keys are lifetime limited - No reset! Contact @BRONX_ULTRA for new keys.</p>
         </div>
     </div>
     
     <script>
         const endpoints = ${JSON.stringify(endpoints)};
+        const keyStorage = ${JSON.stringify(Object.fromEntries(Object.entries(keyStorage).filter(([k, v]) => !v.hidden)))};
+        let customAPIs = ${JSON.stringify(customAPIs)};
+        
+        // Theme functions
+        function setTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.remove('light-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
         
         function copyUrl(endpoint, param, example) {
-            const url = location.origin + '/api/key-bronx/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
+            const url = window.location.origin + '/api/key-bronx/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
             navigator.clipboard.writeText(url);
-            showToast('✅ URL Copied!');
+            showToast('✅ URL Copied! ' + endpoint.toUpperCase());
         }
         
         function copyCustomUrl(endpoint, param, example) {
-            const url = location.origin + '/api/custom/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
+            const url = window.location.origin + '/api/custom/' + endpoint + '?key=YOUR_KEY&' + param + '=' + example;
             navigator.clipboard.writeText(url);
             showToast('✅ Custom API URL Copied!');
         }
@@ -1586,41 +1273,184 @@ function serveHTML(res) {
         
         async function testAPI() {
             const select = document.getElementById('endpointSelect');
-            const selected = select.options[select.selectedIndex];
-            const isCustom = selected.dataset.custom === 'true';
+            const selectedOption = select.options[select.selectedIndex];
+            const isCustom = selectedOption.dataset.custom === 'true';
             const apiKey = document.getElementById('apiKeyInput').value;
             const paramValue = document.getElementById('paramInput').value;
             const resultDiv = document.getElementById('apiResult');
             
-            if (!apiKey) return showToast('❌ Enter API Key');
-            if (!paramValue) return showToast('❌ Enter parameter value');
+            if (!apiKey) {
+                showToast('❌ Please enter API Key');
+                return;
+            }
+            
+            if (!paramValue) {
+                showToast('❌ Please enter parameter value');
+                return;
+            }
             
             let url;
             if (isCustom) {
-                url = '/api/custom/' + selected.dataset.endpoint + '?key=' + apiKey + '&' + selected.dataset.param + '=' + paramValue;
+                const endpoint = selectedOption.dataset.endpoint;
+                const param = selectedOption.dataset.param;
+                url = '/api/custom/' + endpoint + '?key=' + apiKey + '&' + param + '=' + paramValue;
             } else {
-                const ep = endpoints[select.value];
-                url = '/api/key-bronx/' + select.value + '?key=' + apiKey + '&' + ep.param + '=' + paramValue;
+                const endpoint = select.value;
+                const ep = endpoints[endpoint];
+                url = '/api/key-bronx/' + endpoint + '?key=' + apiKey + '&' + ep.param + '=' + paramValue;
             }
             
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = '⏳ Loading...';
             
             try {
-                const res = await fetch(url);
-                const data = await res.json();
-                resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
-            } catch (err) {
-                resultDiv.innerHTML = '<pre style="color: #ff0000;">Error: ' + err.message + '</pre>';
+                const response = await fetch(url);
+                const data = await response.json();
+                resultDiv.innerHTML = '<pre style="color: #00ff41;">' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                resultDiv.innerHTML = '<pre style="color: #ff0000;">Error: ' + error.message + '</pre>';
             }
         }
         
+        // Custom API Management
+        function saveCustomAPI() {
+            const slot = parseInt(document.getElementById('apiSlotSelect').value);
+            if (isNaN(slot)) {
+                showToast('❌ Please select a slot');
+                return;
+            }
+            
+            customAPIs[slot] = {
+                ...customAPIs[slot],
+                name: document.getElementById('apiNameInput').value || customAPIs[slot].name,
+                endpoint: document.getElementById('apiEndpointInput').value || customAPIs[slot].endpoint,
+                param: document.getElementById('apiParamInput').value || customAPIs[slot].param,
+                example: document.getElementById('apiExampleInput').value || customAPIs[slot].example,
+                desc: document.getElementById('apiDescInput').value || customAPIs[slot].desc,
+                realAPI: document.getElementById('apiRealUrlInput').value || customAPIs[slot].realAPI
+            };
+            
+            // Save to server
+            fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot, api: customAPIs[slot] })
+            }).then(() => {
+                showToast('✅ API Saved! Refresh to see changes.');
+                setTimeout(() => location.reload(), 1000);
+            });
+        }
+        
+        function loadAPIToSlot() {
+            const slot = parseInt(document.getElementById('apiSlotSelect').value);
+            if (isNaN(slot)) {
+                showToast('❌ Please select a slot');
+                return;
+            }
+            
+            const api = customAPIs[slot];
+            document.getElementById('apiNameInput').value = api.name || '';
+            document.getElementById('apiEndpointInput').value = api.endpoint || '';
+            document.getElementById('apiParamInput').value = api.param || '';
+            document.getElementById('apiExampleInput').value = api.example || '';
+            document.getElementById('apiDescInput').value = api.desc || '';
+            document.getElementById('apiRealUrlInput').value = api.realAPI || '';
+            document.getElementById('apiVisibleCheck').checked = api.visible || false;
+        }
+        
+        function toggleAPIVisibility() {
+            const slot = parseInt(document.getElementById('apiSlotSelect').value);
+            if (isNaN(slot)) {
+                showToast('❌ Please select a slot');
+                return;
+            }
+            
+            customAPIs[slot].visible = !customAPIs[slot].visible;
+            
+            fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot, api: customAPIs[slot] })
+            }).then(() => {
+                showToast('✅ Visibility toggled! Refreshing...');
+                setTimeout(() => location.reload(), 800);
+            });
+        }
+        
+        function editAPI(index) {
+            document.getElementById('apiSlotSelect').value = index;
+            loadAPIToSlot();
+            document.querySelector('.admin-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function deleteAPI(index) {
+            customAPIs[index] = {
+                ...customAPIs[index],
+                name: 'Custom API ' + (index + 1),
+                endpoint: '',
+                param: '',
+                example: '',
+                desc: '',
+                realAPI: '',
+                visible: false
+            };
+            
+            fetch('/admin/custom-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot: index, api: customAPIs[index] })
+            }).then(() => {
+                showToast('🗑️ API Deleted! Refreshing...');
+                setTimeout(() => location.reload(), 800);
+            });
+        }
+        
+        function populateKeyTable() {
+            const tbody = document.getElementById('keyTableBody');
+            const keys = Object.entries(keyStorage);
+            
+            tbody.innerHTML = keys.map(([key, data]) => {
+                const now = new Date();
+                const expiry = data.expiry ? new Date(data.expiry) : null;
+                const isExpired = expiry && now > expiry;
+                const isExhausted = !data.unlimited && data.used >= data.limit;
+                let status = '✅ Active';
+                let statusClass = 'status-active';
+                
+                if (isExpired) {
+                    status = '⏰ Expired';
+                    statusClass = 'status-expired';
+                } else if (isExhausted) {
+                    status = '🛑 Exhausted';
+                    statusClass = 'status-exhausted';
+                }
+                
+                const limitDisplay = data.unlimited ? '∞' : data.limit;
+                const displayKey = key.length > 20 ? key.substring(0, 17) + '...' : key;
+                
+                return '<tr>' +
+                    '<td><code style="color: #ff00ff;">' + displayKey + '</code></td>' +
+                    '<td>' + (data.name || 'User') + '</td>' +
+                    '<td style="font-size: 11px;">' + (data.scopes.includes('*') ? 'ALL' : data.scopes.slice(0, 3).join(', ') + (data.scopes.length > 3 ? '...' : '')) + '</td>' +
+                    '<td>' + limitDisplay + '</td>' +
+                    '<td>' + data.used + '</td>' +
+                    '<td>' + (data.expiryStr || 'Never') + '</td>' +
+                    '<td class="' + statusClass + '">' + status + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+        
+        populateKeyTable();
+        
         document.getElementById('endpointSelect').addEventListener('change', function() {
-            const selected = this.options[this.selectedIndex];
-            if (selected.dataset.custom) {
-                document.getElementById('paramInput').placeholder = selected.dataset.param;
+            const selectedOption = this.options[this.selectedIndex];
+            const isCustom = selectedOption.dataset.custom === 'true';
+            
+            if (isCustom) {
+                document.getElementById('paramInput').placeholder = selectedOption.dataset.param + ' (e.g., ' + customAPIs[selectedOption.value.split('_')[1] - 1].example + ')';
             } else {
-                const ep = endpoints[this.value];
+                const endpoint = this.value;
+                const ep = endpoints[endpoint];
                 document.getElementById('paramInput').placeholder = ep.param + ' (e.g., ' + ep.example + ')';
             }
         });
@@ -1631,32 +1461,46 @@ function serveHTML(res) {
     res.send(html);
 }
 
-// ========== ROUTES ==========
-app.get('/', (req, res) => serveHTML(res));
+// ========== EXPRESS ROUTES ==========
+app.use(express.json());
 
-app.get('/admin-panel', (req, res) => {
-    const token = req.query.token;
-    if (token && verifyAdminToken(token)) {
-        res.send(getAdminPanelPage(token));
-    } else {
-        res.send(getAdminLoginPage());
-    }
-});
+app.get('/', (req, res) => serveHTML(res));
 
 app.get('/test', (req, res) => {
     res.json({ 
         status: '✅ BRONX OSINT API Running', 
         credit: '@BRONX_ULTRA', 
-        time: getIndiaDateTime()
+        time: getIndiaDateTime(),
+        timezone: 'Asia/Kolkata (IST)',
+        total_keys: Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length,
+        custom_apis: customAPIs.filter(api => api.visible).length
     });
+});
+
+app.get('/keys', (req, res) => {
+    const keyList = {};
+    for (const [key, data] of Object.entries(keyStorage)) {
+        if (!data.hidden) {
+            keyList[key] = { 
+                owner: data.name, 
+                scopes: data.scopes, 
+                type: data.type,
+                limit: data.unlimited ? 'Unlimited' : data.limit,
+                used: data.used,
+                remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used),
+                expiry: data.expiryStr || 'Never',
+                created: data.created
+            };
+        }
+    }
+    res.json({ success: true, total_keys: Object.keys(keyList).length, keys: keyList });
 });
 
 app.get('/key-info', (req, res) => {
     const apiKey = req.query.key;
     if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
     
-    let keyData = keyStorage[apiKey] || customGeneratedKeys[apiKey];
-    
+    const keyData = keyStorage[apiKey];
     if (!keyData || keyData.hidden) {
         return res.status(404).json({ success: false, error: "Key not found" });
     }
@@ -1669,12 +1513,18 @@ app.get('/key-info', (req, res) => {
         success: true,
         key: apiKey,
         owner: keyData.name,
+        type: keyData.type,
         scopes: keyData.scopes,
         limit: keyData.unlimited ? 'Unlimited' : keyData.limit,
         used: keyData.used,
         remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used),
         expiry: keyData.expiryStr || 'Never',
-        status: isExpired ? 'expired' : (isExhausted ? 'exhausted' : 'active')
+        expired: isExpired,
+        exhausted: isExhausted,
+        status: isExpired ? 'expired' : (isExhausted ? 'exhausted' : 'active'),
+        created: keyData.created,
+        timezone: 'Asia/Kolkata',
+        current_time: getIndiaDateTime()
     });
 });
 
@@ -1682,48 +1532,68 @@ app.get('/quota', (req, res) => {
     const apiKey = req.query.key;
     if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
     
-    const keyData = keyStorage[apiKey] || customGeneratedKeys[apiKey];
+    const keyData = keyStorage[apiKey];
     if (!keyData || keyData.hidden) {
         return res.status(404).json({ success: false, error: "Key not found" });
     }
     
+    const remaining = keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used);
+    
     res.json({ 
         success: true,
         key: apiKey,
+        owner: keyData.name,
         limit: keyData.unlimited ? 'Unlimited' : keyData.limit, 
         used: keyData.used, 
-        remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used)
+        remaining: remaining,
+        expiry: keyData.expiryStr || 'Never',
+        resetType: 'never',
+        timezone: 'Asia/Kolkata'
     });
 });
 
+// Custom API endpoint
 app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const apiKey = req.query.key || req.headers['x-api-key'];
+    const query = req.query;
+    const apiKey = query.key || req.headers['x-api-key'];
     
+    // Find custom API
     const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
     if (!customAPI) {
         return res.status(404).json({ success: false, error: `Custom endpoint not found: ${endpoint}` });
     }
     
     if (!apiKey) {
-        return res.status(401).json({ success: false, error: "API Key Required" });
+        return res.status(401).json({ success: false, error: "❌ API Key Required" });
     }
     
+    // Check key validity
     const keyCheck = checkKeyValid(apiKey);
     if (!keyCheck.valid) {
-        return res.status(403).json({ success: false, error: keyCheck.error });
+        return res.status(403).json({ 
+            success: false, 
+            error: keyCheck.error,
+            ...(keyCheck.expired && { expired: true }),
+            ...(keyCheck.limitExhausted && { limit_exhausted: true })
+        });
     }
     
-    const paramValue = req.query[customAPI.param];
+    const keyData = keyCheck.keyData;
+    const paramValue = query[customAPI.param];
+    
     if (!paramValue) {
         return res.status(400).json({ 
             success: false, 
-            error: `Missing parameter: ${customAPI.param}`
+            error: `Missing parameter: ${customAPI.param}`, 
+            example: `?key=YOUR_KEY&${customAPI.param}=${customAPI.example}` 
         });
     }
     
     try {
         const realUrl = customAPI.realAPI.replace('{param}', encodeURIComponent(paramValue));
+        console.log(`📡 [Custom] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
+        
         const response = await axios.get(realUrl, { timeout: 30000 });
         
         incrementKeyUsage(apiKey);
@@ -1732,30 +1602,57 @@ app.get('/api/custom/:endpoint', async (req, res) => {
         cleanedData.api_info = {
             powered_by: "@BRONX_ULTRA",
             endpoint: endpoint,
+            type: 'custom',
+            key_owner: keyData.name,
             timestamp: getIndiaDateTime()
         };
         
         res.json(cleanedData);
     } catch (error) {
+        console.error(`❌ Custom API Error [${endpoint}]:`, error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
+// Admin route for custom API management
+app.post('/admin/custom-api', (req, res) => {
+    const { slot, api } = req.body;
+    
+    if (slot === undefined || slot < 0 || slot >= customAPIs.length) {
+        return res.status(400).json({ success: false, error: "Invalid slot" });
+    }
+    
+    customAPIs[slot] = { ...customAPIs[slot], ...api };
+    
+    res.json({ success: true, message: "Custom API updated", api: customAPIs[slot] });
+});
+
+// Get all custom APIs (for admin)
+app.get('/admin/custom-apis', (req, res) => {
+    res.json({ success: true, customAPIs });
+});
+
 app.get('/api/key-bronx/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const apiKey = req.query.key || req.headers['x-api-key'];
+    const query = req.query;
+    const apiKey = query.key || req.headers['x-api-key'];
     
     if (!endpoints[endpoint]) {
-        return res.status(404).json({ success: false, error: `Endpoint not found: ${endpoint}` });
+        return res.status(404).json({ success: false, error: `Endpoint not found: ${endpoint}`, available_endpoints: Object.keys(endpoints) });
     }
     
     if (!apiKey) {
-        return res.status(401).json({ success: false, error: "API Key Required" });
+        return res.status(401).json({ success: false, error: "❌ API Key Required. Use ?key=YOUR_KEY" });
     }
     
     const keyCheck = checkKeyValid(apiKey);
     if (!keyCheck.valid) {
-        return res.status(403).json({ success: false, error: keyCheck.error });
+        return res.status(403).json({ 
+            success: false, 
+            error: keyCheck.error,
+            ...(keyCheck.expired && { expired: true, expiry_date: keyCheck.expiredDate }),
+            ...(keyCheck.limitExhausted && { limit_exhausted: true })
+        });
     }
     
     const keyData = keyCheck.keyData;
@@ -1766,17 +1663,20 @@ app.get('/api/key-bronx/:endpoint', async (req, res) => {
     }
     
     const ep = endpoints[endpoint];
-    const paramValue = req.query[ep.param];
+    const paramValue = query[ep.param];
     
     if (!paramValue) {
         return res.status(400).json({ 
             success: false, 
-            error: `Missing parameter: ${ep.param}`
+            error: `Missing parameter: ${ep.param}`, 
+            example: `?key=YOUR_KEY&${ep.param}=${ep.example}` 
         });
     }
     
     try {
         const realUrl = `${REAL_API_BASE}/${endpoint}?key=${REAL_API_KEY}&${ep.param}=${encodeURIComponent(paramValue)}`;
+        console.log(`📡 [${getIndiaDateTime()}] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
+        
         const response = await axios.get(realUrl, { timeout: 30000 });
         
         const updatedKey = incrementKeyUsage(apiKey);
@@ -1785,18 +1685,33 @@ app.get('/api/key-bronx/:endpoint', async (req, res) => {
         cleanedData.api_info = {
             powered_by: "@BRONX_ULTRA",
             endpoint: endpoint,
-            remaining: updatedKey.unlimited ? 'Unlimited' : Math.max(0, updatedKey.limit - updatedKey.used),
+            key_owner: keyData.name,
+            key_type: keyData.type,
+            limit: keyData.unlimited ? 'Unlimited' : keyData.limit,
+            used: updatedKey.used,
+            remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - updatedKey.used),
+            expiry: keyData.expiryStr || 'Never',
+            timezone: 'Asia/Kolkata',
             timestamp: getIndiaDateTime()
         };
         
         res.json(cleanedData);
     } catch (error) {
+        console.error(`❌ Error [${endpoint}]:`, error.message);
+        if (error.response) {
+            return res.status(error.response.status).json(cleanResponse(error.response.data));
+        }
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
 app.use((req, res) => {
-    res.status(404).json({ success: false, error: "Endpoint not found" });
+    res.status(404).json({ 
+        success: false, 
+        error: "Endpoint not found",
+        available_endpoints: ["/", "/test", "/keys", "/key-info", "/quota", "/api/key-bronx/:endpoint", "/api/custom/:endpoint"],
+        contact: "@BRONX_ULTRA"
+    });
 });
 
 module.exports = app;
