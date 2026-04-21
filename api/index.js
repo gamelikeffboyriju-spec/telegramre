@@ -10,15 +10,15 @@ const REAL_API_KEY = 'backup-bot';
 // ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
 let customAPIs = [
     { 
-        id: 1, 
-        name: 'Number Info backup ✅', 
-        endpoint: 'bronx-api-bromx', 
-        param: 'num', 
-        example: '9876543210', 
-        desc: 'india Number Lookup Vip Bronx api',
-        category: '🔧 Custom APIs',
-        visible: true,
-        realAPI: 'https://bronx-api-bromx.vercel.app/api/number?num={param}' // Fixed URL
+    id: 1, 
+    name: '📱 Number Info API', 
+    endpoint: 'number-info', 
+    param: 'num', 
+    example: '9876543210', 
+    desc: 'Indian Number Lookup API',
+    category: '🔧 Custom APIs',
+    visible: true,
+    realAPI: 'https://bronx-api-bromx.vercel.app/api/number?num={param}'
     },
     { 
         id: 2, 
