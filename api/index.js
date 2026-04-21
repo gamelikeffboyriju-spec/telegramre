@@ -12,7 +12,7 @@ let customAPIs = [
     { 
         id: 1, 
         name: 'Number Info backup ✅', 
-        endpoint: 'number-detils', 
+        endpoint: 'bronx-api-bromx', 
         param: 'num', 
         example: '9876543210', 
         desc: 'india Number Lookup Vip Bronx api',
@@ -56,7 +56,7 @@ let customAPIs = [
     { 
         id: 5, 
         name: '📲 Telegram Number API', 
-        endpoint: 'telegram-num', 
+        endpoint: 'bronx-tg-ultra', 
         param: 'id', 
         example: '7530266953', 
         desc: 'Telegram Number Lookup',
