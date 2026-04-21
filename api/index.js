@@ -2129,11 +2129,14 @@ app.get('/quota', (req, res) => {
     });
 });
 
-// Custom API endpoint
+// Custom API endpoint - FIXED VERSION
 app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
     const query = req.query;
     const apiKey = query.key || req.headers['x-api-key'];
+    
+    console.log('📡 Custom API Request:', endpoint);
+    console.log('📡 Query Params:', query);
     
     // Find custom API
     const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
@@ -2144,6 +2147,84 @@ app.get('/api/custom/:endpoint', async (req, res) => {
     if (!apiKey) {
         return res.status(401).json({ success: false, error: "❌ API Key Required" });
     }
+    
+    // Check key validity
+    const keyCheck = checkKeyValid(apiKey);
+    if (!keyCheck.valid) {
+        return res.status(403).json({ 
+            success: false, 
+            error: keyCheck.error,
+            ...(keyCheck.expired && { expired: true }),
+            ...(keyCheck.limitExhausted && { limit_exhausted: true })
+        });
+    }
+    
+    const keyData = keyCheck.keyData;
+    const paramValue = query[customAPI.param];
+    
+    if (!paramValue) {
+        return res.status(400).json({ 
+            success: false, 
+            error: `Missing parameter: ${customAPI.param}`, 
+            example: `?key=YOUR_KEY&${customAPI.param}=${customAPI.example}` 
+        });
+    }
+    
+    try {
+        // FIX: Proper URL replacement
+        const realUrl = customAPI.realAPI.replace('{param}', paramValue);
+        console.log(`📡 Calling Real API: ${realUrl}`);
+        
+        const response = await axios.get(realUrl, { 
+            timeout: 30000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json'
+            }
+        });
+        
+        incrementKeyUsage(apiKey);
+        
+        // FIX: Safe response handling
+        let cleanedData;
+        if (response.data) {
+            cleanedData = cleanResponse(response.data);
+        } else {
+            cleanedData = { message: 'No data from API' };
+        }
+        
+        cleanedData.api_info = {
+            powered_by: "@BRONX_ULTRA",
+            endpoint: endpoint,
+            type: 'custom',
+            key_owner: keyData.name,
+            timestamp: getIndiaDateTime()
+        };
+        
+        res.json(cleanedData);
+        
+    } catch (error) {
+        console.error(`❌ Custom API Error [${endpoint}]:`, error.message);
+        console.error('Error Details:', error.response?.status, error.response?.data);
+        
+        // FIX: Better error response
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            details: error.response?.data || 'No additional details',
+            real_url_attempted: customAPI.realAPI.replace('{param}', paramValue)
+        });
+    }
+});
+
+// DEBUG: Test custom API directly
+app.get('/debug/custom-api', (req, res) => {
+    const slot7 = customAPIs.find(api => api.id === 7);
+    res.json({
+        slot7: slot7,
+        all_apis: customAPIs.map(a => ({ id: a.id, name: a.name, endpoint: a.endpoint, visible: a.visible }))
+    });
+});
     
     // Check key validity
     const keyCheck = checkKeyValid(apiKey);
