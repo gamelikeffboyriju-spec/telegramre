@@ -4,8 +4,8 @@ const axios = require('axios');
 const app = express();
 
 // ========== CONFIG ==========
-const REAL_API_BASE = 'https://ft-osint-api.onrender.com/api';
-const REAL_API_KEY = 'nobita-neew';
+const REAL_API_BASE = 'https://ft-osint-api.duckdns.org';
+const REAL_API_KEY = 'backup-bot';
 
 // ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
 let customAPIs = [
@@ -16,7 +16,7 @@ let customAPIs = [
         param: 'num', 
         example: '9876543210', 
         desc: 'india Number Lookup Vip Bronx api',
-        category: 'premium',
+        category: '🔧 Custom APIs',
         visible: true,
         realAPI: 'https://bronx-api-bromx.vercel.app/search?num={parma}'
     },
@@ -27,18 +27,18 @@ let customAPIs = [
         param: 'ca_number', 
         example: 'MH02FZ0555', 
         desc: 'Vehicle RC Details Lookup',
-        category: 'premium',
+        category: '🔧 Custom APIs',
         visible: true,
         realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={parma}'
     },
     { 
         id: 3, 
         name: 'Adhar Detail api ', 
-        endpoint: 'aadhar-details', 
+        endpoint: 'bronx-adhar-api', 
         param: 'aadhaar', 
         example: '393933081942', 
         desc: 'Aadhar Number Lookup',
-        category: 'premium',
+        category: '🔧 Custom APIs',
         visible: true,
         realAPI: 'https://bronx-adhar-api.vercel.app/aadhaar/{param}'
     },
@@ -49,7 +49,7 @@ let customAPIs = [
         param: 'mail', 
         example: 'user@gmail.com', 
         desc: 'Email Information Lookup',
-        category: 'premium',
+        category: '🔧 Custom APIs',
         visible: true,
         realAPI: 'https://bronx-mail-api.vercel.app/mail={parma}'
     },
@@ -60,7 +60,7 @@ let customAPIs = [
         param: 'id', 
         example: '7530266953', 
         desc: 'Telegram Number Lookup',
-        category: 'premium',
+        category: '🔧 Custom APIs',
         visible: true,
         realAPI: 'https://bronx-tg-ultra.vercel.app/tg?id={parma}'
     },
