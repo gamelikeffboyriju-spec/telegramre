@@ -5,7 +5,7 @@ const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org';
-const REAL_API_KEY = 'backup-bot';
+const REAL_API_KEY = 'bronx';
 
 // ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
 let customAPIs = [
