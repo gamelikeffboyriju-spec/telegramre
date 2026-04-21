@@ -12,13 +12,13 @@ let customAPIs = [
     { 
         id: 1, 
         name: 'Number Info backup ✅', 
-        endpoint: 'rajput-api', 
+        endpoint: 'number-detils', 
         param: 'num', 
         example: '9876543210', 
         desc: 'india Number Lookup Vip Bronx api',
-        category: '🔧 Custom APIs',
+        category: 'premium',
         visible: true,
-        realAPI: 'https://rajput-api.vercel.app/search?num={parma}'
+        realAPI: 'https://bronx-api-bromx.vercel.app/search?num={parma}'
     },
     { 
         id: 2, 
@@ -27,7 +27,7 @@ let customAPIs = [
         param: 'ca_number', 
         example: 'MH02FZ0555', 
         desc: 'Vehicle RC Details Lookup',
-        category: '🔧 Custom APIs',
+        category: 'premium',
         visible: true,
         realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={parma}'
     },
@@ -35,12 +35,12 @@ let customAPIs = [
         id: 3, 
         name: 'Adhar Detail api ', 
         endpoint: 'aadhar-details', 
-        param: 'aadhar', 
+        param: 'aadhaar', 
         example: '393933081942', 
         desc: 'Aadhar Number Lookup',
-        category: '🔧 Custom APIs',
+        category: 'premium',
         visible: true,
-        realAPI: 'https://bronx-adhar-api.vercel.app/aadhar={param}'
+        realAPI: 'https://bronx-adhar-api.vercel.app/aadhaar/{param}'
     },
     { 
         id: 4, 
@@ -49,7 +49,7 @@ let customAPIs = [
         param: 'mail', 
         example: 'user@gmail.com', 
         desc: 'Email Information Lookup',
-        category: '🔧 Custom APIs',
+        category: 'premium',
         visible: true,
         realAPI: 'https://bronx-mail-api.vercel.app/mail={parma}'
     },
@@ -60,9 +60,9 @@ let customAPIs = [
         param: 'id', 
         example: '7530266953', 
         desc: 'Telegram Number Lookup',
-        category: '🔧 Custom APIs',
+        category: 'premium',
         visible: true,
-        realAPI: 'http://45.91.248.51:3000/api/tgnum?id={parma}'
+        realAPI: 'https://bronx-tg-ultra.vercel.app/tg?id={parma}'
     },
     { 
         id: 6, 
