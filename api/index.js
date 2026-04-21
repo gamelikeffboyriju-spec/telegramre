@@ -685,68 +685,6 @@ app.get('/admin/dashboard', (req, res) => {
             
             <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
-
-                        🔧 CUSTOM API MANAGER 
-                <small>(10 Slots - Toggle Visibility)</small>
-            </h2>
-            <div class="custom-api-form">
-                <select id="apiSlotSelect">
-                    <option value="0">Select Slot (1-10)</option>
-                    ${customAPIs.map((api, i) => `<option value="${i}">Slot ${api.id} - ${api.name}</option>`).join('')}
-                </select>
-                <input type="text" id="apiNameInput" placeholder="API Display Name">
-                <input type="text" id="apiEndpointInput" placeholder="Endpoint (e.g., myapi)">
-                <input type="text" id="apiParamInput" placeholder="Parameter (e.g., query)">
-                <input type="text" id="apiExampleInput" placeholder="Example Value">
-                <input type="text" id="apiDescInput" placeholder="Description">
-                <input type="text" id="apiRealUrlInput" placeholder="Real API URL (use {param})">
-            </div>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
-                <button onclick="saveCustomAPI()">💾 Save API</button>
-                <button onclick="loadAPIToSlot()">📂 Load to Form</button>
-                <div class="toggle-visibility">
-                    <input type="checkbox" id="apiVisibleCheck"> 
-                    <label for="apiVisibleCheck">👁️ Visible to Public</label>
-                </div>
-                <button onclick="toggleAPIVisibility()">🔄 Toggle Visibility</button>
-            </div>
-            <div class="custom-apis-list" id="customApisList">
-                ${customAPIs.map((api, i) => `
-                    <div class="custom-api-item">
-                        <div class="api-info">
-                            <strong style="color: #ff00ff;">Slot ${api.id}</strong>
-                            <span style="color: var(--text-primary);">${api.name || '(Empty)'}</span>
-                            <code style="color: #00ff41;">/${api.endpoint || 'not-set'}</code>
-                            <span class="status ${api.visible ? 'visible' : 'hidden'}">${api.visible ? '👁️ Visible' : '🔒 Hidden'}</span>
-                        </div>
-                        <div>
-                            <button onclick="editAPI(${i})">✏️ Edit</button>
-                            <button onclick="deleteAPI(${i})">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-
-                <div class="key-info-section">
-            <div class="key-info-title">🔑 PREMIUM KEYS LIST</div>
-            <div class="key-table-container">
-                <table class="key-table">
-                    <thead>
-                        <tr>
-                            <th>Key</th>
-                            <th>Owner</th>
-                            <th>Scopes</th>
-                            <th>Limit</th>
-                            <th>Used</th>
-                            <th>Expiry</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keyTableBody"></tbody>
-                </table>
-            </div>
-        </div>
         
         <!-- Keys Table -->
         <div class="panel">
@@ -1796,9 +1734,7 @@ function serveHTML(res) {
             </div>
         </div>
         
-        <!-- Custom API Admin Panel -->
-        <div class="admin-panel">
-            <h2>
+        
         
         <!-- API Testing Panel -->
         <div class="api-panel">
@@ -1859,7 +1795,7 @@ function serveHTML(res) {
             </div>
         ` : ''}
         
-
+        
         
         <div class="footer">
             <p class="glow-text">✨ BRONX OSINT API - NEON EDITION ✨</p>
