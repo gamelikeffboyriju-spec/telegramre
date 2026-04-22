@@ -7,7 +7,7 @@ const app = express();
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
 const REAL_API_KEY = 'backup-bot';
 
-// ========== EXTRA CUSTOM APIS (10 Slots - Hidden/Public Toggle) ==========
+// ========== EXTRA CUSTOM APIS (10 Slots - SIMPLE VERSION) ==========
 let customAPIs = [
     { 
         id: 1, 
@@ -18,22 +18,22 @@ let customAPIs = [
         desc: 'india Number Lookup Vip Bronx api',
         category: '🔧 Custom APIs',
         visible: true,
-        realAPI: 'https://bronx-api-bromx.vercel.app/search?num={parma}'
+        realAPI: 'https://bronx-api-bromx.vercel.app/search?num={param}'
     },
     { 
         id: 2, 
-        name: 'vehcial Ditails Api 🚕', 
+        name: 'Vehicle Details Api 🚕', 
         endpoint: 'rc-details', 
         param: 'ca_number', 
         example: 'MH02FZ0555', 
         desc: 'Vehicle RC Details Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={parma}'
+        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}'
     },
     { 
         id: 3, 
-        name: 'Adhar Detail api ', 
+        name: 'Adhar Detail api', 
         endpoint: 'aadhar-details', 
         param: 'aadhar', 
         example: '393933081942', 
@@ -51,7 +51,7 @@ let customAPIs = [
         desc: 'Email Information Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        realAPI: 'https://bronx-mail-api.vercel.app/mail={parma}'
+        realAPI: 'https://bronx-mail-api.vercel.app/mail={param}'
     },
     { 
         id: 5, 
@@ -62,63 +62,13 @@ let customAPIs = [
         desc: 'Telegram Number Lookup',
         category: '🔧 Custom APIs',
         visible: true,
-        realAPI: 'http://45.91.248.51:3000/api/tgnum?id={parma}'
+        realAPI: 'http://45.91.248.51:3000/api/tgnum?id={param}'
     },
-    { 
-        id: 6, 
-        name: 'Custom API 6', 
-        endpoint: '', 
-        param: '', 
-        example: '', 
-        desc: '',
-        category: '🔧 Custom APIs',
-        visible: false,
-        realAPI: ''
-    },
-    { 
-        id: 7, 
-        name: 'Custom API 7', 
-        endpoint: '', 
-        param: '', 
-        example: '', 
-        desc: '',
-        category: '🔧 Custom APIs',
-        visible: false,
-        realAPI: ''
-    },
-    { 
-        id: 8, 
-        name: 'Custom API 8', 
-        endpoint: '', 
-        param: '', 
-        example: '', 
-        desc: '',
-        category: '🔧 Custom APIs',
-        visible: false,
-        realAPI: ''
-    },
-    { 
-        id: 9, 
-        name: 'Custom API 9', 
-        endpoint: '', 
-        param: '', 
-        example: '', 
-        desc: '',
-        category: '🔧 Custom APIs',
-        visible: false,
-        realAPI: ''
-    },
-    { 
-        id: 10, 
-        name: 'Custom API 10', 
-        endpoint: '', 
-        param: '', 
-        example: '', 
-        desc: '',
-        category: '🔧 Custom APIs',
-        visible: false,
-        realAPI: ''
-    }
+    { id: 6, name: 'Custom API 6', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
+    { id: 7, name: 'Custom API 7', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
+    { id: 8, name: 'Custom API 8', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
+    { id: 9, name: 'Custom API 9', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
+    { id: 10, name: 'Custom API 10', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' }
 ];
 
 // ========== INDIA TIME HELPER ==========
