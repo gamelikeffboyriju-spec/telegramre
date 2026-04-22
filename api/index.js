@@ -2187,11 +2187,13 @@ app.get('/quota', (req, res) => {
     });
 });
 
-// Custom API endpoint
+// FIXED: Custom API endpoint
 app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const query = req.query;
-    const apiKey = query.key || req.headers['x-api-key'];
+    const apiKey = req.query.key || req.headers['x-api-key'];
+    
+    console.log('📡 Custom API Request:', endpoint);
+    console.log('📡 Query Params:', req.query);
     
     // Find custom API
     const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
@@ -2215,7 +2217,7 @@ app.get('/api/custom/:endpoint', async (req, res) => {
     }
     
     const keyData = keyCheck.keyData;
-    const paramValue = query[customAPI.param];
+    const paramValue = req.query[customAPI.param];
     
     if (!paramValue) {
         return res.status(400).json({ 
@@ -2226,14 +2228,29 @@ app.get('/api/custom/:endpoint', async (req, res) => {
     }
     
     try {
-        const realUrl = customAPI.realAPI.replace('{param}', encodeURIComponent(paramValue));
-        console.log(`📡 [Custom] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
+        // FIX: Properly replace {param} in URL
+        let realUrl = customAPI.realAPI;
+        realUrl = realUrl.replace('{param}', paramValue);
+        realUrl = realUrl.replace('{parma}', paramValue); // Fix typo if any
         
-        const response = await axios.get(realUrl, { timeout: 30000 });
+        console.log(`📡 Calling Real API: ${realUrl}`);
+        
+        const response = await axios.get(realUrl, { 
+            timeout: 30000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json'
+            }
+        });
         
         incrementKeyUsage(apiKey);
         
-        const cleanedData = cleanResponse(response.data);
+        // Clean response
+        let cleanedData = response.data;
+        if (cleanedData && typeof cleanedData === 'object') {
+            cleanedData = cleanResponse(cleanedData);
+        }
+        
         cleanedData.api_info = {
             powered_by: "@BRONX_ULTRA",
             endpoint: endpoint,
@@ -2243,9 +2260,27 @@ app.get('/api/custom/:endpoint', async (req, res) => {
         };
         
         res.json(cleanedData);
+        
     } catch (error) {
         console.error(`❌ Custom API Error [${endpoint}]:`, error.message);
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        
+        // Return the actual error from the real API if available
+        if (error.response) {
+            return res.status(error.response.status).json({
+                success: false,
+                error: 'Real API returned error',
+                real_api_status: error.response.status,
+                real_api_error: error.response.data
+            });
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            url_attempted: customAPI.realAPI.replace('{param}', paramValue)
+        });
     }
 });
 
