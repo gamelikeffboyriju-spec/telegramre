@@ -1,78 +1,7 @@
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');      // ← ADD THIS
-const path = require('path');  // ← ADD THIS
-
-const app = express();
-
-// ========== KEYS FILE STORAGE ==========
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
-const CUSTOM_APIS_FILE = path.join('/tmp', 'bronx_custom_apis.json');
-
-// ========== LOAD KEYS FROM FILE ==========
-function loadKeysFromFile() {
-    try {
-        if (fs.existsSync(KEYS_FILE)) {
-            const data = fs.readFileSync(KEYS_FILE, 'utf8');
-            const parsed = JSON.parse(data);
-            
-            // Convert expiry strings back to Date objects
-            Object.keys(parsed).forEach(key => {
-                if (parsed[key].expiryStr && parsed[key].expiryStr !== 'Never') {
-                    parsed[key].expiry = parseExpiryDate(parsed[key].expiryStr);
-                }
-            });
-            
-            return parsed;
-        }
-    } catch (err) {
-        console.error('Error loading keys:', err);
-    }
-    return {};
-}
-
-// ========== SAVE KEYS TO FILE ==========
-function saveKeysToFile() {
-    try {
-        // Convert Date objects to strings for JSON
-        const keysToSave = {};
-        Object.entries(keyStorage).forEach(([key, data]) => {
-            keysToSave[key] = { ...data };
-            delete keysToSave[key].expiry; // Will be regenerated from expiryStr
-        });
-        
-        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
-        console.log('✅ Keys saved to file');
-    } catch (err) {
-        console.error('Error saving keys:', err);
-    }
-}
-
-// ========== LOAD CUSTOM APIS FROM FILE ==========
-function loadCustomAPIsFromFile() {
-    try {
-        if (fs.existsSync(CUSTOM_APIS_FILE)) {
-            const data = fs.readFileSync(CUSTOM_APIS_FILE, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch (err) {
-        console.error('Error loading custom APIs:', err);
-    }
-    return null;
-}
-
-// ========== SAVE CUSTOM APIS TO FILE ==========
-function saveCustomAPIsToFile() {
-    try {
-        fs.writeFileSync(CUSTOM_APIS_FILE, JSON.stringify(customAPIs, null, 2));
-        console.log('✅ Custom APIs saved to file');
-    } catch (err) {
-        console.error('Error saving custom APIs:', err);
-    }
-}
-
-const express = require('express');
-const axios = require('axios');
+const fs = require('fs');      // ← ADD THIS LINE
+const path = require('path');  // ← ADD THIS LINE
 
 const app = express();
 
@@ -80,11 +9,34 @@ const app = express();
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
 const REAL_API_KEY = 'backup-bot';
 
+// ========== KEYS FILE STORAGE ==========
+const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
+
+// Load keys from file
+function loadKeysFromFile() {
+    try {
+        if (fs.existsSync(KEYS_FILE)) {
+            const data = fs.readFileSync(KEYS_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (err) {
+        console.error('Error loading keys:', err);
+    }
+    return null;
+}
+
+// Save keys to file
+function saveKeysToFile() {
+    try {
+        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
+        console.log('✅ Keys saved to file');
+    } catch (err) {
+        console.error('Error saving keys:', err);
+    }
+}
+
 // ========== EXTRA CUSTOM APIS (10 Slots - SIMPLE VERSION) ==========
-// Load custom APIs from file or use defaults
-let customAPIs = loadCustomAPIsFromFile() || [
-    // ... your default array ...
-];
+let customAPIs = [
     { 
         id: 1, 
         name: 'Number Info backup ✅', 
@@ -177,28 +129,25 @@ function parseExpiryDate(dateStr) {
 }
 
 // ========== ENHANCED KEY STORAGE ==========
-let keyStorage = loadKeysFromFile(); // ← Load from file first
+let keyStorage = loadKeysFromFile() || {};
+const isFreshStart = Object.keys(keyStorage).length === 0;
 
-// If file was empty, initialize with default keys
-if (Object.keys(keyStorage).length === 0) {
-    console.log('📝 Initializing fresh key storage...');
-    keyStorage = {};
-    // Master key and premium keys will be added below
-}
-
-// ========== UNLIMITED MASTER KEY (HIDDEN FROM PUBLIC) ==========
-keyStorage['BRONX_ULTRA_MASTER_2026'] = {
-    name: '👑 BRONX ULTRA OWNER',
-    scopes: ['*'],
-    type: 'owner',
-    limit: Infinity,
-    used: 0,
-    expiry: null,
-    created: getIndiaDateTime(),
-    resetType: 'never',
-    unlimited: true,
-    hidden: true // HIDE FROM PUBLIC
-};
+// Only add default keys if fresh start
+if (isFreshStart) {
+    
+    // ========== UNLIMITED MASTER KEY ==========
+    keyStorage['BRONX_ULTRA_MASTER_2026'] = {
+        name: '👑 BRONX ULTRA OWNER',
+        scopes: ['*'],
+        type: 'owner',
+        limit: Infinity,
+        used: 0,
+        expiry: null,
+        created: getIndiaDateTime(),
+        resetType: 'never',
+        unlimited: true,
+        hidden: true
+    };
 
 // ========== 49 PREMIUM KEYS ==========
 const premiumKeys = [
@@ -298,6 +247,10 @@ keyStorage['TEST_KEY_2026'] = {
     hidden: false
 };
 
+        saveKeysToFile(); // Save initial keys
+    
+} // ← Close the if(isFreshStart) bracket
+
 // ========== KEY MANAGEMENT FUNCTIONS ==========
 function checkKeyValid(apiKey) {
     const keyData = keyStorage[apiKey];
@@ -328,6 +281,7 @@ function checkKeyValid(apiKey) {
 function incrementKeyUsage(apiKey) {
     if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) {
         keyStorage[apiKey].used++;
+        saveKeysToFile(); // ← ADD THIS LINE
     }
     return keyStorage[apiKey];
 }
@@ -950,6 +904,12 @@ app.get('/admin/dashboard', (req, res) => {
 // ========== ADMIN API ENDPOINTS ==========
 
 app.get('/admin/keys', (req, res) => {
+    // Reload from file to get latest
+    const fileKeys = loadKeysFromFile();
+    if (fileKeys) {
+        keyStorage = fileKeys;
+    }
+    
     const allKeys = {};
     Object.entries(keyStorage).forEach(([key, data]) => {
         allKeys[key] = {
@@ -964,9 +924,37 @@ app.get('/admin/keys', (req, res) => {
     res.json({ success: true, keys: allKeys });
 });
 
-// Update generate-key endpoint
+// FIXED: Generate key with proper body parsing
 app.post('/admin/generate-key', (req, res) => {
-    // ... existing code ...
+    console.log('Body received:', req.body); // Debug
+    
+    // Manual extraction for safety
+    const key = req.body.key;
+    const name = req.body.name;
+    const scopes = req.body.scopes;
+    const limit = req.body.limit;
+    const expiry = req.body.expiry;
+    const unlimited = req.body.unlimited;
+    const hidden = req.body.hidden;
+    
+    if (!key) {
+        return res.json({ success: false, error: 'Key required' });
+    }
+    
+    if (keyStorage[key]) {
+        return res.json({ success: false, error: 'Key already exists' });
+    }
+    
+    let expiryDate = null;
+    let expiryStr = null;
+    
+    if (expiry && expiry !== 'never') {
+        const parts = expiry.split('-');
+        if (parts.length === 3) {
+            expiryDate = new Date(parts[2], parts[1] - 1, parts[0], 23, 59, 59);
+            expiryStr = expiry;
+        }
+    }
     
     keyStorage[key] = {
         name: name || 'User',
@@ -982,43 +970,34 @@ app.post('/admin/generate-key', (req, res) => {
         hidden: hidden || false
     };
     
-    saveKeysToFile(); // ← ADD THIS
+    saveKeysToFile(); // ← ADD THIS LIN
     
     res.json({ success: true, message: 'Key generated!', key });
 });
 
-// Update reset-usage endpoint
 app.post('/admin/reset-usage', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        saveKeysToFile(); // ← ADD THIS
+        saveKeysToFile(); // ← ADD THIS LINE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
     }
 });
 
-// Update delete-key endpoint
 app.delete('/admin/delete-key', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         delete keyStorage[key];
-        saveKeysToFile(); // ← ADD THIS
+        saveKeysToFile(); // ← ADD THIS LINE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
     }
 });
 
-// Update incrementKeyUsage function
-function incrementKeyUsage(apiKey) {
-    if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) {
-        keyStorage[apiKey].used++;
-        saveKeysToFile(); // ← ADD THIS
-    }
-    return keyStorage[apiKey];
-}
+console.log('✅ Admin Panel ready at /admin');
 
 // ========== SERVE ENHANCED HTML UI WITH DARK/LIGHT MODE ==========
 function serveHTML(res) {
@@ -2311,7 +2290,6 @@ app.post('/admin/custom-api', (req, res) => {
     }
     
     customAPIs[slot] = { ...customAPIs[slot], ...api };
-    saveCustomAPIsToFile(); // ← ONLY THIS LINE IS NEW
     
     res.json({ success: true, message: "Custom API updated", api: customAPIs[slot] });
 });
