@@ -1,14 +1,16 @@
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
+const fs = require('fs');      // ← ADD THIS LINE
+const path = require('path');  // ← ADD THIS LINE
 
 const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
 const REAL_API_KEY = 'backup-bot';
+
+// ========== KEYS FILE STORAGE ==========
+const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
 
 // Load keys from file
 function loadKeysFromFile() {
@@ -382,6 +384,40 @@ function saveKeysToFile() {
     }
 }
 
+// ========== ADMIN PANEL (100% FIXED + FILE PERSISTENCE) ==========
+
+const ADMIN_PASSWORD = 'bronx2026';
+
+// ========== FILE STORAGE FUNCTIONS ==========
+const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
+
+function loadKeysFromFile() {
+    try {
+        if (fs.existsSync(KEYS_FILE)) {
+            const data = fs.readFileSync(KEYS_FILE, 'utf8');
+            const parsed = JSON.parse(data);
+            console.log('📂 Loaded ' + Object.keys(parsed).length + ' keys from file');
+            return parsed;
+        }
+    } catch(e) {
+        console.error('❌ Load error:', e.message);
+    }
+    return null;
+}
+
+function saveKeysToFile() {
+    try {
+        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
+        console.log('💾 Keys saved! Total: ' + Object.keys(keyStorage).length);
+    } catch(e) {
+        console.error('❌ Save error:', e.message);
+    }
+}
+
+// ========== IMPORTANT: Body Parser Middleware ==========
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
     const html = `<!DOCTYPE html>
@@ -471,10 +507,11 @@ app.get('/admin', (req, res) => {
 
 // ========== ADMIN DASHBOARD ==========
 app.get('/admin/dashboard', (req, res) => {
-    // Reload keys from file
-    const fresh = loadKeysFromFile();
-    if (fresh && Object.keys(fresh).length > 0) {
-        Object.assign(keyStorage, fresh);
+    // LOAD KEYS FROM FILE ON EVERY DASHBOARD VISIT
+    const saved = loadKeysFromFile();
+    if (saved && Object.keys(saved).length > 0) {
+        Object.assign(keyStorage, saved);
+        console.log('✅ Keys synced from file to memory');
     }
     
     const html = `<!DOCTYPE html>
@@ -524,11 +561,6 @@ app.get('/admin/dashboard', (req, res) => {
             background: #1a0033; border: 2px solid; border-radius: 15px;
             padding: 20px; text-align: center;
         }
-        .stat-card:nth-child(1) { border-color: #ff00ff; }
-        .stat-card:nth-child(2) { border-color: #00ff41; }
-        .stat-card:nth-child(3) { border-color: #ffff00; }
-        .stat-card:nth-child(4) { border-color: #ff0000; }
-        .stat-card:nth-child(5) { border-color: #00ffff; }
         .stat-value {
             font-size: 42px; font-weight: bold;
             background: linear-gradient(45deg, #ff00ff, #00ff41);
@@ -623,48 +655,21 @@ app.get('/admin/dashboard', (req, res) => {
         </div>
         
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalKeys">0</div>
-                <div class="stat-label">TOTAL KEYS</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="activeKeys">0</div>
-                <div class="stat-label">ACTIVE KEYS</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalRequests">0</div>
-                <div class="stat-label">TOTAL REQUESTS</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="todayRequests">0</div>
-                <div class="stat-label">TODAY REQUESTS</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="customApisCount">0</div>
-                <div class="stat-label">CUSTOM APIs</div>
-            </div>
+            <div class="stat-card"><div class="stat-value" id="totalKeys">0</div><div class="stat-label">TOTAL KEYS</div></div>
+            <div class="stat-card"><div class="stat-value" id="activeKeys">0</div><div class="stat-label">ACTIVE KEYS</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalRequests">0</div><div class="stat-label">TOTAL REQUESTS</div></div>
+            <div class="stat-card"><div class="stat-value" id="todayRequests">0</div><div class="stat-label">TODAY REQUESTS</div></div>
+            <div class="stat-card"><div class="stat-value" id="customApisCount">0</div><div class="stat-label">CUSTOM APIs</div></div>
         </div>
         
         <!-- Key Generator Panel -->
         <div class="panel">
             <div class="panel-title">🔑 KEY GENERATOR</div>
             <div class="form-grid">
-                <div class="form-group">
-                    <label>🔐 API KEY (blank = auto)</label>
-                    <input type="text" id="newKey" placeholder="Auto-generated">
-                </div>
-                <div class="form-group">
-                    <label>👤 OWNER NAME</label>
-                    <input type="text" id="newName" value="Premium User">
-                </div>
-                <div class="form-group">
-                    <label>📊 REQUEST LIMIT</label>
-                    <input type="number" id="newLimit" value="100">
-                </div>
-                <div class="form-group">
-                    <label>⏰ EXPIRY (DD-MM-YYYY)</label>
-                    <input type="text" id="newExpiry" value="31-12-2026">
-                </div>
+                <div class="form-group"><label>🔐 API KEY</label><input type="text" id="newKey" placeholder="Auto-generated"></div>
+                <div class="form-group"><label>👤 OWNER NAME</label><input type="text" id="newName" value="Premium User"></div>
+                <div class="form-group"><label>📊 REQUEST LIMIT</label><input type="number" id="newLimit" value="100"></div>
+                <div class="form-group"><label>⏰ EXPIRY</label><input type="text" id="newExpiry" value="31-12-2026"></div>
             </div>
             
             <div class="preset-buttons">
@@ -676,27 +681,15 @@ app.get('/admin/dashboard', (req, res) => {
                 <span class="preset-btn" onclick="selectSocial()">🌐 Social</span>
             </div>
             
-            <label style="color: #00ff41; margin: 10px 0; display: block;">📌 SELECT SCOPES:</label>
+            <label style="color:#00ff41;margin:10px 0;display:block;">📌 SELECT SCOPES:</label>
             <div class="scope-selector" id="scopeSelector"></div>
             
             <div class="form-grid">
-                <div class="form-group">
-                    <label>✨ UNLIMITED</label>
-                    <select id="newUnlimited">
-                        <option value="false">No (Use limit)</option>
-                        <option value="true">Yes (Unlimited)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>👁️ VISIBILITY</label>
-                    <select id="newHidden">
-                        <option value="false">Visible</option>
-                        <option value="true">Hidden</option>
-                    </select>
-                </div>
+                <div class="form-group"><label>✨ UNLIMITED</label><select id="newUnlimited"><option value="false">No</option><option value="true">Yes</option></select></div>
+                <div class="form-group"><label>👁️ VISIBILITY</label><select id="newHidden"><option value="false">Visible</option><option value="true">Hidden</option></select></div>
             </div>
             
-            <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
+            <button class="btn btn-primary" style="width:100%;padding:15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
         
         <!-- Keys Table -->
@@ -704,90 +697,47 @@ app.get('/admin/dashboard', (req, res) => {
             <div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
             <div class="table-container">
                 <table class="key-table">
-                    <thead>
-                        <tr>
-                            <th>KEY</th>
-                            <th>OWNER</th>
-                            <th>LIMIT</th>
-                            <th>USED</th>
-                            <th>REMAINING</th>
-                            <th>EXPIRY</th>
-                            <th>STATUS</th>
-                            <th>ACTIONS</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>KEY</th><th>OWNER</th><th>LIMIT</th><th>USED</th><th>REMAINING</th><th>EXPIRY</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
                     <tbody id="keysTableBody"></tbody>
                 </table>
             </div>
         </div>
     </div>
-    
     <div id="toastContainer"></div>
     
     <script>
-        if (localStorage.getItem('bronx_admin_auth') !== 'true') {
-            window.location.href = '/admin';
-        }
+        if (localStorage.getItem('bronx_admin_auth') !== 'true') { window.location.href = '/admin'; }
         
-        const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
-        
+        const SCOPES = ['number','numv2','adv','name','aadhar','upi','ifsc','pan','pincode','ip','vehicle','rc','ff','bgmi','insta','git','tg','pk','pkv2'];
         const scopeDiv = document.getElementById('scopeSelector');
-        SCOPES.forEach(scope => {
-            const span = document.createElement('span');
-            span.className = 'scope-item';
-            span.textContent = scope;
-            span.onclick = function() { this.classList.toggle('selected'); };
-            scopeDiv.appendChild(span);
-        });
+        SCOPES.forEach(s => { const sp = document.createElement('span'); sp.className='scope-item'; sp.textContent=s; sp.onclick=function(){this.classList.toggle('selected');}; scopeDiv.appendChild(sp); });
         
-        function showToast(msg, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.style.color = isError ? '#ff6b6b' : '#00ff41';
-            toast.textContent = msg;
-            document.getElementById('toastContainer').appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function generateRandomKey() {
-            return 'BRONX_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase();
-        }
-        
-        function getSelectedScopes() {
-            return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(el => el.textContent);
-        }
-        
-        function selectAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.add('selected')); }
-        function clearAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected')); }
-        
-        function selectPhone() { clearAllScopes(); ['number','numv2','adv','name','aadhar'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
-        function selectFinance() { clearAllScopes(); ['upi','ifsc','pan'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
-        function selectVehicle() { clearAllScopes(); ['vehicle','rc'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
-        function selectSocial() { clearAllScopes(); ['insta','git','tg'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
+        function showToast(msg, err) { const t = document.createElement('div'); t.className='toast'; t.style.color=err?'#ff6b6b':'#00ff41'; t.textContent=msg; document.getElementById('toastContainer').appendChild(t); setTimeout(()=>t.remove(),3000); }
+        function generateRandomKey() { return 'BRONX_' + Math.random().toString(36).substring(2,10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase(); }
+        function getSelectedScopes() { return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(e=>e.textContent); }
+        function selectAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(e=>e.classList.add('selected')); }
+        function clearAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(e=>e.classList.remove('selected')); }
+        function selectPhone() { clearAllScopes(); ['number','numv2','adv','name','aadhar'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
+        function selectFinance() { clearAllScopes(); ['upi','ifsc','pan'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
+        function selectVehicle() { clearAllScopes(); ['vehicle','rc'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
+        function selectSocial() { clearAllScopes(); ['insta','git','tg'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
         
         async function generateKey() {
-            let key = document.getElementById('newKey').value;
-            if (!key) key = generateRandomKey();
-            
+            let key = document.getElementById('newKey').value || generateRandomKey();
             const name = document.getElementById('newName').value || 'Premium User';
             const limit = parseInt(document.getElementById('newLimit').value) || 100;
             const expiry = document.getElementById('newExpiry').value || '31-12-2026';
             const unlimited = document.getElementById('newUnlimited').value === 'true';
             const hidden = document.getElementById('newHidden').value === 'true';
             const scopes = getSelectedScopes();
-            
             if (scopes.length === 0) { showToast('❌ Select at least one scope!', true); return; }
             
             try {
-                const res = await fetch('/admin/generate-key', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, name, scopes, limit, expiry, unlimited, hidden })
-                });
+                const res = await fetch('/admin/generate-key', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key, name, scopes, limit, expiry, unlimited, hidden}) });
                 const data = await res.json();
-                if (data.success) { showToast('✅ Key generated: ' + key); document.getElementById('newKey').value = ''; refreshData(); }
+                if (data.success) { showToast('✅ Key generated: ' + key); document.getElementById('newKey').value=''; refreshData(); }
                 else { showToast(data.error || 'Failed', true); }
-            } catch (err) { showToast('❌ Error: ' + err.message, true); }
+            } catch(err) { showToast('❌ Error: ' + err.message, true); }
         }
         
         async function refreshData() {
@@ -798,35 +748,29 @@ app.get('/admin/dashboard', (req, res) => {
                     const keys = data.keys;
                     const keysArray = Object.entries(keys);
                     document.getElementById('totalKeys').textContent = keysArray.length;
-                    let active = 0, totalReqs = 0;
-                    keysArray.forEach(([_, k]) => { totalReqs += k.used || 0; const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date(); const hasQuota = k.limit === 'Unlimited' || k.used < k.limit; if (notExpired && hasQuota) active++; });
-                    document.getElementById('activeKeys').textContent = active;
-                    document.getElementById('totalRequests').textContent = totalReqs;
-                    document.getElementById('customApisCount').textContent = '6';
+                    let active=0, totalReqs=0;
+                    keysArray.forEach(([_,k])=>{ totalReqs+=k.used||0; const ne=!k.expiry||k.expiry==='Never'||new Date(k.expiry.split('-').reverse().join('-')); if(ne&&(k.limit==='Unlimited'||k.used<k.limit))active++; });
+                    document.getElementById('activeKeys').textContent=active;
+                    document.getElementById('totalRequests').textContent=totalReqs;
                     
                     const tbody = document.getElementById('keysTableBody');
-                    tbody.innerHTML = keysArray.map(([keyName, k]) => {
-                        const isExpired = k.expiry && k.expiry !== 'Never' && new Date(k.expiry.split('-').reverse().join('-')) < new Date();
-                        const isExhausted = k.limit !== 'Unlimited' && k.used >= k.limit;
-                        let status = '✅ Active', statusClass = 'status-active';
-                        if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
-                        else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
-                        const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
-                        const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
-                        return '<tr><td><code style="color: #ff00ff;">' + displayKey + '</code>' + (k.hidden ? ' 🔒' : '') + '</td><td>' + (k.owner || '-') + '</td><td>' + (k.limit === 'Unlimited' ? '∞' : k.limit) + '</td><td>' + (k.used || 0) + '</td><td style="color: ' + (remaining === 0 ? '#ff6b6b' : '#00ff41') + ';">' + remaining + '</td><td>' + (k.expiry || 'Never') + '</td><td><span class="status-badge ' + statusClass + '">' + status + '</span></td><td><button class="action-btn copy" onclick="copyKey(\'' + keyName + '\')">📋</button><button class="action-btn reset" onclick="resetKey(\'' + keyName + '\')">🔄</button><button class="action-btn delete" onclick="deleteKey(\'' + keyName + '\')">🗑️</button></td></tr>';
+                    tbody.innerHTML = keysArray.map(([kn,k])=>{
+                        const isExp=k.expiry&&k.expiry!=='Never'&&new Date(k.expiry.split('-').reverse().join('-'))<new Date();
+                        const isEx=k.limit!=='Unlimited'&&k.used>=k.limit;
+                        let st='✅ Active', sc='status-active';
+                        if(isExp){st='⏰ Expired';sc='status-expired';}else if(isEx){st='🛑 Exhausted';sc='status-exhausted';}
+                        const dk=kn.length>18?kn.substring(0,15)+'...':kn;
+                        const rem=k.limit==='Unlimited'?'∞':Math.max(0,k.limit-k.used);
+                        return '<tr><td><code style="color:#ff00ff;">'+dk+'</code>'+(k.hidden?' 🔒':'')+'</td><td>'+(k.owner||'-')+'</td><td>'+(k.limit==='Unlimited'?'∞':k.limit)+'</td><td>'+(k.used||0)+'</td><td style="color:'+(rem===0?'#ff6b6b':'#00ff41')+';">'+rem+'</td><td>'+(k.expiry||'Never')+'</td><td><span class="status-badge '+sc+'">'+st+'</span></td><td><button class="action-btn copy" onclick="copyKey(\''+kn+'\')">📋</button><button class="action-btn reset" onclick="resetKey(\''+kn+'\')">🔄</button><button class="action-btn delete" onclick="deleteKey(\''+kn+'\')">🗑️</button></td></tr>';
                     }).join('');
                 }
-            } catch (err) { console.error(err); }
+            } catch(err) { console.error(err); }
         }
         
-        function copyKey(key) { navigator.clipboard.writeText(key); showToast('📋 Copied!'); }
-        
-        async function resetKey(key) { if (!confirm('Reset usage?')) return; await fetch('/admin/reset-usage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }); showToast('✅ Reset!'); refreshData(); }
-        
-        async function deleteKey(key) { if (!confirm('DELETE this key?')) return; await fetch('/admin/delete-key', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }); showToast('✅ Deleted!'); refreshData(); }
-        
+        function copyKey(k) { navigator.clipboard.writeText(k); showToast('📋 Copied!'); }
+        async function resetKey(k) { if(!confirm('Reset?'))return; await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})}); showToast('✅ Reset!'); refreshData(); }
+        async function deleteKey(k) { if(!confirm('DELETE?'))return; await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})}); showToast('✅ Deleted!'); refreshData(); }
         function logout() { localStorage.removeItem('bronx_admin_auth'); window.location.href = '/admin'; }
-        
         refreshData();
     </script>
 </body>
@@ -836,11 +780,12 @@ app.get('/admin/dashboard', (req, res) => {
 
 // ========== ADMIN API ENDPOINTS ==========
 
+// GET ALL KEYS - WITH FILE RELOAD
 app.get('/admin/keys', (req, res) => {
-    // Reload from file
-    const fresh = loadKeysFromFile();
-    if (fresh && Object.keys(fresh).length > 0) {
-        Object.assign(keyStorage, fresh);
+    // Reload from file to sync
+    const saved = loadKeysFromFile();
+    if (saved && Object.keys(saved).length > 0) {
+        Object.assign(keyStorage, saved);
     }
     
     const allKeys = {};
@@ -857,7 +802,7 @@ app.get('/admin/keys', (req, res) => {
     res.json({ success: true, keys: allKeys });
 });
 
-// GENERATE KEY - WITH FILE SAVE
+// GENERATE KEY - SAVES TO FILE
 app.post('/admin/generate-key', (req, res) => {
     console.log('Body received:', req.body);
     
@@ -897,29 +842,30 @@ app.post('/admin/generate-key', (req, res) => {
         hidden: hidden || false
     };
     
-    saveKeysToFile(); // ← SAVE TO FILE
+    // 💾 SAVE TO FILE - TURANT!
+    saveKeysToFile();
     
     res.json({ success: true, message: 'Key generated!', key });
 });
 
-// RESET USAGE - WITH FILE SAVE
+// RESET USAGE - SAVES TO FILE
 app.post('/admin/reset-usage', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        saveKeysToFile(); // ← SAVE TO FILE
+        saveKeysToFile(); // 💾 SAVE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
     }
 });
 
-// DELETE KEY - WITH FILE SAVE
+// DELETE KEY - SAVES TO FILE
 app.delete('/admin/delete-key', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         delete keyStorage[key];
-        saveKeysToFile(); // ← SAVE TO FILE
+        saveKeysToFile(); // 💾 SAVE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
