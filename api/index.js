@@ -317,53 +317,48 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== ADMIN PANEL WITH LOGS & ENHANCED FEATURES ==========
+// ========== ADMIN PANEL WITH EXPORT/IMPORT + TERMINAL ==========
 
 const ADMIN_PASSWORD = 'bronx2026';
 const fs = require('fs');
 const path = require('path');
 
-// ========== LOGS STORAGE ==========
-const LOGS_FILE = path.join(__dirname, 'admin_logs.json');
-let activityLogs = [];
-
-// Load existing logs
+// Terminal Storage
+const TERMINAL_FILE = path.join(__dirname, 'terminal_logs.json');
+let terminalLogs = [];
 try {
-    if (fs.existsSync(LOGS_FILE)) {
-        activityLogs = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8'));
-        console.log('📋 Loaded', activityLogs.length, 'activity logs');
+    if (fs.existsSync(TERMINAL_FILE)) {
+        terminalLogs = JSON.parse(fs.readFileSync(TERMINAL_FILE, 'utf8'));
     }
 } catch(e) {}
 
-// Save logs function
-function saveLogs() {
+function saveTerminal() {
     try {
-        fs.writeFileSync(LOGS_FILE, JSON.stringify(activityLogs.slice(-1000), null, 2)); // Keep last 1000 logs
+        fs.writeFileSync(TERMINAL_FILE, JSON.stringify(terminalLogs.slice(-2000), null, 2));
     } catch(e) {}
 }
 
-// Add log function
-function addLog(action, key, details = '') {
-    const log = {
-        id: Date.now(),
-        timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+function addLog(action, details) {
+    terminalLogs.unshift({
+        time: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
         action: action,
-        key: key,
-        details: details,
-        ip: 'Admin Panel'
-    };
-    activityLogs.unshift(log); // Add to beginning
-    saveLogs();
-    return log;
+        details: details
+    });
+    saveTerminal();
 }
 
-// ========== KEYS STORAGE ==========
-const KEYS_FILE = path.join(__dirname, 'keys_storage.json');
-function saveKeys() {
-    try {
-        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
-    } catch(e) {}
-}
+// ========== IMPORTANT: Body Parser Middleware ==========
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Track API usage
+app.use('/api/*', (req, res, next) => {
+    const key = req.query.key || 'unknown';
+    if (key !== 'unknown' && req.path !== '/api/custom') {
+        addLog('API_CALL', `${req.path} | Key: ${key.substring(0, 12)}...`);
+    }
+    next();
+});
 
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
@@ -372,67 +367,51 @@ app.get('/admin', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 BRONX ADMIN</title>
+    <title>BRONX ADMIN</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:'Courier New',monospace;
+            background:linear-gradient(135deg,#0a0a0a,#1a0033);
+            min-height:100vh;display:flex;justify-content:center;align-items:center;
         }
-        .login-box {
-            background: #1a0033;
-            border: 3px solid #ff00ff;
-            border-radius: 30px;
-            padding: 50px 40px;
-            width: 400px;
-            box-shadow: 0 0 80px #ff00ff66;
-            animation: glow 3s infinite;
+        .box{
+            background:#1a0033;border:3px solid #ff00ff;border-radius:30px;
+            padding:50px 40px;width:400px;box-shadow:0 0 80px #ff00ff66;
         }
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 30px #ff00ff66, 0 0 60px #00ff4133; }
-            50% { box-shadow: 0 0 50px #00ff4166, 0 0 80px #ff00ff33; }
+        h1{color:#00ff41;text-align:center;font-size:36px;margin-bottom:10px}
+        .sub{color:#ff00ff;text-align:center;margin-bottom:30px}
+        input{
+            width:100%;padding:15px;background:#0a0a0a;border:2px solid #00ff41;
+            border-radius:15px;color:#00ff41;font-size:16px;margin-bottom:20px;
         }
-        h1 { color: #00ff41; text-align: center; font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 30px #00ff41; }
-        .subtitle { color: #ff00ff; text-align: center; margin-bottom: 30px; font-size: 14px; }
-        input {
-            width: 100%; padding: 15px; background: #0a0a0a; border: 2px solid #00ff41;
-            border-radius: 15px; color: #00ff41; font-size: 16px; font-family: 'Courier New', monospace; margin-bottom: 20px;
+        button{
+            width:100%;padding:15px;background:linear-gradient(45deg,#ff00ff,#00ff41);
+            border:none;border-radius:15px;color:#000;font-weight:bold;font-size:18px;cursor:pointer;
         }
-        button {
-            width: 100%; padding: 15px; background: linear-gradient(45deg, #ff00ff, #00ff41);
-            border: none; border-radius: 15px; color: #000; font-weight: bold; font-size: 18px; cursor: pointer;
-        }
-        button:hover { transform: scale(1.05); }
-        .error { color: #ff0000; text-align: center; margin-top: 15px; }
-        .hint { color: #ffff00; text-align: center; margin-top: 20px; font-size: 12px; }
+        .err{color:#ff0000;text-align:center;margin-top:15px}
+        .hint{color:#ffff00;text-align:center;margin-top:20px;font-size:12px}
     </style>
 </head>
 <body>
-    <div class="login-box">
+    <div class="box">
         <h1>⚡ BRONX</h1>
-        <div class="subtitle">ADMIN PANEL</div>
-        <input type="password" id="password" placeholder="Enter password" autofocus>
+        <div class="sub">ADMIN PANEL</div>
+        <input type="password" id="pw" placeholder="Password">
         <button onclick="login()">🚀 LOGIN</button>
-        <div id="error" class="error"></div>
+        <div id="err" class="err"></div>
         <div class="hint">Default: bronx2026</div>
     </div>
     <script>
-        const ADMIN_PASS = '${ADMIN_PASSWORD}';
-        function login() {
-            const pass = document.getElementById('password').value;
-            if (pass === ADMIN_PASS) {
-                localStorage.setItem('bronx_admin_auth', 'true');
-                window.location.href = '/admin/dashboard';
-            } else {
-                document.getElementById('error').textContent = '❌ Invalid password!';
-            }
+        const p='${ADMIN_PASSWORD}';
+        function login(){
+            if(document.getElementById('pw').value===p){
+                localStorage.setItem('bauth','1');
+                location='/admin/dashboard';
+            }else document.getElementById('err').textContent='❌ Invalid!';
         }
-        document.getElementById('password').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
-        if (localStorage.getItem('bronx_admin_auth') === 'true') window.location.href = '/admin/dashboard';
+        document.getElementById('pw').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
+        if(localStorage.getItem('bauth')==='1')location='/admin/dashboard';
     </script>
 </body>
 </html>`;
@@ -446,511 +425,311 @@ app.get('/admin/dashboard', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 BRONX ADMIN | DASHBOARD</title>
+    <title>BRONX ADMIN | DASHBOARD</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #0a0a0a, #1a0033);
-            min-height: 100vh; padding: 20px;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:'Courier New',monospace;
+            background:linear-gradient(135deg,#0a0a0a,#1a0033);
+            min-height:100vh;padding:20px;
         }
-        .container { max-width: 1400px; margin: 0 auto; }
-        .header {
-            background: #1a0033; border: 3px solid #ff00ff; border-radius: 20px;
-            padding: 20px 30px; margin-bottom: 20px; display: flex;
-            justify-content: space-between; align-items: center;
+        .c{max-width:1400px;margin:0 auto}
+        .h{
+            background:#1a0033;border:3px solid #ff00ff;border-radius:20px;
+            padding:20px 30px;margin-bottom:20px;display:flex;
+            justify-content:space-between;align-items:center;
         }
-        .header h1 { color: #00ff41; font-size: 28px; }
-        .btn {
-            padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer;
-            border: none; font-family: 'Courier New', monospace;
+        .h h1{color:#00ff41;font-size:28px}
+        .btn{
+            padding:10px 20px;border-radius:10px;font-weight:bold;cursor:pointer;
+            border:none;font-family:'Courier New',monospace;
         }
-        .btn-danger { background: #ff000033; border: 2px solid #ff0000; color: #ff6b6b; }
-        .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
-        .btn-success { background: #00ff4120; border: 2px solid #00ff41; color: #00ff41; }
-        .btn-info { background: #00ffff20; border: 2px solid #00ffff; color: #00ffff; }
-        .btn:hover { transform: scale(1.05); }
+        .btn-r{background:#f0020;border:2px solid #f00;color:#f66}
+        .btn-p{background:linear-gradient(45deg,#f0f,#0f4);color:#000}
+        .btn-g{background:#0f42;border:2px solid #0f4;color:#0f4}
+        .btn-y{background:#ff02;border:2px solid #ff0;color:#ff0}
+        .btn:hover{transform:scale(1.05)}
         
-        .stats-grid {
-            display: grid; grid-template-columns: repeat(5, 1fr);
-            gap: 15px; margin-bottom: 20px;
+        .sg{
+            display:grid;grid-template-columns:repeat(6,1fr);
+            gap:15px;margin-bottom:20px;
         }
-        .stat-card {
-            background: #1a0033; border: 2px solid; border-radius: 15px;
-            padding: 20px; text-align: center;
+        .sc{
+            background:#1a0033;border:2px solid;border-radius:15px;
+            padding:20px;text-align:center;
         }
-        .stat-card:nth-child(1) { border-color: #ff00ff; }
-        .stat-card:nth-child(2) { border-color: #00ff41; }
-        .stat-card:nth-child(3) { border-color: #ffff00; }
-        .stat-card:nth-child(4) { border-color: #ff0000; }
-        .stat-card:nth-child(5) { border-color: #00ffff; }
-        .stat-value { font-size: 42px; color: #00ff41; font-weight: bold; }
-        .stat-label { color: #fff; font-size: 14px; margin-top: 8px; }
+        .sc:nth-child(1){border-color:#f0f}
+        .sc:nth-child(2){border-color:#0f4}
+        .sc:nth-child(3){border-color:#ff0}
+        .sc:nth-child(4){border-color:#f00}
+        .sc:nth-child(5){border-color:#0ff}
+        .sc:nth-child(6){border-color:#f90}
+        .sv{font-size:38px;color:#0f4;font-weight:bold}
+        .sl{color:#fff;font-size:13px;margin-top:8px}
         
-        .panel {
-            background: #1a0033; border: 2px solid #00ff41; border-radius: 20px;
-            padding: 25px; margin-bottom: 20px;
+        .pn{
+            background:#1a0033;border:2px solid #0f4;border-radius:20px;
+            padding:25px;margin-bottom:20px;
         }
-        .panel-title { color: #00ff41; font-size: 22px; margin-bottom: 20px; }
+        .pt{color:#0f4;font-size:22px;margin-bottom:20px}
         
-        .form-row {
-            display: grid; grid-template-columns: repeat(4, 1fr);
-            gap: 15px; margin-bottom: 15px;
+        .fr{
+            display:grid;grid-template-columns:repeat(4,1fr);
+            gap:15px;margin-bottom:15px;
         }
-        .form-group label { color: #00ff41; display: block; margin-bottom: 8px; font-size: 13px; }
-        .form-group input, .form-group select {
-            width: 100%; padding: 10px; background: #0a0a0a; border: 2px solid #00ff41;
-            border-radius: 10px; color: #00ff41; font-family: 'Courier New', monospace;
-        }
-        
-        .scope-selector {
-            display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0;
-            max-height: 150px; overflow-y: auto; padding: 10px;
-            background: #0a0a0a; border-radius: 10px;
-        }
-        .scope-tag {
-            padding: 8px 15px; background: #1a0033; border: 1px solid #00ff41;
-            border-radius: 20px; color: #00ff41; cursor: pointer; font-size: 12px;
-        }
-        .scope-tag.selected { background: #00ff41; color: #000; }
-        
-        .preset-btns { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-        .preset-btn {
-            padding: 8px 15px; background: #0a0a0a; border: 1px solid #ff00ff;
-            border-radius: 20px; color: #ff00ff; cursor: pointer; font-size: 12px;
+        .fg label{color:#0f4;display:block;margin-bottom:8px;font-size:13px}
+        .fg input,.fg select{
+            width:100%;padding:10px;background:#0a0a0a;border:2px solid #0f4;
+            border-radius:10px;color:#0f4;font-family:'Courier New',monospace;
         }
         
-        table {
-            width: 100%; border-collapse: collapse; font-size: 13px;
+        .ss{
+            display:flex;flex-wrap:wrap;gap:8px;margin:15px 0;
+            max-height:150px;overflow-y:auto;padding:10px;
+            background:#0a0a0a;border-radius:10px;
         }
-        th {
-            background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000;
-            padding: 12px; text-align: left; position: sticky; top: 0;
+        .si{
+            padding:8px 15px;background:#1a0033;border:1px solid #0f4;
+            border-radius:20px;color:#0f4;cursor:pointer;font-size:12px;
         }
-        td { padding: 10px; border-bottom: 1px solid #ffffff20; color: #fff; }
+        .si.sel{background:#0f4;color:#000}
         
-        .status-badge {
-            padding: 4px 10px; border-radius: 20px; font-size: 11px;
+        .pb{
+            display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;
         }
-        .status-active { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
-        .status-expired { background: #ff000020; color: #ff6b6b; border: 1px solid #ff0000; }
-        .status-exhausted { background: #ffff0020; color: #ffff00; border: 1px solid #ffff00; }
+        .pb span{
+            padding:8px 15px;background:#0a0a0a;border:1px solid #f0f;
+            border-radius:20px;color:#f0f;cursor:pointer;font-size:12px;
+        }
         
-        .action-btn {
-            padding: 5px 12px; margin: 0 3px; border-radius: 8px; font-size: 11px;
-            cursor: pointer; background: transparent; border: 1px solid #00ff41; color: #00ff41;
+        table{
+            width:100%;border-collapse:collapse;font-size:13px;
         }
-        .action-btn.delete { border-color: #ff0000; color: #ff6b6b; }
+        th{
+            background:linear-gradient(45deg,#f0f,#0f4);color:#000;
+            padding:12px;text-align:left;
+        }
+        td{padding:10px;border-bottom:1px solid #fff2;color:#fff}
         
-        .toast {
-            position: fixed; bottom: 30px; right: 30px; background: #1a0033;
-            color: #00ff41; padding: 15px 30px; border-radius: 50px;
-            border: 2px solid #00ff41; z-index: 9999;
-        }
-
-        .log-item {
-            padding: 10px 15px; background: #0a0a0a; border: 1px solid #333;
-            border-radius: 10px; margin-bottom: 8px; font-size: 12px;
-        }
-        .log-time { color: #ffff00; }
-        .log-action-create { color: #00ff41; }
-        .log-action-delete { color: #ff6b6b; }
-        .log-action-reset { color: #00ffff; }
-        .log-key { color: #ff00ff; }
+        .badge{padding:4px 10px;border-radius:20px;font-size:11px}
+        .ba{background:#0f42;color:#0f4;border:1px solid #0f4}
+        .be{background:#f002;color:#f66;border:1px solid #f00}
         
-        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn {
-            padding: 10px 20px; background: #0a0a0a; border: 2px solid #00ff41;
-            border-radius: 10px; color: #00ff41; cursor: pointer; font-family: 'Courier New', monospace;
+        .act{
+            padding:5px 12px;margin:0 3px;border-radius:8px;font-size:11px;
+            cursor:pointer;background:transparent;border:1px solid #0f4;color:#0f4;
         }
-        .tab-btn.active { background: #00ff41; color: #000; }
+        .act.del{border-color:#f00;color:#f66}
         
-        .table-container { max-height: 400px; overflow-y: auto; }
-        .log-container { max-height: 500px; overflow-y: auto; }
+        .toast{
+            position:fixed;bottom:30px;right:30px;background:#1a0033;
+            color:#0f4;padding:15px 30px;border-radius:50px;
+            border:2px solid #0f4;z-index:9999;
+        }
+        
+        .tc{max-height:400px;overflow-y:auto}
+        .term{
+            background:#000;border:1px solid #0f4;border-radius:10px;
+            padding:15px;max-height:300px;overflow-y:auto;font-size:12px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>⚡ BRONX ADMIN PANEL</h1>
-            <div style="display: flex; gap: 15px;">
-                <button class="btn btn-info" onclick="exportData()">📤 EXPORT</button>
-                <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
-                <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
+    <div class="c">
+        <div class="h">
+            <h1>⚡ BRONX ADMIN</h1>
+            <div style="display:flex;gap:15px;">
+                <button class="btn btn-y" onclick="importKeys()">📥 IMPORT</button>
+                <button class="btn btn-g" onclick="exportKeys()">📤 EXPORT</button>
+                <button class="btn btn-g" onclick="refreshData()">🔄 REFRESH</button>
+                <button class="btn btn-r" onclick="logout()">🚪 LOGOUT</button>
             </div>
         </div>
         
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalKeys">0</div>
-                <div class="stat-label">TOTAL KEYS</div>
+        <div class="sg">
+            <div class="sc"><div class="sv" id="tk">0</div><div class="sl">TOTAL KEYS</div></div>
+            <div class="sc"><div class="sv" id="ak">0</div><div class="sl">ACTIVE KEYS</div></div>
+            <div class="sc"><div class="sv" id="tr">0</div><div class="sl">TOTAL REQUESTS</div></div>
+            <div class="sc"><div class="sv" id="dr">0</div><div class="sl">TODAY REQUESTS</div></div>
+            <div class="sc"><div class="sv" id="ca">0</div><div class="sl">CUSTOM APIs</div></div>
+            <div class="sc"><div class="sv" id="tl">0</div><div class="sl">TERMINAL LOGS</div></div>
+        </div>
+        
+        <div class="pn">
+            <div class="pt">🔑 KEY GENERATOR</div>
+            <div class="fr">
+                <div class="fg"><label>API KEY (blank=auto)</label><input type="text" id="nk" placeholder="Auto"></div>
+                <div class="fg"><label>OWNER</label><input type="text" id="nm" value="Premium User"></div>
+                <div class="fg"><label>LIMIT</label><input type="number" id="nl" value="100"></div>
+                <div class="fg"><label>EXPIRY (DD-MM-YYYY)</label><input type="text" id="ne" value="31-12-2026"></div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="activeKeys">0</div>
-                <div class="stat-label">ACTIVE KEYS</div>
+            <div class="pb">
+                <span onclick="sa()">✅ All</span><span onclick="ca()">❌ Clear</span>
+                <span onclick="sp()">📱 Phone</span><span onclick="sf()">💰 Finance</span>
+                <span onclick="sv()">🚗 Vehicle</span><span onclick="ss()">🌐 Social</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalRequests">0</div>
-                <div class="stat-label">TOTAL REQUESTS</div>
+            <label style="color:#0f4;margin:10px 0;display:block;">📌 SELECT SCOPES:</label>
+            <div class="ss" id="scp"></div>
+            <div class="fr">
+                <div class="fg"><label>UNLIMITED</label><select id="nu"><option value="false">No</option><option value="true">Yes</option></select></div>
+                <div class="fg"><label>VISIBILITY</label><select id="nh"><option value="false">Visible</option><option value="true">Hidden</option></select></div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="todayKeys">0</div>
-                <div class="stat-label">KEYS TODAY</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalLogs">0</div>
-                <div class="stat-label">ACTIVITY LOGS</div>
+            <button class="btn btn-p" style="width:100%;padding:15px;" onclick="gk()">🚀 GENERATE KEY</button>
+        </div>
+        
+        <div class="pn">
+            <div class="pt">📋 ALL KEYS</div>
+            <div class="tc">
+                <table><thead><tr><th>KEY</th><th>OWNER</th><th>LIMIT</th><th>USED</th><th>REMAIN</th><th>EXPIRY</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+                <tbody id="kt"></tbody></table>
             </div>
         </div>
         
-        <!-- Tab Buttons -->
-        <div class="tab-buttons">
-            <button class="tab-btn active" onclick="showTab('generator')">🔑 KEY GENERATOR</button>
-            <button class="tab-btn" onclick="showTab('keys')">📋 KEYS LIST</button>
-            <button class="tab-btn" onclick="showTab('logs')">📝 ACTIVITY LOGS</button>
-        </div>
-        
-        <!-- Key Generator Tab -->
-        <div class="panel" id="tab-generator">
-            <div class="panel-title">🔑 KEY GENERATOR</div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>🔐 API KEY (blank = auto)</label>
-                    <input type="text" id="newKey" placeholder="Auto-generated">
-                </div>
-                <div class="form-group">
-                    <label>👤 OWNER NAME</label>
-                    <input type="text" id="newName" value="Premium User">
-                </div>
-                <div class="form-group">
-                    <label>📊 REQUEST LIMIT</label>
-                    <input type="number" id="newLimit" value="100">
-                </div>
-                <div class="form-group">
-                    <label>⏰ EXPIRY (DD-MM-YYYY)</label>
-                    <input type="text" id="newExpiry" value="31-12-2026">
-                </div>
-            </div>
-            
-            <div class="preset-btns">
-                <span class="preset-btn" onclick="selectAllScopes()">✅ All</span>
-                <span class="preset-btn" onclick="clearAllScopes()">❌ Clear</span>
-                <span class="preset-btn" onclick="selectPhone()">📱 Phone</span>
-                <span class="preset-btn" onclick="selectFinance()">💰 Finance</span>
-                <span class="preset-btn" onclick="selectVehicle()">🚗 Vehicle</span>
-                <span class="preset-btn" onclick="selectSocial()">🌐 Social</span>
-            </div>
-            
-            <label style="color: #00ff41; margin: 10px 0; display: block;">📌 SELECT SCOPES:</label>
-            <div class="scope-selector" id="scopeSelector"></div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>✨ UNLIMITED</label>
-                    <select id="newUnlimited">
-                        <option value="false">No</option>
-                        <option value="true">Yes</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>👁️ VISIBILITY</label>
-                    <select id="newHidden">
-                        <option value="false">Visible</option>
-                        <option value="true">Hidden</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>🔢 BATCH COUNT</label>
-                    <input type="number" id="batchCount" value="1" min="1" max="50">
-                </div>
-            </div>
-            
-            <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
-        </div>
-        
-        <!-- Keys List Tab -->
-        <div class="panel" id="tab-keys" style="display:none;">
-            <div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>KEY</th>
-                            <th>OWNER</th>
-                            <th>LIMIT</th>
-                            <th>USED</th>
-                            <th>REMAINING</th>
-                            <th>EXPIRY</th>
-                            <th>CREATED</th>
-                            <th>STATUS</th>
-                            <th>ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keysTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- Activity Logs Tab -->
-        <div class="panel" id="tab-logs" style="display:none;">
-            <div class="panel-title">📝 ACTIVITY LOGS</div>
-            <div class="log-container" id="logsContainer">Loading...</div>
+        <div class="pn">
+            <div class="pt">🖥️ ACTIVITY TERMINAL</div>
+            <div class="term" id="term">> Loading...</div>
         </div>
     </div>
-    
-    <div id="toastContainer"></div>
+    <div id="tc"></div>
     
     <script>
-        if (localStorage.getItem('bronx_admin_auth') !== 'true') window.location.href = '/admin';
+        if(localStorage.getItem('bauth')!=='1')location='/admin';
         
-        const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
-        
-        const scopeDiv = document.getElementById('scopeSelector');
-        SCOPES.forEach(scope => {
-            const span = document.createElement('span');
-            span.className = 'scope-tag';
-            span.textContent = scope;
-            span.onclick = function() { this.classList.toggle('selected'); };
-            scopeDiv.appendChild(span);
+        const S=['number','numv2','adv','name','aadhar','upi','ifsc','pan','pincode','ip','vehicle','rc','ff','bgmi','insta','git','tg','pk','pkv2'];
+        const sc=document.getElementById('scp');
+        S.forEach(s=>{
+            const sp=document.createElement('span');
+            sp.className='si';sp.textContent=s;
+            sp.onclick=function(){this.classList.toggle('sel')};
+            sc.appendChild(sp);
         });
         
-        function showToast(msg, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.style.color = isError ? '#ff6b6b' : '#00ff41';
-            toast.textContent = msg;
-            document.getElementById('toastContainer').appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        function showToast(m,e){
+            const t=document.createElement('div');
+            t.className='toast';t.style.color=e?'#f66':'#0f4';t.textContent=m;
+            document.getElementById('tc').appendChild(t);
+            setTimeout(()=>t.remove(),3000);
         }
         
-        function showTab(tab) {
-            document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
-            document.getElementById('tab-' + tab).style.display = 'block';
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            if (tab === 'keys') refreshData();
-            if (tab === 'logs') loadLogs();
-        }
+        function gs(){return Array.from(document.querySelectorAll('#scp .si.sel')).map(e=>e.textContent)}
+        function sa(){document.querySelectorAll('#scp .si').forEach(e=>e.classList.add('sel'))}
+        function ca(){document.querySelectorAll('#scp .si').forEach(e=>e.classList.remove('sel'))}
+        function sp(){ca();['number','numv2','adv','name','aadhar'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
+        function sf(){ca();['upi','ifsc','pan'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
+        function sv(){ca();['vehicle','rc'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
+        function ss(){ca();['insta','git','tg'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
         
-        function generateRandomKey() {
-            return 'BRONX_' + Math.random().toString(36).substring(2, 10).toUpperCase();
-        }
+        function rk(){return 'BRONX_'+Math.random().toString(36).substring(2,10).toUpperCase()+'_'+Date.now().toString(36).toUpperCase()}
         
-        function getSelectedScopes() {
-            return Array.from(document.querySelectorAll('#scopeSelector .scope-tag.selected')).map(el => el.textContent);
-        }
-        
-        function selectAllScopes() {
-            document.querySelectorAll('#scopeSelector .scope-tag').forEach(el => el.classList.add('selected'));
-        }
-        
-        function clearAllScopes() {
-            document.querySelectorAll('#scopeSelector .scope-tag').forEach(el => el.classList.remove('selected'));
-        }
-        
-        function selectPhone() {
-            clearAllScopes();
-            ['number', 'numv2', 'adv', 'name', 'aadhar'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-tag')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        function selectFinance() {
-            clearAllScopes();
-            ['upi', 'ifsc', 'pan'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-tag')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        function selectVehicle() {
-            clearAllScopes();
-            ['vehicle', 'rc'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-tag')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        function selectSocial() {
-            clearAllScopes();
-            ['insta', 'git', 'tg'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-tag')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        async function generateKey() {
-            const batchCount = parseInt(document.getElementById('batchCount').value) || 1;
-            const name = document.getElementById('newName').value || 'Premium User';
-            const limit = parseInt(document.getElementById('newLimit').value) || 100;
-            const expiry = document.getElementById('newExpiry').value || '31-12-2026';
-            const unlimited = document.getElementById('newUnlimited').value === 'true';
-            const hidden = document.getElementById('newHidden').value === 'true';
-            const scopes = getSelectedScopes();
+        async function gk(){
+            let k=document.getElementById('nk').value;
+            if(!k)k=rk();
+            const scopes=gs();
+            if(scopes.length===0){showToast('❌ Select scope!',1);return}
             
-            if (scopes.length === 0) {
-                showToast('❌ Select at least one scope!', true);
-                return;
-            }
-            
-            let successCount = 0;
-            
-            for (let i = 0; i < batchCount; i++) {
-                let key = document.getElementById('newKey').value;
-                if (!key || batchCount > 1) key = generateRandomKey();
-                
-                try {
-                    const res = await fetch('/admin/generate-key', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key, name, scopes, limit, expiry, unlimited, hidden })
-                    });
-                    
-                    const data = await res.json();
-                    if (data.success) successCount++;
-                } catch (err) {
-                    console.error(err);
-                }
-            }
-            
-            if (successCount > 0) {
-                showToast('✅ ' + successCount + ' key(s) generated!');
-                document.getElementById('newKey').value = '';
-                refreshData();
-                loadLogs();
-            } else {
-                showToast('❌ Failed to generate keys', true);
-            }
+            try{
+                const r=await fetch('/admin/generate-key',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({
+                        key:k,
+                        name:document.getElementById('nm').value||'User',
+                        scopes:scopes,
+                        limit:parseInt(document.getElementById('nl').value)||100,
+                        expiry:document.getElementById('ne').value||'31-12-2026',
+                        unlimited:document.getElementById('nu').value==='true',
+                        hidden:document.getElementById('nh').value==='true'
+                    })
+                });
+                const d=await r.json();
+                if(d.success){showToast('✅ '+k);document.getElementById('nk').value='';rd();lt()}
+                else showToast(d.error||'Failed',1);
+            }catch(e){showToast('❌ '+e.message,1)}
         }
         
-        async function refreshData() {
-            try {
-                const res = await fetch('/admin/keys');
-                const data = await res.json();
-                
-                if (data.success) {
-                    const keys = data.keys;
-                    const keysArray = Object.entries(keys);
+        async function rd(){
+            try{
+                const r=await fetch('/admin/keys');
+                const d=await r.json();
+                if(d.success){
+                    const ks=Object.entries(d.keys);
+                    document.getElementById('tk').textContent=ks.length;
+                    let a=0,tr=0;
+                    ks.forEach(([_,k])=>{tr+=k.used||0;if((!k.expiry||k.expiry==='Never'||new Date(k.expiry.split('-').reverse().join('-'))>new Date())&&(k.limit==='Unlimited'||k.used<k.limit))a++});
+                    document.getElementById('ak').textContent=a;
+                    document.getElementById('tr').textContent=tr;
+                    document.getElementById('ca').textContent='6';
                     
-                    document.getElementById('totalKeys').textContent = keysArray.length;
-                    
-                    let active = 0, totalReqs = 0, todayKeys = 0;
-                    const today = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
-                    
-                    keysArray.forEach(([_, k]) => {
-                        totalReqs += k.used || 0;
-                        const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
-                        const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
-                        if (notExpired && hasQuota) active++;
-                        if (k.created && k.created.includes(today)) todayKeys++;
-                    });
-                    
-                    document.getElementById('activeKeys').textContent = active;
-                    document.getElementById('totalRequests').textContent = totalReqs;
-                    document.getElementById('todayKeys').textContent = todayKeys;
-                    
-                    const tbody = document.getElementById('keysTableBody');
-                    tbody.innerHTML = keysArray.map(([keyName, k]) => {
-                        const isExpired = k.expiry && k.expiry !== 'Never' && new Date(k.expiry.split('-').reverse().join('-')) < new Date();
-                        const isExhausted = k.limit !== 'Unlimited' && k.used >= k.limit;
-                        let status = '✅ Active', statusClass = 'status-active';
-                        if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
-                        else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
-                        
-                        const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
-                        const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
-                        
-                        return '<tr>' +
-                            '<td><code style="color: #ff00ff;">' + displayKey + '</code>' + (k.hidden ? ' 🔒' : '') + '</td>' +
-                            '<td>' + (k.owner || '-') + '</td>' +
-                            '<td>' + (k.limit === 'Unlimited' ? '∞' : k.limit) + '</td>' +
-                            '<td>' + (k.used || 0) + '</td>' +
-                            '<td style="color: ' + (remaining === 0 ? '#ff6b6b' : '#00ff41') + ';">' + remaining + '</td>' +
-                            '<td>' + (k.expiry || 'Never') + '</td>' +
-                            '<td style="font-size:11px;">' + (k.created || '-') + '</td>' +
-                            '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
-                            '<td>' +
-                                '<button class="action-btn" onclick="copyKey(\'' + keyName + '\')">📋</button>' +
-                                '<button class="action-btn" onclick="resetKey(\'' + keyName + '\')">🔄</button>' +
-                                '<button class="action-btn delete" onclick="deleteKey(\'' + keyName + '\')">🗑️</button>' +
-                            '</td>' +
-                        '</tr>';
+                    document.getElementById('kt').innerHTML=ks.map(([kn,k])=>{
+                        const ie=k.expiry&&k.expiry!=='Never'&&new Date(k.expiry.split('-').reverse().join('-'))<new Date();
+                        const ix=k.limit!=='Unlimited'&&k.used>=k.limit;
+                        let s='✅ Active',sc='ba';if(ie){s='⏰ Expired';sc='be'}else if(ix){s='🛑 Exhausted';sc='be'}
+                        const dk=kn.length>18?kn.substring(0,15)+'...':kn;
+                        const rem=k.limit==='Unlimited'?'∞':Math.max(0,k.limit-k.used);
+                        return '<tr><td><code style="color:#f0f">'+dk+'</code>'+(k.hidden?' 🔒':'')+'</td><td>'+(k.owner||'-')+'</td><td>'+(k.limit==='Unlimited'?'∞':k.limit)+'</td><td>'+(k.used||0)+'</td><td style="color:'+(rem===0?'#f66':'#0f4')+'">'+rem+'</td><td>'+(k.expiry||'Never')+'</td><td><span class="badge '+sc+'">'+s+'</span></td><td><button class="act" onclick="ck(\''+kn+'\')">📋</button><button class="act" onclick="rk2(\''+kn+'\')">🔄</button><button class="act del" onclick="dk(\''+kn+'\')">🗑️</button></td></tr>';
                     }).join('');
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            }catch(e){console.error(e)}
         }
         
-        async function loadLogs() {
-            try {
-                const res = await fetch('/admin/logs');
-                const data = await res.json();
-                
-                document.getElementById('totalLogs').textContent = data.logs ? data.logs.length : 0;
-                
-                const container = document.getElementById('logsContainer');
-                if (data.logs && data.logs.length > 0) {
-                    container.innerHTML = data.logs.map(log => 
-                        '<div class="log-item">' +
-                            '<span class="log-time">[' + log.timestamp + ']</span> ' +
-                            '<span class="log-action-' + log.action + '">' + log.action.toUpperCase() + '</span> ' +
-                            '<span class="log-key">' + log.key + '</span> ' +
-                            '<span style="color:#fff;">' + (log.details || '') + '</span>' +
-                        '</div>'
-                    ).join('');
-                } else {
-                    container.innerHTML = '<div style="color:#fff; text-align:center;">No logs yet</div>';
-                }
-            } catch (err) {
-                console.error(err);
-            }
+        function ck(k){navigator.clipboard.writeText(k);showToast('📋 Copied!')}
+        
+        async function rk2(k){
+            if(!confirm('Reset?'))return;
+            await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})});
+            showToast('✅ Reset!');rd();lt();
         }
         
-        function copyKey(key) {
-            navigator.clipboard.writeText(key);
-            showToast('📋 Copied!');
+        async function dk(k){
+            if(!confirm('DELETE?'))return;
+            await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})});
+            showToast('✅ Deleted!');rd();lt();
         }
         
-        async function resetKey(key) {
-            if (!confirm('Reset usage for: ' + key.substring(0, 10) + '...?')) return;
-            await fetch('/admin/reset-usage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            showToast('✅ Reset!');
-            refreshData();
-            loadLogs();
-        }
-        
-        async function deleteKey(key) {
-            if (!confirm('DELETE: ' + key.substring(0, 10) + '...?')) return;
-            await fetch('/admin/delete-key', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            showToast('✅ Deleted!');
-            refreshData();
-            loadLogs();
-        }
-        
-        function exportData() {
-            fetch('/admin/keys').then(r => r.json()).then(data => {
-                const blob = new Blob([JSON.stringify(data.keys, null, 2)], {type: 'application/json'});
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'bronx_keys_' + new Date().toISOString().split('T')[0] + '.json';
-                a.click();
-                showToast('📤 Exported!');
+        function exportKeys(){
+            fetch('/admin/keys').then(r=>r.json()).then(d=>{
+                const b=new Blob([JSON.stringify(d.keys,null,2)],{type:'application/json'});
+                const a=document.createElement('a');
+                a.href=URL.createObjectURL(b);
+                a.download='bronx_keys_'+new Date().toISOString().split('T')[0]+'.json';
+                a.click();showToast('📤 Exported!');
             });
         }
         
-        function logout() {
-            localStorage.removeItem('bronx_admin_auth');
-            window.location.href = '/admin';
+        function importKeys(){
+            const inp=document.createElement('input');
+            inp.type='file';inp.accept='.json';
+            inp.onchange=async function(e){
+                const f=e.target.files[0];if(!f)return;
+                const t=await f.text();
+                const d=JSON.parse(t);
+                const r=await fetch('/admin/import-keys',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({keys:d})
+                });
+                const j=await r.json();
+                showToast(j.success?'📥 Imported '+j.imported+' keys!':'❌ Failed');
+                rd();lt();
+            };
+            inp.click();
         }
         
-        refreshData();
-        loadLogs();
+        async function lt(){
+            try{
+                const r=await fetch('/admin/terminal');
+                const d=await r.json();
+                document.getElementById('tl').textContent=d.logs?d.logs.length:0;
+                const c=document.getElementById('term');
+                if(d.logs&&d.logs.length>0){
+                    c.innerHTML=d.logs.map(l=>'<div style="margin-bottom:5px;border-bottom:1px solid #111;padding-bottom:5px"><span style="color:#ff0">['+l.time+']</span> <span style="color:#f0f">'+l.action+'</span> <span style="color:#fff">'+l.details+'</span></div>').join('');
+                }else c.innerHTML='<span style="color:#0f4">> Terminal ready...</span>';
+            }catch(e){console.error(e)}
+        }
+        
+        function logout(){localStorage.removeItem('bauth');location='/admin'}
+        
+        rd();lt();
     </script>
 </body>
 </html>`;
@@ -959,8 +738,8 @@ app.get('/admin/dashboard', (req, res) => {
 
 // ========== ADMIN API ENDPOINTS ==========
 
-app.get('/admin/logs', (req, res) => {
-    res.json({ success: true, logs: activityLogs });
+app.get('/admin/terminal', (req, res) => {
+    res.json({ success: true, logs: terminalLogs });
 });
 
 app.get('/admin/keys', (req, res) => {
@@ -972,11 +751,39 @@ app.get('/admin/keys', (req, res) => {
             limit: data.unlimited ? 'Unlimited' : data.limit,
             used: data.used,
             expiry: data.expiryStr || 'Never',
-            hidden: data.hidden || false,
-            created: data.created || 'Unknown'
+            hidden: data.hidden || false
         };
     });
     res.json({ success: true, keys: allKeys });
+});
+
+app.post('/admin/import-keys', (req, res) => {
+    try {
+        const keys = req.body.keys || req.body;
+        let imported = 0;
+        Object.entries(keys).forEach(([key, data]) => {
+            if (!keyStorage[key] && typeof data === 'object') {
+                keyStorage[key] = {
+                    name: data.owner || data.name || 'Imported',
+                    scopes: data.scopes || ['number'],
+                    type: 'imported',
+                    limit: data.limit === 'Unlimited' ? Infinity : (parseInt(data.limit) || 100),
+                    used: data.used || 0,
+                    expiry: data.expiry ? new Date(data.expiry) : null,
+                    expiryStr: data.expiry || 'Never',
+                    created: getIndiaDateTime(),
+                    resetType: 'never',
+                    unlimited: data.limit === 'Unlimited',
+                    hidden: data.hidden || false
+                };
+                imported++;
+            }
+        });
+        addLog('IMPORT', `Imported ${imported} keys`);
+        res.json({ success: true, imported });
+    } catch(e) {
+        res.json({ success: false, error: e.message });
+    }
 });
 
 app.post('/admin/generate-key', (req, res) => {
@@ -1014,9 +821,7 @@ app.post('/admin/generate-key', (req, res) => {
         hidden: hidden || false
     };
     
-    saveKeys();
-    addLog('create', key, 'Owner: ' + (name || 'User') + ', Scopes: ' + (scopes || ['number']).length + ' scopes');
-    
+    addLog('KEY_CREATED', `Key: ${key.substring(0, 15)}... | Owner: ${name || 'User'}`);
     res.json({ success: true, message: 'Key generated!', key });
 });
 
@@ -1024,8 +829,7 @@ app.post('/admin/reset-usage', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        saveKeys();
-        addLog('reset', key, 'Usage counter reset to 0');
+        addLog('USAGE_RESET', `Key: ${key.substring(0, 15)}...`);
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
@@ -1035,17 +839,15 @@ app.post('/admin/reset-usage', (req, res) => {
 app.delete('/admin/delete-key', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
-        const keyInfo = keyStorage[key];
         delete keyStorage[key];
-        saveKeys();
-        addLog('delete', key, 'Owner: ' + (keyInfo.name || 'Unknown') + ', Used: ' + keyInfo.used);
+        addLog('KEY_DELETED', `Key: ${key.substring(0, 15)}...`);
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
     }
 });
 
-console.log('✅ Admin Panel with Logs ready at /admin');
+console.log('✅ Admin Panel ready at /admin');
 
 // ========== SERVE ENHANCED HTML UI WITH DARK/LIGHT MODE ==========
 function serveHTML(res) {
