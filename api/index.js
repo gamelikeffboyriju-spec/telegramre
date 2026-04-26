@@ -1,9 +1,41 @@
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');      // ← ADD THIS LINE
-const path = require('path');  // ← ADD THIS LINE
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
+
+// ========== CONFIG ==========
+const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
+
+// Load keys from file
+function loadKeysFromFile() {
+    try {
+        if (fs.existsSync(KEYS_FILE)) {
+            const data = fs.readFileSync(KEYS_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch(e) {}
+    return null;
+}
+
+// Save keys to file
+function saveKeysToFile() {
+    try {
+        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
+        console.log('✅ Keys saved');
+    } catch(e) {}
+}
+
+// ... baaki sab kuch ...
+
+// ========== ADMIN PANEL ==========
+const ADMIN_PASSWORD = 'bronx2026';
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ... admin routes ...
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
