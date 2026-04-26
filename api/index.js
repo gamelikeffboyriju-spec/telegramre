@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
+const express = require('express');
+const axios = require('axios');
+
 const app = express();
 
 // ========== CONFIG ==========
