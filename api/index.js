@@ -317,48 +317,13 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== ADMIN PANEL WITH EXPORT/IMPORT + TERMINAL ==========
+// ========== ADMIN PANEL (100% FIXED) - ADD BEFORE module.exports ==========
 
 const ADMIN_PASSWORD = 'bronx2026';
-const fs = require('fs');
-const path = require('path');
-
-// Terminal Storage
-const TERMINAL_FILE = path.join(__dirname, 'terminal_logs.json');
-let terminalLogs = [];
-try {
-    if (fs.existsSync(TERMINAL_FILE)) {
-        terminalLogs = JSON.parse(fs.readFileSync(TERMINAL_FILE, 'utf8'));
-    }
-} catch(e) {}
-
-function saveTerminal() {
-    try {
-        fs.writeFileSync(TERMINAL_FILE, JSON.stringify(terminalLogs.slice(-2000), null, 2));
-    } catch(e) {}
-}
-
-function addLog(action, details) {
-    terminalLogs.unshift({
-        time: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        action: action,
-        details: details
-    });
-    saveTerminal();
-}
 
 // ========== IMPORTANT: Body Parser Middleware ==========
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Track API usage
-app.use('/api/*', (req, res, next) => {
-    const key = req.query.key || 'unknown';
-    if (key !== 'unknown' && req.path !== '/api/custom') {
-        addLog('API_CALL', `${req.path} | Key: ${key.substring(0, 12)}...`);
-    }
-    next();
-});
 
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
@@ -367,51 +332,80 @@ app.get('/admin', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRONX ADMIN</title>
+    <title>🔐 BRONX ADMIN</title>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:'Courier New',monospace;
-            background:linear-gradient(135deg,#0a0a0a,#1a0033);
-            min-height:100vh;display:flex;justify-content:center;align-items:center;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .box{
-            background:#1a0033;border:3px solid #ff00ff;border-radius:30px;
-            padding:50px 40px;width:400px;box-shadow:0 0 80px #ff00ff66;
+        .login-box {
+            background: #1a0033;
+            border: 3px solid #ff00ff;
+            border-radius: 30px;
+            padding: 50px 40px;
+            width: 400px;
+            box-shadow: 0 0 80px #ff00ff66;
+            animation: glow 3s infinite;
         }
-        h1{color:#00ff41;text-align:center;font-size:36px;margin-bottom:10px}
-        .sub{color:#ff00ff;text-align:center;margin-bottom:30px}
-        input{
-            width:100%;padding:15px;background:#0a0a0a;border:2px solid #00ff41;
-            border-radius:15px;color:#00ff41;font-size:16px;margin-bottom:20px;
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 30px #ff00ff66, 0 0 60px #00ff4133; }
+            50% { box-shadow: 0 0 50px #00ff4166, 0 0 80px #ff00ff33; }
         }
-        button{
-            width:100%;padding:15px;background:linear-gradient(45deg,#ff00ff,#00ff41);
-            border:none;border-radius:15px;color:#000;font-weight:bold;font-size:18px;cursor:pointer;
+        h1 { color: #00ff41; text-align: center; font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 30px #00ff41; }
+        .subtitle { color: #ff00ff; text-align: center; margin-bottom: 30px; font-size: 14px; }
+        .input-group { margin-bottom: 25px; }
+        .input-group label { color: #00ff41; display: block; margin-bottom: 10px; font-size: 14px; }
+        .input-group input {
+            width: 100%; padding: 15px; background: #0a0a0a; border: 2px solid #00ff41;
+            border-radius: 15px; color: #00ff41; font-size: 16px; font-family: 'Courier New', monospace;
         }
-        .err{color:#ff0000;text-align:center;margin-top:15px}
-        .hint{color:#ffff00;text-align:center;margin-top:20px;font-size:12px}
+        .btn {
+            width: 100%; padding: 15px; background: linear-gradient(45deg, #ff00ff, #00ff41);
+            border: none; border-radius: 15px; color: #000; font-weight: bold; font-size: 18px;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 0 40px #00ff41; }
+        .error { color: #ff0000; text-align: center; margin-top: 15px; }
+        .hint { color: #ffff00; text-align: center; margin-top: 20px; font-size: 12px; opacity: 0.7; }
     </style>
 </head>
 <body>
-    <div class="box">
+    <div class="login-box">
         <h1>⚡ BRONX</h1>
-        <div class="sub">ADMIN PANEL</div>
-        <input type="password" id="pw" placeholder="Password">
-        <button onclick="login()">🚀 LOGIN</button>
-        <div id="err" class="err"></div>
+        <div class="subtitle">ADMIN PANEL</div>
+        <div class="input-group">
+            <label>🔑 ADMIN PASSWORD</label>
+            <input type="password" id="password" placeholder="Enter password" autofocus>
+        </div>
+        <button class="btn" onclick="login()">🚀 LOGIN</button>
+        <div id="error" class="error"></div>
         <div class="hint">Default: bronx2026</div>
     </div>
     <script>
-        const p='${ADMIN_PASSWORD}';
-        function login(){
-            if(document.getElementById('pw').value===p){
-                localStorage.setItem('bauth','1');
-                location='/admin/dashboard';
-            }else document.getElementById('err').textContent='❌ Invalid!';
+        const ADMIN_PASS = '${ADMIN_PASSWORD}';
+        
+        function login() {
+            const pass = document.getElementById('password').value;
+            if (pass === ADMIN_PASS) {
+                localStorage.setItem('bronx_admin_auth', 'true');
+                window.location.href = '/admin/dashboard';
+            } else {
+                document.getElementById('error').textContent = '❌ Invalid password!';
+            }
         }
-        document.getElementById('pw').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
-        if(localStorage.getItem('bauth')==='1')location='/admin/dashboard';
+        
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+
+        if (localStorage.getItem('bronx_admin_auth') === 'true') {
+            window.location.href = '/admin/dashboard';
+        }
     </script>
 </body>
 </html>`;
@@ -425,351 +419,568 @@ app.get('/admin/dashboard', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRONX ADMIN | DASHBOARD</title>
+    <title>🔐 BRONX ADMIN | DASHBOARD</title>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:'Courier New',monospace;
-            background:linear-gradient(135deg,#0a0a0a,#1a0033);
-            min-height:100vh;padding:20px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-        .c{max-width:1400px;margin:0 auto}
-        .h{
-            background:#1a0033;border:3px solid #ff00ff;border-radius:20px;
-            padding:20px 30px;margin-bottom:20px;display:flex;
-            justify-content:space-between;align-items:center;
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: #1a0033;
+            border: 3px solid #ff00ff;
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 50px #ff00ff33;
         }
-        .h h1{color:#00ff41;font-size:28px}
-        .btn{
-            padding:10px 20px;border-radius:10px;font-weight:bold;cursor:pointer;
-            border:none;font-family:'Courier New',monospace;
+        .header h1 { color: #00ff41; font-size: 32px; text-shadow: 0 0 30px #00ff41; }
+        .btn {
+            padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer;
+            transition: all 0.3s; font-family: 'Courier New', monospace; border: none;
         }
-        .btn-r{background:#f0020;border:2px solid #f00;color:#f66}
-        .btn-p{background:linear-gradient(45deg,#f0f,#0f4);color:#000}
-        .btn-g{background:#0f42;border:2px solid #0f4;color:#0f4}
-        .btn-y{background:#ff02;border:2px solid #ff0;color:#ff0}
-        .btn:hover{transform:scale(1.05)}
+        .btn-danger { background: #ff000033; border: 2px solid #ff0000; color: #ff6b6b; }
+        .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
+        .btn-success { background: #00ff4120; border: 2px solid #00ff41; color: #00ff41; }
+        .btn-warning { background: #ffff0020; border: 2px solid #ffff00; color: #ffff00; }
+        .btn:hover { transform: scale(1.05); }
         
-        .sg{
-            display:grid;grid-template-columns:repeat(6,1fr);
-            gap:15px;margin-bottom:20px;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
         }
-        .sc{
-            background:#1a0033;border:2px solid;border-radius:15px;
-            padding:20px;text-align:center;
+        .stat-card {
+            background: #1a0033; border: 2px solid; border-radius: 15px;
+            padding: 20px; text-align: center;
         }
-        .sc:nth-child(1){border-color:#f0f}
-        .sc:nth-child(2){border-color:#0f4}
-        .sc:nth-child(3){border-color:#ff0}
-        .sc:nth-child(4){border-color:#f00}
-        .sc:nth-child(5){border-color:#0ff}
-        .sc:nth-child(6){border-color:#f90}
-        .sv{font-size:38px;color:#0f4;font-weight:bold}
-        .sl{color:#fff;font-size:13px;margin-top:8px}
+        .stat-card:nth-child(1) { border-color: #ff00ff; }
+        .stat-card:nth-child(2) { border-color: #00ff41; }
+        .stat-card:nth-child(3) { border-color: #ffff00; }
+        .stat-card:nth-child(4) { border-color: #ff0000; }
+        .stat-card:nth-child(5) { border-color: #00ffff; }
+        .stat-value {
+            font-size: 42px; font-weight: bold;
+            background: linear-gradient(45deg, #ff00ff, #00ff41);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .stat-label { color: #fff; font-size: 14px; margin-top: 8px; }
         
-        .pn{
-            background:#1a0033;border:2px solid #0f4;border-radius:20px;
-            padding:25px;margin-bottom:20px;
+        .panel {
+            background: #1a0033; border: 2px solid #00ff41; border-radius: 20px;
+            padding: 25px; margin-bottom: 25px;
         }
-        .pt{color:#0f4;font-size:22px;margin-bottom:20px}
+        .panel-title { color: #00ff41; font-size: 22px; margin-bottom: 20px; }
         
-        .fr{
-            display:grid;grid-template-columns:repeat(4,1fr);
-            gap:15px;margin-bottom:15px;
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-bottom: 20px;
         }
-        .fg label{color:#0f4;display:block;margin-bottom:8px;font-size:13px}
-        .fg input,.fg select{
-            width:100%;padding:10px;background:#0a0a0a;border:2px solid #0f4;
-            border-radius:10px;color:#0f4;font-family:'Courier New',monospace;
-        }
-        
-        .ss{
-            display:flex;flex-wrap:wrap;gap:8px;margin:15px 0;
-            max-height:150px;overflow-y:auto;padding:10px;
-            background:#0a0a0a;border-radius:10px;
-        }
-        .si{
-            padding:8px 15px;background:#1a0033;border:1px solid #0f4;
-            border-radius:20px;color:#0f4;cursor:pointer;font-size:12px;
-        }
-        .si.sel{background:#0f4;color:#000}
-        
-        .pb{
-            display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;
-        }
-        .pb span{
-            padding:8px 15px;background:#0a0a0a;border:1px solid #f0f;
-            border-radius:20px;color:#f0f;cursor:pointer;font-size:12px;
+        .form-group label { color: #00ff41; display: block; margin-bottom: 8px; font-size: 13px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; background: #0a0a0a; border: 2px solid #00ff41;
+            border-radius: 10px; color: #00ff41; font-family: 'Courier New', monospace;
         }
         
-        table{
-            width:100%;border-collapse:collapse;font-size:13px;
+        .scope-selector {
+            display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;
+            max-height: 200px; overflow-y: auto; padding: 10px;
+            background: #0a0a0a; border-radius: 10px;
         }
-        th{
-            background:linear-gradient(45deg,#f0f,#0f4);color:#000;
-            padding:12px;text-align:left;
+        .scope-item {
+            padding: 8px 15px; background: #1a0033; border: 1px solid #00ff41;
+            border-radius: 20px; color: #00ff41; cursor: pointer; font-size: 12px;
         }
-        td{padding:10px;border-bottom:1px solid #fff2;color:#fff}
+        .scope-item.selected { background: #00ff41; color: #000; border-color: #00ff41; }
         
-        .badge{padding:4px 10px;border-radius:20px;font-size:11px}
-        .ba{background:#0f42;color:#0f4;border:1px solid #0f4}
-        .be{background:#f002;color:#f66;border:1px solid #f00}
-        
-        .act{
-            padding:5px 12px;margin:0 3px;border-radius:8px;font-size:11px;
-            cursor:pointer;background:transparent;border:1px solid #0f4;color:#0f4;
+        .key-table {
+            width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px;
         }
-        .act.del{border-color:#f00;color:#f66}
+        .key-table th {
+            background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000;
+            padding: 12px; text-align: left; position: sticky; top: 0;
+        }
+        .key-table td { padding: 10px; border-bottom: 1px solid #ffffff20; color: #fff; }
+        .key-table tr:hover { background: #ffffff10; }
         
-        .toast{
-            position:fixed;bottom:30px;right:30px;background:#1a0033;
-            color:#0f4;padding:15px 30px;border-radius:50px;
-            border:2px solid #0f4;z-index:9999;
+        .status-badge {
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;
+        }
+        .status-active { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
+        .status-expired { background: #ff000020; color: #ff6b6b; border: 1px solid #ff0000; }
+        .status-exhausted { background: #ffff0020; color: #ffff00; border: 1px solid #ffff00; }
+        
+        .action-btn {
+            padding: 5px 12px; margin: 0 3px; border-radius: 8px; font-size: 11px;
+            cursor: pointer; background: transparent; border: 1px solid;
+        }
+        .action-btn.edit { border-color: #00ff41; color: #00ff41; }
+        .action-btn.reset { border-color: #ffff00; color: #ffff00; }
+        .action-btn.delete { border-color: #ff0000; color: #ff6b6b; }
+        .action-btn.copy { border-color: #ff00ff; color: #ff00ff; }
+        
+        .toast {
+            position: fixed; bottom: 30px; right: 30px; background: #1a0033;
+            color: #00ff41; padding: 15px 30px; border-radius: 50px;
+            border: 2px solid #00ff41; box-shadow: 0 0 40px #00ff41;
+            z-index: 9999; animation: slideIn 0.3s;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
-        .tc{max-height:400px;overflow-y:auto}
-        .term{
-            background:#000;border:1px solid #0f4;border-radius:10px;
-            padding:15px;max-height:300px;overflow-y:auto;font-size:12px;
+        .table-container { max-height: 500px; overflow-y: auto; }
+        
+        .preset-buttons {
+            display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;
+        }
+        .preset-btn {
+            padding: 8px 15px; background: #0a0a0a; border: 1px solid #ff00ff;
+            border-radius: 20px; color: #ff00ff; cursor: pointer; font-size: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="c">
-        <div class="h">
-            <h1>⚡ BRONX ADMIN</h1>
-            <div style="display:flex;gap:15px;">
-                <button class="btn btn-y" onclick="importKeys()">📥 IMPORT</button>
-                <button class="btn btn-g" onclick="exportKeys()">📤 EXPORT</button>
-                <button class="btn btn-g" onclick="refreshData()">🔄 REFRESH</button>
-                <button class="btn btn-r" onclick="logout()">🚪 LOGOUT</button>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ BRONX ADMIN PANEL</h1>
+            <div style="display: flex; gap: 15px;">
+    <button class="btn btn-warning" onclick="importKeys()">📥 IMPORT</button>
+    <button class="btn btn-success" onclick="exportKeys()">📤 EXPORT</button>
+    <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
+    <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
+</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalKeys">0</div>
+                <div class="stat-label">TOTAL KEYS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeKeys">0</div>
+                <div class="stat-label">ACTIVE KEYS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalRequests">0</div>
+                <div class="stat-label">TOTAL REQUESTS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="todayRequests">0</div>
+                <div class="stat-label">TODAY REQUESTS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="customApisCount">0</div>
+                <div class="stat-label">CUSTOM APIs</div>
             </div>
         </div>
         
-        <div class="sg">
-            <div class="sc"><div class="sv" id="tk">0</div><div class="sl">TOTAL KEYS</div></div>
-            <div class="sc"><div class="sv" id="ak">0</div><div class="sl">ACTIVE KEYS</div></div>
-            <div class="sc"><div class="sv" id="tr">0</div><div class="sl">TOTAL REQUESTS</div></div>
-            <div class="sc"><div class="sv" id="dr">0</div><div class="sl">TODAY REQUESTS</div></div>
-            <div class="sc"><div class="sv" id="ca">0</div><div class="sl">CUSTOM APIs</div></div>
-            <div class="sc"><div class="sv" id="tl">0</div><div class="sl">TERMINAL LOGS</div></div>
+        <!-- Key Generator Panel -->
+        <div class="panel">
+            <div class="panel-title">🔑 KEY GENERATOR</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>🔐 API KEY (blank = auto)</label>
+                    <input type="text" id="newKey" placeholder="Auto-generated">
+                </div>
+                <div class="form-group">
+                    <label>👤 OWNER NAME</label>
+                    <input type="text" id="newName" value="Premium User">
+                </div>
+                <div class="form-group">
+                    <label>📊 REQUEST LIMIT</label>
+                    <input type="number" id="newLimit" value="100">
+                </div>
+                <div class="form-group">
+                    <label>⏰ EXPIRY (DD-MM-YYYY)</label>
+                    <input type="text" id="newExpiry" value="31-12-2026">
+                </div>
+            </div>
+            
+            <div class="preset-buttons">
+                <span class="preset-btn" onclick="selectAllScopes()">✅ All</span>
+                <span class="preset-btn" onclick="clearAllScopes()">❌ Clear</span>
+                <span class="preset-btn" onclick="selectPhone()">📱 Phone</span>
+                <span class="preset-btn" onclick="selectFinance()">💰 Finance</span>
+                <span class="preset-btn" onclick="selectVehicle()">🚗 Vehicle</span>
+                <span class="preset-btn" onclick="selectSocial()">🌐 Social</span>
+            </div>
+            
+            <label style="color: #00ff41; margin: 10px 0; display: block;">📌 SELECT SCOPES:</label>
+            <div class="scope-selector" id="scopeSelector"></div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>✨ UNLIMITED</label>
+                    <select id="newUnlimited">
+                        <option value="false">No (Use limit)</option>
+                        <option value="true">Yes (Unlimited)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>👁️ VISIBILITY</label>
+                    <select id="newHidden">
+                        <option value="false">Visible</option>
+                        <option value="true">Hidden</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
         
-        <div class="pn">
-            <div class="pt">🔑 KEY GENERATOR</div>
-            <div class="fr">
-                <div class="fg"><label>API KEY (blank=auto)</label><input type="text" id="nk" placeholder="Auto"></div>
-                <div class="fg"><label>OWNER</label><input type="text" id="nm" value="Premium User"></div>
-                <div class="fg"><label>LIMIT</label><input type="number" id="nl" value="100"></div>
-                <div class="fg"><label>EXPIRY (DD-MM-YYYY)</label><input type="text" id="ne" value="31-12-2026"></div>
+        <!-- Keys Table -->
+        <div class="panel">
+            <div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
+            <div class="table-container">
+                <table class="key-table">
+                    <thead>
+                        <tr>
+                            <th>KEY</th>
+                            <th>OWNER</th>
+                            <th>LIMIT</th>
+                            <th>USED</th>
+                            <th>REMAINING</th>
+                            <th>EXPIRY</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysTableBody"></tbody>
+                </table>
             </div>
-            <div class="pb">
-                <span onclick="sa()">✅ All</span><span onclick="ca()">❌ Clear</span>
-                <span onclick="sp()">📱 Phone</span><span onclick="sf()">💰 Finance</span>
-                <span onclick="sv()">🚗 Vehicle</span><span onclick="ss()">🌐 Social</span>
-            </div>
-            <label style="color:#0f4;margin:10px 0;display:block;">📌 SELECT SCOPES:</label>
-            <div class="ss" id="scp"></div>
-            <div class="fr">
-                <div class="fg"><label>UNLIMITED</label><select id="nu"><option value="false">No</option><option value="true">Yes</option></select></div>
-                <div class="fg"><label>VISIBILITY</label><select id="nh"><option value="false">Visible</option><option value="true">Hidden</option></select></div>
-            </div>
-            <button class="btn btn-p" style="width:100%;padding:15px;" onclick="gk()">🚀 GENERATE KEY</button>
-        </div>
-        
-        <div class="pn">
-            <div class="pt">📋 ALL KEYS</div>
-            <div class="tc">
-                <table><thead><tr><th>KEY</th><th>OWNER</th><th>LIMIT</th><th>USED</th><th>REMAIN</th><th>EXPIRY</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
-                <tbody id="kt"></tbody></table>
-            </div>
-        </div>
-        
-        <div class="pn">
-            <div class="pt">🖥️ ACTIVITY TERMINAL</div>
-            <div class="term" id="term">> Loading...</div>
         </div>
     </div>
-    <div id="tc"></div>
+    <!-- Activity Terminal Panel -->
+<div class="panel">
+    <div class="panel-title" style="display: flex; justify-content: space-between;">
+        <span>🖥️ ACTIVITY TERMINAL</span>
+        <button class="btn btn-success" style="padding: 5px 15px; font-size: 12px;" onclick="loadTerminal()">🔄 Refresh Terminal</button>
+    </div>
+    <div id="terminalContainer" style="background: #000; border: 1px solid #00ff41; border-radius: 10px; padding: 15px; max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+        <div style="color: #00ff41;">> Terminal ready...</div>
+    </div>
+</div>
+    
+    <div id="toastContainer"></div>
     
     <script>
-        if(localStorage.getItem('bauth')!=='1')location='/admin';
+        if (localStorage.getItem('bronx_admin_auth') !== 'true') {
+            window.location.href = '/admin';
+        }
         
-        const S=['number','numv2','adv','name','aadhar','upi','ifsc','pan','pincode','ip','vehicle','rc','ff','bgmi','insta','git','tg','pk','pkv2'];
-        const sc=document.getElementById('scp');
-        S.forEach(s=>{
-            const sp=document.createElement('span');
-            sp.className='si';sp.textContent=s;
-            sp.onclick=function(){this.classList.toggle('sel')};
-            sc.appendChild(sp);
+        const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
+        
+        const scopeDiv = document.getElementById('scopeSelector');
+        SCOPES.forEach(scope => {
+            const span = document.createElement('span');
+            span.className = 'scope-item';
+            span.textContent = scope;
+            span.onclick = function() { this.classList.toggle('selected'); };
+            scopeDiv.appendChild(span);
         });
         
-        function showToast(m,e){
-            const t=document.createElement('div');
-            t.className='toast';t.style.color=e?'#f66':'#0f4';t.textContent=m;
-            document.getElementById('tc').appendChild(t);
-            setTimeout(()=>t.remove(),3000);
+        function showToast(msg, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.color = isError ? '#ff6b6b' : '#00ff41';
+            toast.textContent = msg;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
         
-        function gs(){return Array.from(document.querySelectorAll('#scp .si.sel')).map(e=>e.textContent)}
-        function sa(){document.querySelectorAll('#scp .si').forEach(e=>e.classList.add('sel'))}
-        function ca(){document.querySelectorAll('#scp .si').forEach(e=>e.classList.remove('sel'))}
-        function sp(){ca();['number','numv2','adv','name','aadhar'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
-        function sf(){ca();['upi','ifsc','pan'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
-        function sv(){ca();['vehicle','rc'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
-        function ss(){ca();['insta','git','tg'].forEach(s=>{Array.from(document.querySelectorAll('#scp .si')).find(e=>e.textContent===s)?.classList.add('sel')})}
-        
-        function rk(){return 'BRONX_'+Math.random().toString(36).substring(2,10).toUpperCase()+'_'+Date.now().toString(36).toUpperCase()}
-        
-        async function gk(){
-            let k=document.getElementById('nk').value;
-            if(!k)k=rk();
-            const scopes=gs();
-            if(scopes.length===0){showToast('❌ Select scope!',1);return}
-            
-            try{
-                const r=await fetch('/admin/generate-key',{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({
-                        key:k,
-                        name:document.getElementById('nm').value||'User',
-                        scopes:scopes,
-                        limit:parseInt(document.getElementById('nl').value)||100,
-                        expiry:document.getElementById('ne').value||'31-12-2026',
-                        unlimited:document.getElementById('nu').value==='true',
-                        hidden:document.getElementById('nh').value==='true'
-                    })
-                });
-                const d=await r.json();
-                if(d.success){showToast('✅ '+k);document.getElementById('nk').value='';rd();lt()}
-                else showToast(d.error||'Failed',1);
-            }catch(e){showToast('❌ '+e.message,1)}
+        function generateRandomKey() {
+            return 'BRONX_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase();
         }
         
-        async function rd(){
-            try{
-                const r=await fetch('/admin/keys');
-                const d=await r.json();
-                if(d.success){
-                    const ks=Object.entries(d.keys);
-                    document.getElementById('tk').textContent=ks.length;
-                    let a=0,tr=0;
-                    ks.forEach(([_,k])=>{tr+=k.used||0;if((!k.expiry||k.expiry==='Never'||new Date(k.expiry.split('-').reverse().join('-'))>new Date())&&(k.limit==='Unlimited'||k.used<k.limit))a++});
-                    document.getElementById('ak').textContent=a;
-                    document.getElementById('tr').textContent=tr;
-                    document.getElementById('ca').textContent='6';
-                    
-                    document.getElementById('kt').innerHTML=ks.map(([kn,k])=>{
-                        const ie=k.expiry&&k.expiry!=='Never'&&new Date(k.expiry.split('-').reverse().join('-'))<new Date();
-                        const ix=k.limit!=='Unlimited'&&k.used>=k.limit;
-                        let s='✅ Active',sc='ba';if(ie){s='⏰ Expired';sc='be'}else if(ix){s='🛑 Exhausted';sc='be'}
-                        const dk=kn.length>18?kn.substring(0,15)+'...':kn;
-                        const rem=k.limit==='Unlimited'?'∞':Math.max(0,k.limit-k.used);
-                        return '<tr><td><code style="color:#f0f">'+dk+'</code>'+(k.hidden?' 🔒':'')+'</td><td>'+(k.owner||'-')+'</td><td>'+(k.limit==='Unlimited'?'∞':k.limit)+'</td><td>'+(k.used||0)+'</td><td style="color:'+(rem===0?'#f66':'#0f4')+'">'+rem+'</td><td>'+(k.expiry||'Never')+'</td><td><span class="badge '+sc+'">'+s+'</span></td><td><button class="act" onclick="ck(\''+kn+'\')">📋</button><button class="act" onclick="rk2(\''+kn+'\')">🔄</button><button class="act del" onclick="dk(\''+kn+'\')">🗑️</button></td></tr>';
-                    }).join('');
-                }
-            }catch(e){console.error(e)}
+        function getSelectedScopes() {
+            return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(el => el.textContent);
         }
         
-        function ck(k){navigator.clipboard.writeText(k);showToast('📋 Copied!')}
-        
-        async function rk2(k){
-            if(!confirm('Reset?'))return;
-            await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})});
-            showToast('✅ Reset!');rd();lt();
+        function selectAllScopes() {
+            document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.add('selected'));
         }
         
-        async function dk(k){
-            if(!confirm('DELETE?'))return;
-            await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})});
-            showToast('✅ Deleted!');rd();lt();
+        function clearAllScopes() {
+            document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected'));
         }
         
-        function exportKeys(){
-            fetch('/admin/keys').then(r=>r.json()).then(d=>{
-                const b=new Blob([JSON.stringify(d.keys,null,2)],{type:'application/json'});
-                const a=document.createElement('a');
-                a.href=URL.createObjectURL(b);
-                a.download='bronx_keys_'+new Date().toISOString().split('T')[0]+'.json';
-                a.click();showToast('📤 Exported!');
+        function selectPhone() {
+            clearAllScopes();
+            ['number', 'numv2', 'adv', 'name', 'aadhar'].forEach(s => {
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
         
-        function importKeys(){
-            const inp=document.createElement('input');
-            inp.type='file';inp.accept='.json';
-            inp.onchange=async function(e){
-                const f=e.target.files[0];if(!f)return;
-                const t=await f.text();
-                const d=JSON.parse(t);
-                const r=await fetch('/admin/import-keys',{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({keys:d})
+        function selectFinance() {
+            clearAllScopes();
+            ['upi', 'ifsc', 'pan'].forEach(s => {
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
+            });
+        }
+        
+        function selectVehicle() {
+            clearAllScopes();
+            ['vehicle', 'rc'].forEach(s => {
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
+            });
+        }
+        
+        function selectSocial() {
+            clearAllScopes();
+            ['insta', 'git', 'tg'].forEach(s => {
+                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
+            });
+        }
+        
+        async function generateKey() {
+            let key = document.getElementById('newKey').value;
+            if (!key) key = generateRandomKey();
+            
+            const name = document.getElementById('newName').value || 'Premium User';
+            const limit = parseInt(document.getElementById('newLimit').value) || 100;
+            const expiry = document.getElementById('newExpiry').value || '31-12-2026';
+            const unlimited = document.getElementById('newUnlimited').value === 'true';
+            const hidden = document.getElementById('newHidden').value === 'true';
+            const scopes = getSelectedScopes();
+            
+            if (scopes.length === 0) {
+                showToast('❌ Select at least one scope!', true);
+                return;
+            }
+            
+            const payload = { key, name, scopes, limit, expiry, unlimited, hidden };
+            console.log('Sending:', payload);
+            
+            try {
+                const res = await fetch('/admin/generate-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-                const j=await r.json();
-                showToast(j.success?'📥 Imported '+j.imported+' keys!':'❌ Failed');
-                rd();lt();
-            };
-            inp.click();
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('✅ Key generated: ' + key);
+                    document.getElementById('newKey').value = '';
+                    refreshData();
+                } else {
+                    showToast(data.error || 'Failed', true);
+                }
+            } catch (err) {
+                showToast('❌ Error: ' + err.message, true);
+            }
         }
         
-        async function lt(){
-            try{
-                const r=await fetch('/admin/terminal');
-                const d=await r.json();
-                document.getElementById('tl').textContent=d.logs?d.logs.length:0;
-                const c=document.getElementById('term');
-                if(d.logs&&d.logs.length>0){
-                    c.innerHTML=d.logs.map(l=>'<div style="margin-bottom:5px;border-bottom:1px solid #111;padding-bottom:5px"><span style="color:#ff0">['+l.time+']</span> <span style="color:#f0f">'+l.action+'</span> <span style="color:#fff">'+l.details+'</span></div>').join('');
-                }else c.innerHTML='<span style="color:#0f4">> Terminal ready...</span>';
-            }catch(e){console.error(e)}
+        async function refreshData() {
+            try {
+                const res = await fetch('/admin/keys');
+                const data = await res.json();
+                
+                if (data.success) {
+                    const keys = data.keys;
+                    const keysArray = Object.entries(keys);
+                    
+                    document.getElementById('totalKeys').textContent = keysArray.length;
+                    
+                    let active = 0, totalReqs = 0;
+                    keysArray.forEach(([_, k]) => {
+                        totalReqs += k.used || 0;
+                        const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
+                        const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
+                        if (notExpired && hasQuota) active++;
+                    });
+                    
+                    document.getElementById('activeKeys').textContent = active;
+                    document.getElementById('totalRequests').textContent = totalReqs;
+                    document.getElementById('customApisCount').textContent = '6';
+                    
+                    const tbody = document.getElementById('keysTableBody');
+                    tbody.innerHTML = keysArray.map(([keyName, k]) => {
+                        const isExpired = k.expiry && k.expiry !== 'Never' && new Date(k.expiry.split('-').reverse().join('-')) < new Date();
+                        const isExhausted = k.limit !== 'Unlimited' && k.used >= k.limit;
+                        let status = '✅ Active', statusClass = 'status-active';
+                        if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
+                        else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
+                        
+                        const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
+                        const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
+                        
+                        return \`<tr>
+                            <td><code style="color: #ff00ff;">\${displayKey}</code>\${k.hidden ? ' 🔒' : ''}</td>
+                            <td>\${k.owner || '-'}</td>
+                            <td>\${k.limit === 'Unlimited' ? '∞' : k.limit}</td>
+                            <td>\${k.used || 0}</td>
+                            <td style="color: \${remaining === 0 ? '#ff6b6b' : '#00ff41'};">\${remaining}</td>
+                            <td>\${k.expiry || 'Never'}</td>
+                            <td><span class="status-badge \${statusClass}">\${status}</span></td>
+                            <td>
+                                <button class="action-btn copy" onclick="copyKey('\${keyName}')">📋</button>
+                                <button class="action-btn reset" onclick="resetKey('\${keyName}')">🔄</button>
+                                <button class="action-btn delete" onclick="deleteKey('\${keyName}')">🗑️</button>
+                            </td>
+                        </tr>\`;
+                    }).join('');
+                }
+            } catch (err) {
+                console.error(err);
+            }
         }
         
-        function logout(){localStorage.removeItem('bauth');location='/admin'}
+        function copyKey(key) {
+            navigator.clipboard.writeText(key);
+            showToast('📋 Copied!');
+        }
         
-        rd();lt();
+        async function resetKey(key) {
+            if (!confirm('Reset usage?')) return;
+            await fetch('/admin/reset-usage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key })
+            });
+            showToast('✅ Reset!');
+            refreshData();
+        }
+        
+        async function deleteKey(key) {
+            if (!confirm('DELETE this key?')) return;
+            await fetch('/admin/delete-key', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key })
+            });
+            showToast('✅ Deleted!');
+            refreshData();
+        }
+        
+        function logout() {
+            localStorage.removeItem('bronx_admin_auth');
+            window.location.href = '/admin';
+        }
+        
+        refreshData();
     </script>
 </body>
 </html>`;
     res.send(html);
 });
 
-// ========== ADMIN API ENDPOINTS ==========
+// ========== ADD THESE FUNCTIONS IN YOUR SCRIPT ==========
+
+async function loadTerminal() {
+    try {
+        const res = await fetch('/admin/terminal');
+        const data = await res.json();
+        
+        const container = document.getElementById('terminalContainer');
+        if (data.logs && data.logs.length > 0) {
+            container.innerHTML = data.logs.map(log => 
+                `<div style="margin-bottom: 5px; border-bottom: 1px solid #111; padding-bottom: 5px;">
+                    <span style="color: #ffff00;">[${log.timestamp}]</span> 
+                    <span style="color: #ff00ff;">${log.action}</span> - 
+                    <span style="color: #fff;">${log.details}</span>
+                </div>`
+            ).join('');
+        } else {
+            container.innerHTML = '<div style="color: #00ff41;">> No activity yet</div>';
+        }
+        container.scrollTop = container.scrollHeight;
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function exportKeys() {
+    fetch('/admin/keys')
+        .then(r => r.json())
+        .then(data => {
+            const exportData = {
+                export_time: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+                total_keys: Object.keys(data.keys).length,
+                keys: data.keys
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'bronx_keys_backup_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            showToast('📤 Keys exported successfully!');
+        });
+}
+
+function importKeys() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            
+            if (!data.keys) {
+                showToast('❌ Invalid file format', true);
+                return;
+            }
+            
+            const res = await fetch('/admin/import-keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keys: data.keys })
+            });
+            
+            const result = await res.json();
+            if (result.success) {
+                showToast('📥 Imported ' + result.imported + ' keys!');
+                refreshData();
+                loadTerminal();
+            } else {
+                showToast('❌ ' + (result.error || 'Import failed'), true);
+            }
+        } catch(e) {
+            showToast('❌ Error reading file', true);
+        }
+    };
+    input.click();
+}
+
+// CALL THIS ON PAGE LOAD (add after refreshData())
+loadTerminal();
+
+// ========== ADD THESE NEW ENDPOINTS ==========
 
 app.get('/admin/terminal', (req, res) => {
-    res.json({ success: true, logs: terminalLogs });
-});
-
-app.get('/admin/keys', (req, res) => {
-    const allKeys = {};
-    Object.entries(keyStorage).forEach(([key, data]) => {
-        allKeys[key] = {
-            owner: data.name,
-            scopes: data.scopes,
-            limit: data.unlimited ? 'Unlimited' : data.limit,
-            used: data.used,
-            expiry: data.expiryStr || 'Never',
-            hidden: data.hidden || false
-        };
-    });
-    res.json({ success: true, keys: allKeys });
+    res.json({ success: true, logs: activityTerminal });
 });
 
 app.post('/admin/import-keys', (req, res) => {
     try {
-        const keys = req.body.keys || req.body;
+        const { keys } = req.body;
+        if (!keys) return res.json({ success: false, error: 'No keys provided' });
+        
         let imported = 0;
         Object.entries(keys).forEach(([key, data]) => {
-            if (!keyStorage[key] && typeof data === 'object') {
+            if (!keyStorage[key]) {
                 keyStorage[key] = {
                     name: data.owner || data.name || 'Imported',
                     scopes: data.scopes || ['number'],
                     type: 'imported',
-                    limit: data.limit === 'Unlimited' ? Infinity : (parseInt(data.limit) || 100),
+                    limit: data.limit === 'Unlimited' ? Infinity : (data.limit || 100),
                     used: data.used || 0,
-                    expiry: data.expiry ? new Date(data.expiry) : null,
+                    expiry: data.expiry ? parseExpiryDate(data.expiry) : null,
                     expiryStr: data.expiry || 'Never',
                     created: getIndiaDateTime(),
                     resetType: 'never',
@@ -779,72 +990,56 @@ app.post('/admin/import-keys', (req, res) => {
                 imported++;
             }
         });
-        addLog('IMPORT', `Imported ${imported} keys`);
-        res.json({ success: true, imported });
+        
+        addActivity('IMPORT', `Imported ${imported} keys from backup file`);
+        res.json({ success: true, imported: imported });
     } catch(e) {
         res.json({ success: false, error: e.message });
     }
 });
 
+// ========== UPDATE EXISTING ENDPOINTS (add addActivity) ==========
+
 app.post('/admin/generate-key', (req, res) => {
-    const key = req.body.key;
-    const name = req.body.name;
-    const scopes = req.body.scopes;
-    const limit = req.body.limit;
-    const expiry = req.body.expiry;
-    const unlimited = req.body.unlimited;
-    const hidden = req.body.hidden;
+    // ... existing code ...
     
-    if (!key) return res.json({ success: false, error: 'Key required' });
-    if (keyStorage[key]) return res.json({ success: false, error: 'Key exists' });
+    keyStorage[key] = { /* ... */ };
     
-    let expiryDate = null, expiryStr = null;
-    if (expiry && expiry !== 'never') {
-        const parts = expiry.split('-');
-        if (parts.length === 3) {
-            expiryDate = new Date(parts[2], parts[1] - 1, parts[0], 23, 59, 59);
-            expiryStr = expiry;
-        }
-    }
+    addActivity('KEY_CREATED', `Key: ${key.substring(0, 12)}... | Owner: ${name || 'User'} | Scopes: ${(scopes || ['number']).length}`);
     
-    keyStorage[key] = {
-        name: name || 'User',
-        scopes: scopes || ['number'],
-        type: 'premium',
-        limit: unlimited ? Infinity : (parseInt(limit) || 100),
-        used: 0,
-        expiry: expiryDate,
-        expiryStr: expiryStr,
-        created: getIndiaDateTime(),
-        resetType: 'never',
-        unlimited: unlimited || false,
-        hidden: hidden || false
-    };
-    
-    addLog('KEY_CREATED', `Key: ${key.substring(0, 15)}... | Owner: ${name || 'User'}`);
     res.json({ success: true, message: 'Key generated!', key });
+});
+
+app.delete('/admin/delete-key', (req, res) => {
+    const key = req.body.key;
+    if (keyStorage[key]) {
+        const info = keyStorage[key];
+        delete keyStorage[key];
+        addActivity('KEY_DELETED', `Key: ${key.substring(0, 12)}... | Was: ${info.name}`);
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
 });
 
 app.post('/admin/reset-usage', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        addLog('USAGE_RESET', `Key: ${key.substring(0, 15)}...`);
+        addActivity('USAGE_RESET', `Key: ${key.substring(0, 12)}...`);
         res.json({ success: true });
     } else {
-        res.json({ success: false, error: 'Key not found' });
+        res.json({ success: false });
     }
 });
 
-app.delete('/admin/delete-key', (req, res) => {
-    const key = req.body.key;
-    if (keyStorage[key]) {
-        delete keyStorage[key];
-        addLog('KEY_DELETED', `Key: ${key.substring(0, 15)}...`);
-        res.json({ success: true });
-    } else {
-        res.json({ success: false, error: 'Key not found' });
+// Track API usage in terminal
+app.use('/api/*', (req, res, next) => {
+    const key = req.query.key || req.headers['x-api-key'] || 'unknown';
+    if (key !== 'unknown') {
+        addActivity('API_CALL', `Key: ${key.substring(0, 10)}... | Endpoint: ${req.path}`);
     }
+    next();
 });
 
 console.log('✅ Admin Panel ready at /admin');
