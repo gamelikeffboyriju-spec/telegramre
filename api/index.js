@@ -354,13 +354,35 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== ADMIN PANEL (100% FIXED) - ADD BEFORE module.exports ==========
+// ========== ADMIN PANEL (100% FIXED + FILE SAVE) ==========
 
 const ADMIN_PASSWORD = 'bronx2026';
 
 // ========== IMPORTANT: Body Parser Middleware ==========
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ========== KEYS FILE STORAGE ==========
+const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
+
+function loadKeysFromFile() {
+    try {
+        if (fs.existsSync(KEYS_FILE)) {
+            const data = fs.readFileSync(KEYS_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch(e) {}
+    return null;
+}
+
+function saveKeysToFile() {
+    try {
+        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
+        console.log('✅ Keys saved to file');
+    } catch(e) {
+        console.error('Save error:', e);
+    }
+}
 
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
@@ -451,6 +473,12 @@ app.get('/admin', (req, res) => {
 
 // ========== ADMIN DASHBOARD ==========
 app.get('/admin/dashboard', (req, res) => {
+    // Reload keys from file
+    const fresh = loadKeysFromFile();
+    if (fresh && Object.keys(fresh).length > 0) {
+        Object.assign(keyStorage, fresh);
+    }
+    
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -731,41 +759,13 @@ app.get('/admin/dashboard', (req, res) => {
             return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(el => el.textContent);
         }
         
-        function selectAllScopes() {
-            document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.add('selected'));
-        }
+        function selectAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.add('selected')); }
+        function clearAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected')); }
         
-        function clearAllScopes() {
-            document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected'));
-        }
-        
-        function selectPhone() {
-            clearAllScopes();
-            ['number', 'numv2', 'adv', 'name', 'aadhar'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        function selectFinance() {
-            clearAllScopes();
-            ['upi', 'ifsc', 'pan'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        function selectVehicle() {
-            clearAllScopes();
-            ['vehicle', 'rc'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
-        
-        function selectSocial() {
-            clearAllScopes();
-            ['insta', 'git', 'tg'].forEach(s => {
-                Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
-            });
-        }
+        function selectPhone() { clearAllScopes(); ['number','numv2','adv','name','aadhar'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
+        function selectFinance() { clearAllScopes(); ['upi','ifsc','pan'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
+        function selectVehicle() { clearAllScopes(); ['vehicle','rc'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
+        function selectSocial() { clearAllScopes(); ['insta','git','tg'].forEach(s => { document.querySelectorAll('#scopeSelector .scope-item').forEach(el => { if(el.textContent===s) el.classList.add('selected'); }); }); }
         
         async function generateKey() {
             let key = document.getElementById('newKey').value;
@@ -778,54 +778,30 @@ app.get('/admin/dashboard', (req, res) => {
             const hidden = document.getElementById('newHidden').value === 'true';
             const scopes = getSelectedScopes();
             
-            if (scopes.length === 0) {
-                showToast('❌ Select at least one scope!', true);
-                return;
-            }
-            
-            const payload = { key, name, scopes, limit, expiry, unlimited, hidden };
-            console.log('Sending:', payload);
+            if (scopes.length === 0) { showToast('❌ Select at least one scope!', true); return; }
             
             try {
                 const res = await fetch('/admin/generate-key', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ key, name, scopes, limit, expiry, unlimited, hidden })
                 });
-                
                 const data = await res.json();
-                
-                if (data.success) {
-                    showToast('✅ Key generated: ' + key);
-                    document.getElementById('newKey').value = '';
-                    refreshData();
-                } else {
-                    showToast(data.error || 'Failed', true);
-                }
-            } catch (err) {
-                showToast('❌ Error: ' + err.message, true);
-            }
+                if (data.success) { showToast('✅ Key generated: ' + key); document.getElementById('newKey').value = ''; refreshData(); }
+                else { showToast(data.error || 'Failed', true); }
+            } catch (err) { showToast('❌ Error: ' + err.message, true); }
         }
         
         async function refreshData() {
             try {
                 const res = await fetch('/admin/keys');
                 const data = await res.json();
-                
                 if (data.success) {
                     const keys = data.keys;
                     const keysArray = Object.entries(keys);
-                    
                     document.getElementById('totalKeys').textContent = keysArray.length;
-                    
                     let active = 0, totalReqs = 0;
-                    keysArray.forEach(([_, k]) => {
-                        totalReqs += k.used || 0;
-                        const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
-                        const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
-                        if (notExpired && hasQuota) active++;
-                    });
-                    
+                    keysArray.forEach(([_, k]) => { totalReqs += k.used || 0; const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date(); const hasQuota = k.limit === 'Unlimited' || k.used < k.limit; if (notExpired && hasQuota) active++; });
                     document.getElementById('activeKeys').textContent = active;
                     document.getElementById('totalRequests').textContent = totalReqs;
                     document.getElementById('customApisCount').textContent = '6';
@@ -837,62 +813,21 @@ app.get('/admin/dashboard', (req, res) => {
                         let status = '✅ Active', statusClass = 'status-active';
                         if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
                         else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
-                        
                         const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
                         const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
-                        
-                        return \`<tr>
-                            <td><code style="color: #ff00ff;">\${displayKey}</code>\${k.hidden ? ' 🔒' : ''}</td>
-                            <td>\${k.owner || '-'}</td>
-                            <td>\${k.limit === 'Unlimited' ? '∞' : k.limit}</td>
-                            <td>\${k.used || 0}</td>
-                            <td style="color: \${remaining === 0 ? '#ff6b6b' : '#00ff41'};">\${remaining}</td>
-                            <td>\${k.expiry || 'Never'}</td>
-                            <td><span class="status-badge \${statusClass}">\${status}</span></td>
-                            <td>
-                                <button class="action-btn copy" onclick="copyKey('\${keyName}')">📋</button>
-                                <button class="action-btn reset" onclick="resetKey('\${keyName}')">🔄</button>
-                                <button class="action-btn delete" onclick="deleteKey('\${keyName}')">🗑️</button>
-                            </td>
-                        </tr>\`;
+                        return '<tr><td><code style="color: #ff00ff;">' + displayKey + '</code>' + (k.hidden ? ' 🔒' : '') + '</td><td>' + (k.owner || '-') + '</td><td>' + (k.limit === 'Unlimited' ? '∞' : k.limit) + '</td><td>' + (k.used || 0) + '</td><td style="color: ' + (remaining === 0 ? '#ff6b6b' : '#00ff41') + ';">' + remaining + '</td><td>' + (k.expiry || 'Never') + '</td><td><span class="status-badge ' + statusClass + '">' + status + '</span></td><td><button class="action-btn copy" onclick="copyKey(\'' + keyName + '\')">📋</button><button class="action-btn reset" onclick="resetKey(\'' + keyName + '\')">🔄</button><button class="action-btn delete" onclick="deleteKey(\'' + keyName + '\')">🗑️</button></td></tr>';
                     }).join('');
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
         
-        function copyKey(key) {
-            navigator.clipboard.writeText(key);
-            showToast('📋 Copied!');
-        }
+        function copyKey(key) { navigator.clipboard.writeText(key); showToast('📋 Copied!'); }
         
-        async function resetKey(key) {
-            if (!confirm('Reset usage?')) return;
-            await fetch('/admin/reset-usage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            showToast('✅ Reset!');
-            refreshData();
-        }
+        async function resetKey(key) { if (!confirm('Reset usage?')) return; await fetch('/admin/reset-usage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }); showToast('✅ Reset!'); refreshData(); }
         
-        async function deleteKey(key) {
-            if (!confirm('DELETE this key?')) return;
-            await fetch('/admin/delete-key', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            showToast('✅ Deleted!');
-            refreshData();
-        }
+        async function deleteKey(key) { if (!confirm('DELETE this key?')) return; await fetch('/admin/delete-key', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }); showToast('✅ Deleted!'); refreshData(); }
         
-        function logout() {
-            localStorage.removeItem('bronx_admin_auth');
-            window.location.href = '/admin';
-        }
+        function logout() { localStorage.removeItem('bronx_admin_auth'); window.location.href = '/admin'; }
         
         refreshData();
     </script>
@@ -904,10 +839,10 @@ app.get('/admin/dashboard', (req, res) => {
 // ========== ADMIN API ENDPOINTS ==========
 
 app.get('/admin/keys', (req, res) => {
-    // Reload from file to get latest
-    const fileKeys = loadKeysFromFile();
-    if (fileKeys) {
-        keyStorage = fileKeys;
+    // Reload from file
+    const fresh = loadKeysFromFile();
+    if (fresh && Object.keys(fresh).length > 0) {
+        Object.assign(keyStorage, fresh);
     }
     
     const allKeys = {};
@@ -924,11 +859,10 @@ app.get('/admin/keys', (req, res) => {
     res.json({ success: true, keys: allKeys });
 });
 
-// FIXED: Generate key with proper body parsing
+// GENERATE KEY - WITH FILE SAVE
 app.post('/admin/generate-key', (req, res) => {
-    console.log('Body received:', req.body); // Debug
+    console.log('Body received:', req.body);
     
-    // Manual extraction for safety
     const key = req.body.key;
     const name = req.body.name;
     const scopes = req.body.scopes;
@@ -937,13 +871,8 @@ app.post('/admin/generate-key', (req, res) => {
     const unlimited = req.body.unlimited;
     const hidden = req.body.hidden;
     
-    if (!key) {
-        return res.json({ success: false, error: 'Key required' });
-    }
-    
-    if (keyStorage[key]) {
-        return res.json({ success: false, error: 'Key already exists' });
-    }
+    if (!key) return res.json({ success: false, error: 'Key required' });
+    if (keyStorage[key]) return res.json({ success: false, error: 'Key already exists' });
     
     let expiryDate = null;
     let expiryStr = null;
@@ -970,27 +899,29 @@ app.post('/admin/generate-key', (req, res) => {
         hidden: hidden || false
     };
     
-    saveKeysToFile(); // ← ADD THIS LIN
+    saveKeysToFile(); // ← SAVE TO FILE
     
     res.json({ success: true, message: 'Key generated!', key });
 });
 
+// RESET USAGE - WITH FILE SAVE
 app.post('/admin/reset-usage', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        saveKeysToFile(); // ← ADD THIS LINE
+        saveKeysToFile(); // ← SAVE TO FILE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
     }
 });
 
+// DELETE KEY - WITH FILE SAVE
 app.delete('/admin/delete-key', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         delete keyStorage[key];
-        saveKeysToFile(); // ← ADD THIS LINE
+        saveKeysToFile(); // ← SAVE TO FILE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
