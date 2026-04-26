@@ -1,41 +1,9 @@
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs');      // ← ADD THIS LINE
+const path = require('path');  // ← ADD THIS LINE
 
 const app = express();
-
-// ========== CONFIG ==========
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
-
-// Load keys from file
-function loadKeysFromFile() {
-    try {
-        if (fs.existsSync(KEYS_FILE)) {
-            const data = fs.readFileSync(KEYS_FILE, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch(e) {}
-    return null;
-}
-
-// Save keys to file
-function saveKeysToFile() {
-    try {
-        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
-        console.log('✅ Keys saved');
-    } catch(e) {}
-}
-
-// ... baaki sab kuch ...
-
-// ========== ADMIN PANEL ==========
-const ADMIN_PASSWORD = 'bronx2026';
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ... admin routes ...
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
@@ -386,65 +354,9 @@ function cleanResponse(data) {
     return cleaned;
 }
 
-// ========== ADMIN PANEL (100% FIXED + FILE SAVE) ==========
+// ========== ADMIN PANEL (100% FIXED) - ADD BEFORE module.exports ==========
 
 const ADMIN_PASSWORD = 'bronx2026';
-
-// ========== IMPORTANT: Body Parser Middleware ==========
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ========== KEYS FILE STORAGE ==========
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
-
-function loadKeysFromFile() {
-    try {
-        if (fs.existsSync(KEYS_FILE)) {
-            const data = fs.readFileSync(KEYS_FILE, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch(e) {}
-    return null;
-}
-
-function saveKeysToFile() {
-    try {
-        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
-        console.log('✅ Keys saved to file');
-    } catch(e) {
-        console.error('Save error:', e);
-    }
-}
-
-// ========== ADMIN PANEL (100% FIXED + FILE PERSISTENCE) ==========
-
-const ADMIN_PASSWORD = 'bronx2026';
-
-// ========== FILE STORAGE FUNCTIONS ==========
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
-
-function loadKeysFromFile() {
-    try {
-        if (fs.existsSync(KEYS_FILE)) {
-            const data = fs.readFileSync(KEYS_FILE, 'utf8');
-            const parsed = JSON.parse(data);
-            console.log('📂 Loaded ' + Object.keys(parsed).length + ' keys from file');
-            return parsed;
-        }
-    } catch(e) {
-        console.error('❌ Load error:', e.message);
-    }
-    return null;
-}
-
-function saveKeysToFile() {
-    try {
-        fs.writeFileSync(KEYS_FILE, JSON.stringify(keyStorage, null, 2));
-        console.log('💾 Keys saved! Total: ' + Object.keys(keyStorage).length);
-    } catch(e) {
-        console.error('❌ Save error:', e.message);
-    }
-}
 
 // ========== IMPORTANT: Body Parser Middleware ==========
 app.use(express.json());
@@ -537,287 +449,223 @@ app.get('/admin', (req, res) => {
     res.send(html);
 });
 
+// ========== ADMIN PANEL (CLEAN + WORKING) ==========
+const ADMIN_PASSWORD = 'bronx2026';
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ========== ADMIN LOGIN PAGE ==========
+app.get('/admin', (req, res) => {
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>🔐 BRONX ADMIN</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New',monospace;background:linear-gradient(135deg,#0a0a0a,#1a0033,#0a0a0a);min-height:100vh;display:flex;justify-content:center;align-items:center}
+.login-box{background:#1a0033;border:3px solid #ff00ff;border-radius:30px;padding:50px 40px;width:400px;box-shadow:0 0 80px #ff00ff66;animation:glow 3s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 30px #ff00ff66,0 0 60px #00ff4133}50%{box-shadow:0 0 50px #00ff4166,0 0 80px #ff00ff33}}
+h1{color:#00ff41;text-align:center;font-size:36px;margin-bottom:10px;text-shadow:0 0 30px #00ff41}
+.subtitle{color:#ff00ff;text-align:center;margin-bottom:30px;font-size:14px}
+.input-group{margin-bottom:25px}
+.input-group label{color:#00ff41;display:block;margin-bottom:10px;font-size:14px}
+.input-group input{width:100%;padding:15px;background:#0a0a0a;border:2px solid #00ff41;border-radius:15px;color:#00ff41;font-size:16px;font-family:'Courier New',monospace}
+.btn{width:100%;padding:15px;background:linear-gradient(45deg,#ff00ff,#00ff41);border:none;border-radius:15px;color:#000;font-weight:bold;font-size:18px;cursor:pointer;transition:all .3s}
+.btn:hover{transform:scale(1.05);box-shadow:0 0 40px #00ff41}
+.error{color:#ff0000;text-align:center;margin-top:15px}
+.hint{color:#ffff00;text-align:center;margin-top:20px;font-size:12px;opacity:.7}
+</style></head>
+<body>
+<div class="login-box"><h1>⚡ BRONX</h1><div class="subtitle">ADMIN PANEL</div>
+<div class="input-group"><label>🔑 ADMIN PASSWORD</label><input type="password" id="password" placeholder="Enter password" autofocus></div>
+<button class="btn" onclick="login()">🚀 LOGIN</button><div id="error" class="error"></div><div class="hint">Default: bronx2026</div></div>
+<script>
+const ADMIN_PASS='${ADMIN_PASSWORD}';
+function login(){const p=document.getElementById('password').value;if(p===ADMIN_PASS){localStorage.setItem('bronx_admin_auth','true');window.location.href='/admin/dashboard'}else{document.getElementById('error').textContent='❌ Invalid password!'}}
+document.getElementById('password').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
+if(localStorage.getItem('bronx_admin_auth')==='true')window.location.href='/admin/dashboard';
+</script></body></html>`);
+});
+
 // ========== ADMIN DASHBOARD ==========
 app.get('/admin/dashboard', (req, res) => {
-    // LOAD KEYS FROM FILE ON EVERY DASHBOARD VISIT
     const saved = loadKeysFromFile();
-    if (saved && Object.keys(saved).length > 0) {
-        Object.assign(keyStorage, saved);
-        console.log('✅ Keys synced from file to memory');
-    }
+    if (saved && Object.keys(saved).length > 0) Object.assign(keyStorage, saved);
     
-    const html = `<!DOCTYPE html>
+    res.send(`<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 BRONX ADMIN | DASHBOARD</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container { max-width: 1400px; margin: 0 auto; }
-        .header {
-            background: #1a0033;
-            border: 3px solid #ff00ff;
-            border-radius: 20px;
-            padding: 25px 30px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 0 50px #ff00ff33;
-        }
-        .header h1 { color: #00ff41; font-size: 32px; text-shadow: 0 0 30px #00ff41; }
-        .btn {
-            padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer;
-            transition: all 0.3s; font-family: 'Courier New', monospace; border: none;
-        }
-        .btn-danger { background: #ff000033; border: 2px solid #ff0000; color: #ff6b6b; }
-        .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
-        .btn-success { background: #00ff4120; border: 2px solid #00ff41; color: #00ff41; }
-        .btn-warning { background: #ffff0020; border: 2px solid #ffff00; color: #ffff00; }
-        .btn:hover { transform: scale(1.05); }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        .stat-card {
-            background: #1a0033; border: 2px solid; border-radius: 15px;
-            padding: 20px; text-align: center;
-        }
-        .stat-value {
-            font-size: 42px; font-weight: bold;
-            background: linear-gradient(45deg, #ff00ff, #00ff41);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .stat-label { color: #fff; font-size: 14px; margin-top: 8px; }
-        
-        .panel {
-            background: #1a0033; border: 2px solid #00ff41; border-radius: 20px;
-            padding: 25px; margin-bottom: 25px;
-        }
-        .panel-title { color: #00ff41; font-size: 22px; margin-bottom: 20px; }
-        
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px; margin-bottom: 20px;
-        }
-        .form-group label { color: #00ff41; display: block; margin-bottom: 8px; font-size: 13px; }
-        .form-group input, .form-group select {
-            width: 100%; padding: 12px; background: #0a0a0a; border: 2px solid #00ff41;
-            border-radius: 10px; color: #00ff41; font-family: 'Courier New', monospace;
-        }
-        
-        .scope-selector {
-            display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;
-            max-height: 200px; overflow-y: auto; padding: 10px;
-            background: #0a0a0a; border-radius: 10px;
-        }
-        .scope-item {
-            padding: 8px 15px; background: #1a0033; border: 1px solid #00ff41;
-            border-radius: 20px; color: #00ff41; cursor: pointer; font-size: 12px;
-        }
-        .scope-item.selected { background: #00ff41; color: #000; border-color: #00ff41; }
-        
-        .key-table {
-            width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px;
-        }
-        .key-table th {
-            background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000;
-            padding: 12px; text-align: left; position: sticky; top: 0;
-        }
-        .key-table td { padding: 10px; border-bottom: 1px solid #ffffff20; color: #fff; }
-        .key-table tr:hover { background: #ffffff10; }
-        
-        .status-badge {
-            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;
-        }
-        .status-active { background: #00ff4120; color: #00ff41; border: 1px solid #00ff41; }
-        .status-expired { background: #ff000020; color: #ff6b6b; border: 1px solid #ff0000; }
-        .status-exhausted { background: #ffff0020; color: #ffff00; border: 1px solid #ffff00; }
-        
-        .action-btn {
-            padding: 5px 12px; margin: 0 3px; border-radius: 8px; font-size: 11px;
-            cursor: pointer; background: transparent; border: 1px solid;
-        }
-        .action-btn.edit { border-color: #00ff41; color: #00ff41; }
-        .action-btn.reset { border-color: #ffff00; color: #ffff00; }
-        .action-btn.delete { border-color: #ff0000; color: #ff6b6b; }
-        .action-btn.copy { border-color: #ff00ff; color: #ff00ff; }
-        
-        .toast {
-            position: fixed; bottom: 30px; right: 30px; background: #1a0033;
-            color: #00ff41; padding: 15px 30px; border-radius: 50px;
-            border: 2px solid #00ff41; box-shadow: 0 0 40px #00ff41;
-            z-index: 9999; animation: slideIn 0.3s;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .table-container { max-height: 500px; overflow-y: auto; }
-        
-        .preset-buttons {
-            display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;
-        }
-        .preset-btn {
-            padding: 8px 15px; background: #0a0a0a; border: 1px solid #ff00ff;
-            border-radius: 20px; color: #ff00ff; cursor: pointer; font-size: 12px;
-        }
-    </style>
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>🔐 BRONX ADMIN | DASHBOARD</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New',monospace;background:linear-gradient(135deg,#0a0a0a,#1a0033,#0a0a0a);min-height:100vh;padding:20px;color:#fff}
+.container{max-width:1400px;margin:0 auto}
+.header{background:#1a0033;border:3px solid #ff00ff;border-radius:20px;padding:25px 30px;margin-bottom:25px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 50px #ff00ff33}
+.header h1{color:#00ff41;font-size:32px;text-shadow:0 0 30px #00ff41}
+.btn{padding:12px 25px;border-radius:12px;font-weight:bold;cursor:pointer;transition:all .3s;font-family:'Courier New',monospace;border:none}
+.btn-danger{background:#ff000033;border:2px solid #ff0000;color:#ff6b6b}
+.btn-primary{background:linear-gradient(45deg,#ff00ff,#00ff41);color:#000}
+.btn-success{background:#00ff4120;border:2px solid #00ff41;color:#00ff41}
+.btn-warning{background:#ffff0020;border:2px solid #ffff00;color:#ffff00}
+.btn:hover{transform:scale(1.05)}
+.panel{background:#1a0033;border:2px solid #00ff41;border-radius:20px;padding:25px;margin-bottom:25px}
+.panel-title{color:#00ff41;font-size:22px;margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
+.form-group label{color:#00ff41;display:block;margin-bottom:8px;font-size:13px}
+.form-group input,.form-group select{width:100%;padding:12px;background:#0a0a0a;border:2px solid #00ff41;border-radius:10px;color:#00ff41;font-family:'Courier New',monospace}
+.scope-selector{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0;max-height:200px;overflow-y:auto;padding:10px;background:#0a0a0a;border-radius:10px}
+.scope-item{padding:8px 15px;background:#1a0033;border:1px solid #00ff41;border-radius:20px;color:#00ff41;cursor:pointer;font-size:12px}
+.scope-item.selected{background:#00ff41;color:#000;border-color:#00ff41}
+.key-table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}
+.key-table th{background:linear-gradient(45deg,#ff00ff,#00ff41);color:#000;padding:12px;text-align:left;position:sticky;top:0}
+.key-table td{padding:10px;border-bottom:1px solid #ffffff20}
+.key-table tr:hover{background:#ffffff10}
+.status-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold}
+.status-active{background:#00ff4120;color:#00ff41;border:1px solid #00ff41}
+.status-expired{background:#ff000020;color:#ff6b6b;border:1px solid #ff0000}
+.status-exhausted{background:#ffff0020;color:#ffff00;border:1px solid #ffff00}
+.action-btn{padding:5px 12px;margin:0 3px;border-radius:8px;font-size:11px;cursor:pointer;background:transparent;border:1px solid}
+.action-btn.copy{border-color:#ff00ff;color:#ff00ff}
+.action-btn.reset{border-color:#ffff00;color:#ffff00}
+.action-btn.delete{border-color:#ff0000;color:#ff6b6b}
+.toast{position:fixed;bottom:30px;right:30px;background:#1a0033;color:#00ff41;padding:15px 30px;border-radius:50px;border:2px solid #00ff41;box-shadow:0 0 40px #00ff41;z-index:9999;animation:slideIn .3s}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.table-container{max-height:500px;overflow-y:auto}
+.preset-buttons{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap}
+.preset-btn{padding:8px 15px;background:#0a0a0a;border:1px solid #ff00ff;border-radius:20px;color:#ff00ff;cursor:pointer;font-size:12px}
+</style></head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>⚡ BRONX ADMIN PANEL</h1>
-            <div style="display: flex; gap: 15px;">
-                <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
-                <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
-            </div>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card"><div class="stat-value" id="totalKeys">0</div><div class="stat-label">TOTAL KEYS</div></div>
-            <div class="stat-card"><div class="stat-value" id="activeKeys">0</div><div class="stat-label">ACTIVE KEYS</div></div>
-            <div class="stat-card"><div class="stat-value" id="totalRequests">0</div><div class="stat-label">TOTAL REQUESTS</div></div>
-            <div class="stat-card"><div class="stat-value" id="todayRequests">0</div><div class="stat-label">TODAY REQUESTS</div></div>
-            <div class="stat-card"><div class="stat-value" id="customApisCount">0</div><div class="stat-label">CUSTOM APIs</div></div>
-        </div>
-        
-        <!-- Key Generator Panel -->
-        <div class="panel">
-            <div class="panel-title">🔑 KEY GENERATOR</div>
-            <div class="form-grid">
-                <div class="form-group"><label>🔐 API KEY</label><input type="text" id="newKey" placeholder="Auto-generated"></div>
-                <div class="form-group"><label>👤 OWNER NAME</label><input type="text" id="newName" value="Premium User"></div>
-                <div class="form-group"><label>📊 REQUEST LIMIT</label><input type="number" id="newLimit" value="100"></div>
-                <div class="form-group"><label>⏰ EXPIRY</label><input type="text" id="newExpiry" value="31-12-2026"></div>
-            </div>
-            
-            <div class="preset-buttons">
-                <span class="preset-btn" onclick="selectAllScopes()">✅ All</span>
-                <span class="preset-btn" onclick="clearAllScopes()">❌ Clear</span>
-                <span class="preset-btn" onclick="selectPhone()">📱 Phone</span>
-                <span class="preset-btn" onclick="selectFinance()">💰 Finance</span>
-                <span class="preset-btn" onclick="selectVehicle()">🚗 Vehicle</span>
-                <span class="preset-btn" onclick="selectSocial()">🌐 Social</span>
-            </div>
-            
-            <label style="color:#00ff41;margin:10px 0;display:block;">📌 SELECT SCOPES:</label>
-            <div class="scope-selector" id="scopeSelector"></div>
-            
-            <div class="form-grid">
-                <div class="form-group"><label>✨ UNLIMITED</label><select id="newUnlimited"><option value="false">No</option><option value="true">Yes</option></select></div>
-                <div class="form-group"><label>👁️ VISIBILITY</label><select id="newHidden"><option value="false">Visible</option><option value="true">Hidden</option></select></div>
-            </div>
-            
-            <button class="btn btn-primary" style="width:100%;padding:15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
-        </div>
-        
-        <!-- Keys Table -->
-        <div class="panel">
-            <div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
-            <div class="table-container">
-                <table class="key-table">
-                    <thead><tr><th>KEY</th><th>OWNER</th><th>LIMIT</th><th>USED</th><th>REMAINING</th><th>EXPIRY</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
-                    <tbody id="keysTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div id="toastContainer"></div>
-    
-    <script>
-        if (localStorage.getItem('bronx_admin_auth') !== 'true') { window.location.href = '/admin'; }
-        
-        const SCOPES = ['number','numv2','adv','name','aadhar','upi','ifsc','pan','pincode','ip','vehicle','rc','ff','bgmi','insta','git','tg','pk','pkv2'];
-        const scopeDiv = document.getElementById('scopeSelector');
-        SCOPES.forEach(s => { const sp = document.createElement('span'); sp.className='scope-item'; sp.textContent=s; sp.onclick=function(){this.classList.toggle('selected');}; scopeDiv.appendChild(sp); });
-        
-        function showToast(msg, err) { const t = document.createElement('div'); t.className='toast'; t.style.color=err?'#ff6b6b':'#00ff41'; t.textContent=msg; document.getElementById('toastContainer').appendChild(t); setTimeout(()=>t.remove(),3000); }
-        function generateRandomKey() { return 'BRONX_' + Math.random().toString(36).substring(2,10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase(); }
-        function getSelectedScopes() { return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(e=>e.textContent); }
-        function selectAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(e=>e.classList.add('selected')); }
-        function clearAllScopes() { document.querySelectorAll('#scopeSelector .scope-item').forEach(e=>e.classList.remove('selected')); }
-        function selectPhone() { clearAllScopes(); ['number','numv2','adv','name','aadhar'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
-        function selectFinance() { clearAllScopes(); ['upi','ifsc','pan'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
-        function selectVehicle() { clearAllScopes(); ['vehicle','rc'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
-        function selectSocial() { clearAllScopes(); ['insta','git','tg'].forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected');}); }
-        
-        async function generateKey() {
-            let key = document.getElementById('newKey').value || generateRandomKey();
-            const name = document.getElementById('newName').value || 'Premium User';
-            const limit = parseInt(document.getElementById('newLimit').value) || 100;
-            const expiry = document.getElementById('newExpiry').value || '31-12-2026';
-            const unlimited = document.getElementById('newUnlimited').value === 'true';
-            const hidden = document.getElementById('newHidden').value === 'true';
-            const scopes = getSelectedScopes();
-            if (scopes.length === 0) { showToast('❌ Select at least one scope!', true); return; }
-            
-            try {
-                const res = await fetch('/admin/generate-key', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key, name, scopes, limit, expiry, unlimited, hidden}) });
-                const data = await res.json();
-                if (data.success) { showToast('✅ Key generated: ' + key); document.getElementById('newKey').value=''; refreshData(); }
-                else { showToast(data.error || 'Failed', true); }
-            } catch(err) { showToast('❌ Error: ' + err.message, true); }
-        }
-        
-        async function refreshData() {
-            try {
-                const res = await fetch('/admin/keys');
-                const data = await res.json();
-                if (data.success) {
-                    const keys = data.keys;
-                    const keysArray = Object.entries(keys);
-                    document.getElementById('totalKeys').textContent = keysArray.length;
-                    let active=0, totalReqs=0;
-                    keysArray.forEach(([_,k])=>{ totalReqs+=k.used||0; const ne=!k.expiry||k.expiry==='Never'||new Date(k.expiry.split('-').reverse().join('-')); if(ne&&(k.limit==='Unlimited'||k.used<k.limit))active++; });
-                    document.getElementById('activeKeys').textContent=active;
-                    document.getElementById('totalRequests').textContent=totalReqs;
-                    
-                    const tbody = document.getElementById('keysTableBody');
-                    tbody.innerHTML = keysArray.map(([kn,k])=>{
-                        const isExp=k.expiry&&k.expiry!=='Never'&&new Date(k.expiry.split('-').reverse().join('-'))<new Date();
-                        const isEx=k.limit!=='Unlimited'&&k.used>=k.limit;
-                        let st='✅ Active', sc='status-active';
-                        if(isExp){st='⏰ Expired';sc='status-expired';}else if(isEx){st='🛑 Exhausted';sc='status-exhausted';}
-                        const dk=kn.length>18?kn.substring(0,15)+'...':kn;
-                        const rem=k.limit==='Unlimited'?'∞':Math.max(0,k.limit-k.used);
-                        return '<tr><td><code style="color:#ff00ff;">'+dk+'</code>'+(k.hidden?' 🔒':'')+'</td><td>'+(k.owner||'-')+'</td><td>'+(k.limit==='Unlimited'?'∞':k.limit)+'</td><td>'+(k.used||0)+'</td><td style="color:'+(rem===0?'#ff6b6b':'#00ff41')+';">'+rem+'</td><td>'+(k.expiry||'Never')+'</td><td><span class="status-badge '+sc+'">'+st+'</span></td><td><button class="action-btn copy" onclick="copyKey(\''+kn+'\')">📋</button><button class="action-btn reset" onclick="resetKey(\''+kn+'\')">🔄</button><button class="action-btn delete" onclick="deleteKey(\''+kn+'\')">🗑️</button></td></tr>';
-                    }).join('');
-                }
-            } catch(err) { console.error(err); }
-        }
-        
-        function copyKey(k) { navigator.clipboard.writeText(k); showToast('📋 Copied!'); }
-        async function resetKey(k) { if(!confirm('Reset?'))return; await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})}); showToast('✅ Reset!'); refreshData(); }
-        async function deleteKey(k) { if(!confirm('DELETE?'))return; await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})}); showToast('✅ Deleted!'); refreshData(); }
-        function logout() { localStorage.removeItem('bronx_admin_auth'); window.location.href = '/admin'; }
-        refreshData();
-    </script>
-</body>
-</html>`;
-    res.send(html);
+<div class="container">
+<div class="header"><h1>⚡ BRONX ADMIN PANEL</h1><div style="display:flex;gap:15px"><button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button><button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button></div></div>
+
+<div class="panel"><div class="panel-title">🔑 KEY GENERATOR</div>
+<div class="form-grid">
+<div class="form-group"><label>🔐 API KEY</label><input type="text" id="newKey" placeholder="Auto-generated"></div>
+<div class="form-group"><label>👤 OWNER NAME</label><input type="text" id="newName" value="Premium User"></div>
+<div class="form-group"><label>📊 REQUEST LIMIT</label><input type="number" id="newLimit" value="100"></div>
+<div class="form-group"><label>⏰ EXPIRY</label><input type="text" id="newExpiry" value="31-12-2026"></div>
+</div>
+<div class="preset-buttons">
+<span class="preset-btn" onclick="selectAll()">✅ All</span><span class="preset-btn" onclick="clearAll()">❌ Clear</span>
+<span class="preset-btn" onclick="selectGroup(['number','numv2','adv','name','aadhar'])">📱 Phone</span>
+<span class="preset-btn" onclick="selectGroup(['upi','ifsc','pan'])">💰 Finance</span>
+</div>
+<label style="color:#00ff41;margin:10px 0;display:block">📌 SELECT SCOPES:</label>
+<div class="scope-selector" id="scopeSelector"></div>
+<div class="form-grid">
+<div class="form-group"><label>✨ UNLIMITED</label><select id="newUnlimited"><option value="false">No</option><option value="true">Yes</option></select></div>
+<div class="form-group"><label>👁️ VISIBILITY</label><select id="newHidden"><option value="false">Visible</option><option value="true">Hidden</option></select></div>
+</div>
+<button class="btn btn-primary" style="width:100%;padding:15px" onclick="generateKey()">🚀 GENERATE KEY</button></div>
+
+<div class="panel"><div class="panel-title">📋 ALL KEYS MANAGEMENT</div>
+<div class="table-container"><table class="key-table"><thead><tr><th>KEY</th><th>OWNER</th><th>LIMIT</th><th>USED</th><th>REMAINING</th><th>EXPIRY</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="keysTableBody"></tbody></table></div></div>
+</div>
+<div id="toastContainer"></div>
+
+<script>
+if(localStorage.getItem('bronx_admin_auth')!=='true')window.location.href='/admin';
+const SCOPES=['number','numv2','adv','name','aadhar','upi','ifsc','pan','pincode','ip','vehicle','rc','ff','bgmi','insta','git','tg','pk','pkv2'];
+const sd=document.getElementById('scopeSelector');
+SCOPES.forEach(s=>{const sp=document.createElement('span');sp.className='scope-item';sp.textContent=s;sp.onclick=function(){this.classList.toggle('selected')};sd.appendChild(sp)});
+
+function showToast(m,e){const t=document.createElement('div');t.className='toast';t.style.color=e?'#ff6b6b':'#00ff41';t.textContent=m;document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.remove(),3000)}
+function genKey(){return'BRONX_'+Math.random().toString(36).substring(2,10).toUpperCase()+'_'+Date.now().toString(36).toUpperCase()}
+function getScopes(){return Array.from(document.querySelectorAll('#scopeSelector .scope-item.selected')).map(e=>e.textContent)}
+function selectAll(){document.querySelectorAll('#scopeSelector .scope-item').forEach(e=>e.classList.add('selected'))}
+function clearAll(){document.querySelectorAll('#scopeSelector .scope-item').forEach(e=>e.classList.remove('selected'))}
+function selectGroup(g){clearAll();g.forEach(s=>{Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(e=>e.textContent===s)?.classList.add('selected')})}
+
+async function generateKey(){
+let k=document.getElementById('newKey').value||genKey();
+const n=document.getElementById('newName').value||'User';
+const l=parseInt(document.getElementById('newLimit').value)||100;
+const e=document.getElementById('newExpiry').value||'31-12-2026';
+const u=document.getElementById('newUnlimited').value==='true';
+const h=document.getElementById('newHidden').value==='true';
+const s=getScopes();
+if(!s.length){showToast('❌ Select scopes!',true);return}
+try{
+const r=await fetch('/admin/generate-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,name:n,scopes:s,limit:l,expiry:e,unlimited:u,hidden:h})});
+const d=await r.json();
+d.success?(showToast('✅ Generated: '+k),document.getElementById('newKey').value='',refreshData()):showToast(d.error||'Failed',true)
+}catch(err){showToast('❌ Error',true)}
+}
+
+async function refreshData(){
+try{
+const r=await fetch('/admin/keys');const d=await r.json();
+if(!d.success)return;
+const keys=Object.entries(d.keys);
+let a=0,t=0;keys.forEach(([_,k])=>{t+=k.used||0;if((!k.expiry||k.expiry==='Never'||new Date(k.expiry.split('-').reverse().join('-'))>new Date())&&(k.limit==='Unlimited'||k.used<k.limit))a++});
+document.getElementById('keysTableBody').innerHTML=keys.map(([kn,k])=>{
+const ie=k.expiry&&k.expiry!=='Never'&&new Date(k.expiry.split('-').reverse().join('-'))<new Date();
+const ix=k.limit!=='Unlimited'&&k.used>=k.limit;
+let st='✅ Active',sc='status-active';
+if(ie){st='⏰ Expired';sc='status-expired'}else if(ix){st='🛑 Exhausted';sc='status-exhausted'}
+const dk=kn.length>18?kn.substring(0,15)+'...':kn;
+const rem=k.limit==='Unlimited'?'∞':Math.max(0,k.limit-k.used);
+return'<tr><td><code style="color:#ff00ff">'+dk+'</code>'+(k.hidden?' 🔒':'')+'</td><td>'+(k.owner||'-')+'</td><td>'+(k.limit==='Unlimited'?'∞':k.limit)+'</td><td>'+(k.used||0)+'</td><td style="color:'+(rem===0?'#ff6b6b':'#00ff41')+'">'+rem+'</td><td>'+(k.expiry||'Never')+'</td><td><span class="status-badge '+sc+'">'+st+'</span></td><td><button class="action-btn copy" onclick="copyKey(\''+kn+'\')">📋</button><button class="action-btn reset" onclick="resetKey(\''+kn+'\')">🔄</button><button class="action-btn delete" onclick="deleteKey(\''+kn+'\')">🗑️</button></td></tr>'
+}).join('')
+}catch(e){}
+}
+
+function copyKey(k){navigator.clipboard.writeText(k);showToast('📋 Copied!')}
+async function resetKey(k){if(!confirm('Reset?'))return;await fetch('/admin/reset-usage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})});showToast('✅ Reset!');refreshData()}
+async function deleteKey(k){if(!confirm('DELETE?'))return;await fetch('/admin/delete-key',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})});showToast('✅ Deleted!');refreshData()}
+function logout(){localStorage.removeItem('bronx_admin_auth');window.location.href='/admin'}
+refreshData();
+</script></body></html>`);
 });
 
 // ========== ADMIN API ENDPOINTS ==========
-
-// GET ALL KEYS - WITH FILE RELOAD
 app.get('/admin/keys', (req, res) => {
-    // Reload from file to sync
     const saved = loadKeysFromFile();
-    if (saved && Object.keys(saved).length > 0) {
-        Object.assign(keyStorage, saved);
+    if (saved && Object.keys(saved).length > 0) Object.assign(keyStorage, saved);
+    
+    const allKeys = {};
+    Object.entries(keyStorage).forEach(([key, data]) => {
+        allKeys[key] = { owner: data.name, scopes: data.scopes, limit: data.unlimited ? 'Unlimited' : data.limit, used: data.used, expiry: data.expiryStr || 'Never', hidden: data.hidden || false };
+    });
+    res.json({ success: true, keys: allKeys });
+});
+
+app.post('/admin/generate-key', (req, res) => {
+    const { key, name, scopes, limit, expiry, unlimited, hidden } = req.body;
+    if (!key) return res.json({ success: false, error: 'Key required' });
+    if (keyStorage[key]) return res.json({ success: false, error: 'Key exists' });
+    
+    let expiryDate = null, expiryStr = null;
+    if (expiry && expiry !== 'never') {
+        const parts = expiry.split('-');
+        if (parts.length === 3) { expiryDate = new Date(parts[2], parts[1] - 1, parts[0], 23, 59, 59); expiryStr = expiry; }
+    }
+    
+    keyStorage[key] = { name: name || 'User', scopes: scopes || ['number'], type: 'premium', limit: unlimited ? Infinity : (parseInt(limit) || 100), used: 0, expiry: expiryDate, expiryStr, created: getIndiaDateTime(), unlimited: unlimited || false, hidden: hidden || false };
+    saveKeysToFile();
+    res.json({ success: true, message: 'Key generated!', key });
+});
+
+app.post('/admin/reset-usage', (req, res) => {
+    const { key } = req.body;
+    if (keyStorage[key]) { keyStorage[key].used = 0; saveKeysToFile(); res.json({ success: true }); }
+    else res.json({ success: false, error: 'Key not found' });
+});
+
+app.delete('/admin/delete-key', (req, res) => {
+    const { key } = req.body;
+    if (keyStorage[key]) { delete keyStorage[key]; saveKeysToFile(); res.json({ success: true }); }
+    else res.json({ success: false, error: 'Key not found' });
+});
+
+console.log('✅ Admin Panel ready at /admin');
+
+// ========== ADMIN API ENDPOINTS ==========
+
+app.get('/admin/keys', (req, res) => {
+    // Reload from file to get latest
+    const fileKeys = loadKeysFromFile();
+    if (fileKeys) {
+        keyStorage = fileKeys;
     }
     
     const allKeys = {};
@@ -834,10 +682,11 @@ app.get('/admin/keys', (req, res) => {
     res.json({ success: true, keys: allKeys });
 });
 
-// GENERATE KEY - SAVES TO FILE
+// FIXED: Generate key with proper body parsing
 app.post('/admin/generate-key', (req, res) => {
-    console.log('Body received:', req.body);
+    console.log('Body received:', req.body); // Debug
     
+    // Manual extraction for safety
     const key = req.body.key;
     const name = req.body.name;
     const scopes = req.body.scopes;
@@ -846,8 +695,13 @@ app.post('/admin/generate-key', (req, res) => {
     const unlimited = req.body.unlimited;
     const hidden = req.body.hidden;
     
-    if (!key) return res.json({ success: false, error: 'Key required' });
-    if (keyStorage[key]) return res.json({ success: false, error: 'Key already exists' });
+    if (!key) {
+        return res.json({ success: false, error: 'Key required' });
+    }
+    
+    if (keyStorage[key]) {
+        return res.json({ success: false, error: 'Key already exists' });
+    }
     
     let expiryDate = null;
     let expiryStr = null;
@@ -874,30 +728,27 @@ app.post('/admin/generate-key', (req, res) => {
         hidden: hidden || false
     };
     
-    // 💾 SAVE TO FILE - TURANT!
-    saveKeysToFile();
+    saveKeysToFile(); // ← ADD THIS LIN
     
     res.json({ success: true, message: 'Key generated!', key });
 });
 
-// RESET USAGE - SAVES TO FILE
 app.post('/admin/reset-usage', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        saveKeysToFile(); // 💾 SAVE
+        saveKeysToFile(); // ← ADD THIS LINE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
     }
 });
 
-// DELETE KEY - SAVES TO FILE
 app.delete('/admin/delete-key', (req, res) => {
     const key = req.body.key;
     if (keyStorage[key]) {
         delete keyStorage[key];
-        saveKeysToFile(); // 💾 SAVE
+        saveKeysToFile(); // ← ADD THIS LINE
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Key not found' });
