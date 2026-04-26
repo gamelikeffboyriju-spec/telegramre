@@ -1,16 +1,11 @@
-const express = require('express');
-const axios = require('axios');
-const fs = require('fs');      // ← ADD THIS LINE
-const path = require('path');  // ← ADD THIS LINE
-
+const fs = require('fs');
+const path = require('path');
+const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
 const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
 const REAL_API_KEY = 'backup-bot';
-
-// ========== KEYS FILE STORAGE ==========
-const KEYS_FILE = path.join('/tmp', 'bronx_keys.json');
 
 // Load keys from file
 function loadKeysFromFile() {
