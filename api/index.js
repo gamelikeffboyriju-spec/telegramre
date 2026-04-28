@@ -325,6 +325,13 @@ const ADMIN_PASSWORD = 'bronx2026';
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ========== KEY STORAGE (Memory me store karo) ==========
+// Agar tumhare paas already keyStorage hai toh ye line hata do
+if (!global.keyStorage) {
+    global.keyStorage = {};
+}
+const keyStorage = global.keyStorage;
+
 // ========== ADMIN LOGIN PAGE ==========
 app.get('/admin', (req, res) => {
     const html = `<!DOCTYPE html>
@@ -350,11 +357,6 @@ app.get('/admin', (req, res) => {
             padding: 50px 40px;
             width: 400px;
             box-shadow: 0 0 80px #ff00ff66;
-            animation: glow 3s infinite;
-        }
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 30px #ff00ff66, 0 0 60px #00ff4133; }
-            50% { box-shadow: 0 0 50px #00ff4166, 0 0 80px #ff00ff33; }
         }
         h1 { color: #00ff41; text-align: center; font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 30px #00ff41; }
         .subtitle { color: #ff00ff; text-align: center; margin-bottom: 30px; font-size: 14px; }
@@ -371,7 +373,6 @@ app.get('/admin', (req, res) => {
         }
         .btn:hover { transform: scale(1.05); box-shadow: 0 0 40px #00ff41; }
         .error { color: #ff0000; text-align: center; margin-top: 15px; }
-        .hint { color: #ffff00; text-align: center; margin-top: 20px; font-size: 12px; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -384,7 +385,6 @@ app.get('/admin', (req, res) => {
         </div>
         <button class="btn" onclick="login()">🚀 LOGIN</button>
         <div id="error" class="error"></div>
-        <div class="hint">Default: bronx2026</div>
     </div>
     <script>
         const ADMIN_PASS = '${ADMIN_PASSWORD}';
@@ -427,6 +427,7 @@ app.get('/admin/dashboard', (req, res) => {
             background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
             min-height: 100vh;
             padding: 20px;
+            color: #fff;
         }
         .container { max-width: 1400px; margin: 0 auto; }
         .header {
@@ -438,22 +439,23 @@ app.get('/admin/dashboard', (req, res) => {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 0 50px #ff00ff33;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         .header h1 { color: #00ff41; font-size: 32px; text-shadow: 0 0 30px #00ff41; }
         .btn {
             padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer;
             transition: all 0.3s; font-family: 'Courier New', monospace; border: none;
+            font-size: 14px;
         }
         .btn-danger { background: #ff000033; border: 2px solid #ff0000; color: #ff6b6b; }
         .btn-primary { background: linear-gradient(45deg, #ff00ff, #00ff41); color: #000; }
         .btn-success { background: #00ff4120; border: 2px solid #00ff41; color: #00ff41; }
-        .btn-warning { background: #ffff0020; border: 2px solid #ffff00; color: #ffff00; }
         .btn:hover { transform: scale(1.05); }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 25px;
         }
@@ -498,6 +500,7 @@ app.get('/admin/dashboard', (req, res) => {
         .scope-item {
             padding: 8px 15px; background: #1a0033; border: 1px solid #00ff41;
             border-radius: 20px; color: #00ff41; cursor: pointer; font-size: 12px;
+            transition: all 0.2s;
         }
         .scope-item.selected { background: #00ff41; color: #000; border-color: #00ff41; }
         
@@ -519,13 +522,12 @@ app.get('/admin/dashboard', (req, res) => {
         .status-exhausted { background: #ffff0020; color: #ffff00; border: 1px solid #ffff00; }
         
         .action-btn {
-            padding: 5px 12px; margin: 0 3px; border-radius: 8px; font-size: 11px;
-            cursor: pointer; background: transparent; border: 1px solid;
+            padding: 6px 12px; margin: 0 3px; border-radius: 8px; font-size: 12px;
+            cursor: pointer; background: transparent; border: 1px solid; font-weight: bold;
         }
-        .action-btn.edit { border-color: #00ff41; color: #00ff41; }
+        .action-btn.copy { border-color: #ff00ff; color: #ff00ff; }
         .action-btn.reset { border-color: #ffff00; color: #ffff00; }
         .action-btn.delete { border-color: #ff0000; color: #ff6b6b; }
-        .action-btn.copy { border-color: #ff00ff; color: #ff00ff; }
         
         .toast {
             position: fixed; bottom: 30px; right: 30px; background: #1a0033;
@@ -553,12 +555,10 @@ app.get('/admin/dashboard', (req, res) => {
     <div class="container">
         <div class="header">
             <h1>⚡ BRONX ADMIN PANEL</h1>
-            <div style="display: flex; gap: 15px;">
-    <button class="btn btn-warning" onclick="importKeys()">📥 IMPORT</button>
-    <button class="btn btn-success" onclick="exportKeys()">📤 EXPORT</button>
-    <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
-    <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
-</div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <button class="btn btn-success" onclick="refreshData()">🔄 REFRESH</button>
+                <button class="btn btn-danger" onclick="logout()">🚪 LOGOUT</button>
+            </div>
         </div>
         
         <div class="stats-grid">
@@ -622,8 +622,8 @@ app.get('/admin/dashboard', (req, res) => {
                 <div class="form-group">
                     <label>✨ UNLIMITED</label>
                     <select id="newUnlimited">
-                        <option value="false">No (Use limit)</option>
-                        <option value="true">Yes (Unlimited)</option>
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -635,7 +635,7 @@ app.get('/admin/dashboard', (req, res) => {
                 </div>
             </div>
             
-            <button class="btn btn-primary" style="width: 100%; padding: 15px;" onclick="generateKey()">🚀 GENERATE KEY</button>
+            <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 18px;" onclick="generateKey()">🚀 GENERATE KEY</button>
         </div>
         
         <!-- Keys Table -->
@@ -647,6 +647,7 @@ app.get('/admin/dashboard', (req, res) => {
                         <tr>
                             <th>KEY</th>
                             <th>OWNER</th>
+                            <th>SCOPES</th>
                             <th>LIMIT</th>
                             <th>USED</th>
                             <th>REMAINING</th>
@@ -660,16 +661,6 @@ app.get('/admin/dashboard', (req, res) => {
             </div>
         </div>
     </div>
-    <!-- Activity Terminal Panel -->
-<div class="panel">
-    <div class="panel-title" style="display: flex; justify-content: space-between;">
-        <span>🖥️ ACTIVITY TERMINAL</span>
-        <button class="btn btn-success" style="padding: 5px 15px; font-size: 12px;" onclick="loadTerminal()">🔄 Refresh Terminal</button>
-    </div>
-    <div id="terminalContainer" style="background: #000; border: 1px solid #00ff41; border-radius: 10px; padding: 15px; max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
-        <div style="color: #00ff41;">> Terminal ready...</div>
-    </div>
-</div>
     
     <div id="toastContainer"></div>
     
@@ -680,6 +671,7 @@ app.get('/admin/dashboard', (req, res) => {
         
         const SCOPES = ['number', 'numv2', 'adv', 'name', 'aadhar', 'upi', 'ifsc', 'pan', 'pincode', 'ip', 'vehicle', 'rc', 'ff', 'bgmi', 'insta', 'git', 'tg', 'pk', 'pkv2'];
         
+        // Populate scopes
         const scopeDiv = document.getElementById('scopeSelector');
         SCOPES.forEach(scope => {
             const span = document.createElement('span');
@@ -709,32 +701,27 @@ app.get('/admin/dashboard', (req, res) => {
         function selectAllScopes() {
             document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.add('selected'));
         }
-        
         function clearAllScopes() {
             document.querySelectorAll('#scopeSelector .scope-item').forEach(el => el.classList.remove('selected'));
         }
-        
         function selectPhone() {
             clearAllScopes();
             ['number', 'numv2', 'adv', 'name', 'aadhar'].forEach(s => {
                 Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
-        
         function selectFinance() {
             clearAllScopes();
             ['upi', 'ifsc', 'pan'].forEach(s => {
                 Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
-        
         function selectVehicle() {
             clearAllScopes();
             ['vehicle', 'rc'].forEach(s => {
                 Array.from(document.querySelectorAll('#scopeSelector .scope-item')).find(el => el.textContent === s)?.classList.add('selected');
             });
         }
-        
         function selectSocial() {
             clearAllScopes();
             ['insta', 'git', 'tg'].forEach(s => {
@@ -743,12 +730,12 @@ app.get('/admin/dashboard', (req, res) => {
         }
         
         async function generateKey() {
-            let key = document.getElementById('newKey').value;
+            let key = document.getElementById('newKey').value.trim();
             if (!key) key = generateRandomKey();
             
-            const name = document.getElementById('newName').value || 'Premium User';
+            const name = document.getElementById('newName').value.trim() || 'Premium User';
             const limit = parseInt(document.getElementById('newLimit').value) || 100;
-            const expiry = document.getElementById('newExpiry').value || '31-12-2026';
+            const expiry = document.getElementById('newExpiry').value.trim() || '31-12-2026';
             const unlimited = document.getElementById('newUnlimited').value === 'true';
             const hidden = document.getElementById('newHidden').value === 'true';
             const scopes = getSelectedScopes();
@@ -758,8 +745,17 @@ app.get('/admin/dashboard', (req, res) => {
                 return;
             }
             
-            const payload = { key, name, scopes, limit, expiry, unlimited, hidden };
-            console.log('Sending:', payload);
+            const payload = { 
+                key: key, 
+                name: name, 
+                scopes: scopes, 
+                limit: limit, 
+                expiry: expiry, 
+                unlimited: unlimited, 
+                hidden: hidden 
+            };
+            
+            console.log('Sending payload:', JSON.stringify(payload));
             
             try {
                 const res = await fetch('/admin/generate-key', {
@@ -768,100 +764,129 @@ app.get('/admin/dashboard', (req, res) => {
                     body: JSON.stringify(payload)
                 });
                 
-                const data = await res.json();
+                const text = await res.text();
+                console.log('Raw response:', text);
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    showToast('❌ Invalid response from server', true);
+                    return;
+                }
                 
                 if (data.success) {
                     showToast('✅ Key generated: ' + key);
                     document.getElementById('newKey').value = '';
-                    refreshData();
+                    await refreshData();
                 } else {
-                    showToast(data.error || 'Failed', true);
+                    showToast('❌ ' + (data.error || 'Failed'), true);
                 }
             } catch (err) {
                 showToast('❌ Error: ' + err.message, true);
+                console.error(err);
             }
         }
         
         async function refreshData() {
             try {
                 const res = await fetch('/admin/keys');
-                const data = await res.json();
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    console.error('Invalid JSON from /admin/keys');
+                    return;
+                }
                 
                 if (data.success) {
                     const keys = data.keys;
                     const keysArray = Object.entries(keys);
                     
                     document.getElementById('totalKeys').textContent = keysArray.length;
+                    document.getElementById('customApisCount').textContent = keysArray.length;
                     
                     let active = 0, totalReqs = 0;
                     keysArray.forEach(([_, k]) => {
-                        totalReqs += k.used || 0;
+                        totalReqs += (k.used || 0);
                         const notExpired = !k.expiry || k.expiry === 'Never' || new Date(k.expiry.split('-').reverse().join('-')) > new Date();
-                        const hasQuota = k.limit === 'Unlimited' || k.used < k.limit;
+                        const hasQuota = k.limit === 'Unlimited' || (k.used || 0) < k.limit;
                         if (notExpired && hasQuota) active++;
                     });
                     
                     document.getElementById('activeKeys').textContent = active;
                     document.getElementById('totalRequests').textContent = totalReqs;
-                    document.getElementById('customApisCount').textContent = '6';
                     
                     const tbody = document.getElementById('keysTableBody');
                     tbody.innerHTML = keysArray.map(([keyName, k]) => {
                         const isExpired = k.expiry && k.expiry !== 'Never' && new Date(k.expiry.split('-').reverse().join('-')) < new Date();
-                        const isExhausted = k.limit !== 'Unlimited' && k.used >= k.limit;
+                        const isExhausted = k.limit !== 'Unlimited' && (k.used || 0) >= k.limit;
                         let status = '✅ Active', statusClass = 'status-active';
                         if (isExpired) { status = '⏰ Expired'; statusClass = 'status-expired'; }
                         else if (isExhausted) { status = '🛑 Exhausted'; statusClass = 'status-exhausted'; }
                         
-                        const displayKey = keyName.length > 18 ? keyName.substring(0, 15) + '...' : keyName;
-                        const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - k.used);
+                        const displayKey = keyName.length > 20 ? keyName.substring(0, 18) + '..' : keyName;
+                        const remaining = k.limit === 'Unlimited' ? '∞' : Math.max(0, k.limit - (k.used || 0));
                         
                         return \`<tr>
                             <td><code style="color: #ff00ff;">\${displayKey}</code>\${k.hidden ? ' 🔒' : ''}</td>
                             <td>\${k.owner || '-'}</td>
+                            <td>\${(k.scopes || []).join(', ')}</td>
                             <td>\${k.limit === 'Unlimited' ? '∞' : k.limit}</td>
                             <td>\${k.used || 0}</td>
-                            <td style="color: \${remaining === 0 ? '#ff6b6b' : '#00ff41'};">\${remaining}</td>
+                            <td style="color: \${(k.used || 0) >= k.limit ? '#ff6b6b' : '#00ff41'};">\${remaining}</td>
                             <td>\${k.expiry || 'Never'}</td>
                             <td><span class="status-badge \${statusClass}">\${status}</span></td>
                             <td>
-                                <button class="action-btn copy" onclick="copyKey('\${keyName}')">📋</button>
-                                <button class="action-btn reset" onclick="resetKey('\${keyName}')">🔄</button>
-                                <button class="action-btn delete" onclick="deleteKey('\${keyName}')">🗑️</button>
+                                <button class="action-btn copy" onclick="copyKey('\${keyName.replace(/'/g, "\\'")}')">📋</button>
+                                <button class="action-btn reset" onclick="resetKey('\${keyName.replace(/'/g, "\\'")}')">🔄</button>
+                                <button class="action-btn delete" onclick="deleteKey('\${keyName.replace(/'/g, "\\'")}')">🗑️</button>
                             </td>
                         </tr>\`;
                     }).join('');
                 }
             } catch (err) {
-                console.error(err);
+                console.error('Refresh error:', err);
             }
         }
         
         function copyKey(key) {
-            navigator.clipboard.writeText(key);
-            showToast('📋 Copied!');
+            navigator.clipboard.writeText(key).then(() => {
+                showToast('📋 Key copied!');
+            }).catch(() => {
+                showToast('❌ Copy failed', true);
+            });
         }
         
         async function resetKey(key) {
-            if (!confirm('Reset usage?')) return;
-            await fetch('/admin/reset-usage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            showToast('✅ Reset!');
-            refreshData();
+            if (!confirm('Reset usage for this key?')) return;
+            try {
+                await fetch('/admin/reset-usage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: key })
+                });
+                showToast('✅ Usage reset!');
+                await refreshData();
+            } catch(e) {
+                showToast('❌ Error', true);
+            }
         }
         
         async function deleteKey(key) {
-            if (!confirm('DELETE this key?')) return;
-            await fetch('/admin/delete-key', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key })
-            });
-            showToast('✅ Deleted!');
-            refreshData();
+            if (!confirm('PERMANENTLY DELETE this key?')) return;
+            try {
+                await fetch('/admin/delete-key', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: key })
+                });
+                showToast('✅ Key deleted!');
+                await refreshData();
+            } catch(e) {
+                showToast('❌ Error', true);
+            }
         }
         
         function logout() {
@@ -869,6 +894,7 @@ app.get('/admin/dashboard', (req, res) => {
             window.location.href = '/admin';
         }
         
+        // Initial load
         refreshData();
     </script>
 </body>
@@ -876,173 +902,115 @@ app.get('/admin/dashboard', (req, res) => {
     res.send(html);
 });
 
-// ========== ADD THESE FUNCTIONS IN YOUR SCRIPT ==========
+// ========== ADMIN API ENDPOINTS ==========
 
-async function loadTerminal() {
-    try {
-        const res = await fetch('/admin/terminal');
-        const data = await res.json();
-        
-        const container = document.getElementById('terminalContainer');
-        if (data.logs && data.logs.length > 0) {
-            container.innerHTML = data.logs.map(log => 
-                `<div style="margin-bottom: 5px; border-bottom: 1px solid #111; padding-bottom: 5px;">
-                    <span style="color: #ffff00;">[${log.timestamp}]</span> 
-                    <span style="color: #ff00ff;">${log.action}</span> - 
-                    <span style="color: #fff;">${log.details}</span>
-                </div>`
-            ).join('');
-        } else {
-            container.innerHTML = '<div style="color: #00ff41;">> No activity yet</div>';
-        }
-        container.scrollTop = container.scrollHeight;
-    } catch(e) {
-        console.error(e);
-    }
-}
-
-function exportKeys() {
-    fetch('/admin/keys')
-        .then(r => r.json())
-        .then(data => {
-            const exportData = {
-                export_time: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-                total_keys: Object.keys(data.keys).length,
-                keys: data.keys
-            };
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'bronx_keys_backup_' + new Date().toISOString().split('T')[0] + '.json';
-            a.click();
-            showToast('📤 Keys exported successfully!');
-        });
-}
-
-function importKeys() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            
-            if (!data.keys) {
-                showToast('❌ Invalid file format', true);
-                return;
-            }
-            
-            const res = await fetch('/admin/import-keys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keys: data.keys })
-            });
-            
-            const result = await res.json();
-            if (result.success) {
-                showToast('📥 Imported ' + result.imported + ' keys!');
-                refreshData();
-                loadTerminal();
-            } else {
-                showToast('❌ ' + (result.error || 'Import failed'), true);
-            }
-        } catch(e) {
-            showToast('❌ Error reading file', true);
-        }
-    };
-    input.click();
-}
-
-// CALL THIS ON PAGE LOAD (add after refreshData())
-loadTerminal();
-
-// ========== ADD THESE NEW ENDPOINTS ==========
-
-app.get('/admin/terminal', (req, res) => {
-    res.json({ success: true, logs: activityTerminal });
+// GET all keys
+app.get('/admin/keys', (req, res) => {
+    const allKeys = {};
+    Object.entries(keyStorage).forEach(([key, data]) => {
+        allKeys[key] = {
+            owner: data.name || 'Unknown',
+            scopes: data.scopes || [],
+            limit: data.unlimited ? 'Unlimited' : (data.limit || 100),
+            used: data.used || 0,
+            expiry: data.expiryStr || 'Never',
+            hidden: data.hidden || false
+        };
+    });
+    res.json({ success: true, keys: allKeys });
 });
 
-app.post('/admin/import-keys', (req, res) => {
-    try {
-        const { keys } = req.body;
-        if (!keys) return res.json({ success: false, error: 'No keys provided' });
-        
-        let imported = 0;
-        Object.entries(keys).forEach(([key, data]) => {
-            if (!keyStorage[key]) {
-                keyStorage[key] = {
-                    name: data.owner || data.name || 'Imported',
-                    scopes: data.scopes || ['number'],
-                    type: 'imported',
-                    limit: data.limit === 'Unlimited' ? Infinity : (data.limit || 100),
-                    used: data.used || 0,
-                    expiry: data.expiry ? parseExpiryDate(data.expiry) : null,
-                    expiryStr: data.expiry || 'Never',
-                    created: getIndiaDateTime(),
-                    resetType: 'never',
-                    unlimited: data.limit === 'Unlimited',
-                    hidden: data.hidden || false
-                };
-                imported++;
-            }
-        });
-        
-        addActivity('IMPORT', `Imported ${imported} keys from backup file`);
-        res.json({ success: true, imported: imported });
-    } catch(e) {
-        res.json({ success: false, error: e.message });
-    }
-});
-
-// ========== UPDATE EXISTING ENDPOINTS (add addActivity) ==========
-
+// FIXED: Generate key
 app.post('/admin/generate-key', (req, res) => {
-    // ... existing code ...
+    console.log('=== GENERATE KEY REQUEST ===');
+    console.log('Headers:', req.headers['content-type']);
+    console.log('Raw Body:', req.body);
     
-    keyStorage[key] = { /* ... */ };
+    const { key, name, scopes, limit, expiry, unlimited, hidden } = req.body;
     
-    addActivity('KEY_CREATED', `Key: ${key.substring(0, 12)}... | Owner: ${name || 'User'} | Scopes: ${(scopes || ['number']).length}`);
-    
-    res.json({ success: true, message: 'Key generated!', key });
-});
-
-app.delete('/admin/delete-key', (req, res) => {
-    const key = req.body.key;
-    if (keyStorage[key]) {
-        const info = keyStorage[key];
-        delete keyStorage[key];
-        addActivity('KEY_DELETED', `Key: ${key.substring(0, 12)}... | Was: ${info.name}`);
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
+    if (!key) {
+        console.log('❌ No key provided');
+        return res.json({ success: false, error: 'Key is required' });
     }
+    
+    if (keyStorage[key]) {
+        console.log('❌ Key already exists:', key);
+        return res.json({ success: false, error: 'Key already exists!' });
+    }
+    
+    console.log('✅ Creating new key:', key);
+    console.log('Name:', name);
+    console.log('Scopes:', scopes);
+    console.log('Limit:', limit);
+    console.log('Expiry:', expiry);
+    
+    let expiryDate = null;
+    let expiryStr = null;
+    
+    if (expiry && expiry.toLowerCase() !== 'never') {
+        const parts = expiry.split('-');
+        if (parts.length === 3) {
+            expiryDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 23, 59, 59);
+            expiryStr = expiry;
+        }
+    }
+    
+    keyStorage[key] = {
+        name: name || 'User',
+        scopes: scopes || ['number'],
+        type: 'premium',
+        limit: unlimited ? Infinity : (parseInt(limit) || 100),
+        used: 0,
+        expiry: expiryDate,
+        expiryStr: expiryStr,
+        created: new Date().toISOString(),
+        unlimited: unlimited || false,
+        hidden: hidden || false
+    };
+    
+    console.log('✅ Key stored successfully!');
+    console.log('Total keys:', Object.keys(keyStorage).length);
+    
+    res.json({ 
+        success: true, 
+        message: 'Key generated successfully!', 
+        key: key,
+        total_keys: Object.keys(keyStorage).length
+    });
 });
 
+// Reset usage
 app.post('/admin/reset-usage', (req, res) => {
-    const key = req.body.key;
+    const { key } = req.body;
+    console.log('Reset usage for:', key);
+    
     if (keyStorage[key]) {
         keyStorage[key].used = 0;
-        addActivity('USAGE_RESET', `Key: ${key.substring(0, 12)}...`);
+        console.log('✅ Usage reset');
         res.json({ success: true });
     } else {
-        res.json({ success: false });
+        console.log('❌ Key not found');
+        res.json({ success: false, error: 'Key not found' });
     }
 });
 
-// Track API usage in terminal
-app.use('/api/*', (req, res, next) => {
-    const key = req.query.key || req.headers['x-api-key'] || 'unknown';
-    if (key !== 'unknown') {
-        addActivity('API_CALL', `Key: ${key.substring(0, 10)}... | Endpoint: ${req.path}`);
+// Delete key
+app.delete('/admin/delete-key', (req, res) => {
+    const { key } = req.body;
+    console.log('Delete key:', key);
+    
+    if (keyStorage[key]) {
+        delete keyStorage[key];
+        console.log('✅ Key deleted');
+        res.json({ success: true });
+    } else {
+        console.log('❌ Key not found');
+        res.json({ success: false, error: 'Key not found' });
     }
-    next();
 });
 
 console.log('✅ Admin Panel ready at /admin');
+console.log('📝 Password:', ADMIN_PASSWORD);
 
 // ========== SERVE ENHANCED HTML UI WITH DARK/LIGHT MODE ==========
 function serveHTML(res) {
