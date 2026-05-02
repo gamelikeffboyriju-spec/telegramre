@@ -6,7 +6,7 @@ const app = express();
 
 // ========== CONFIG ==========
 const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
-const REAL_API_KEY = 'bronx';
+const REAL_API_KEY = 'bot-new';
 
 // ========== ADMIN CONFIG ==========
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'BRONX_ULTRA';
@@ -93,12 +93,66 @@ function initializeData() {
         hidden: false
     };
     
-    customAPIs = [
-        { id: 1, name: 'Number Info backup ✅', endpoint: 'rajput-api', param: 'num', example: '9876543210', desc: 'India Number Lookup Vip Bronx api', category: '🔧 Custom APIs', visible: true, realAPI: 'https://rajput-api.vercel.app/search?num={param}' },
-        { id: 2, name: 'Vehicle Details Api 🚕', endpoint: 'rc-details', param: 'ca_number', example: 'MH02FZ0555', desc: 'Vehicle RC Details Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}' },
-        { id: 3, name: 'Adhar Detail api', endpoint: 'aadhar-details', param: 'aadhar', example: '393933081942', desc: 'Aadhar Number Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'https://bronx-adhar-api.vercel.app/aadhar={param}' },
-        { id: 4, name: '📧 Email Lookup API', endpoint: 'email-lookup', param: 'mail', example: 'user@gmail.com', desc: 'Email Information Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'https://bronx-mail-api.vercel.app/mail={param}' },
-        { id: 5, name: '📲 Telegram Number API', endpoint: 'telegram-num', param: 'id', example: '7530266953', desc: 'Telegram Number Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'http://45.91.248.51:3000/api/tgnum?id={param}' },
+    // initializeData() function mein yeh changes karo:
+
+customAPIs = [
+    { 
+        id: 1, 
+        name: 'Number Info backup ✅', 
+        endpoint: 'bronx-apiop', 
+        param: 'num', 
+        example: '9876543210', 
+        desc: 'India Number Lookup Vip Bronx api',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://rajput-api.vercel.app/search?num={param}'  // ✅ {param}
+    },
+    { 
+        id: 2, 
+        name: 'Vehicle Details Api 🚕', 
+        endpoint: 'rc-details', 
+        param: 'ca_number', 
+        example: 'MH02FZ0555', 
+        desc: 'Vehicle RC Details Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}'  // ✅ {param}
+    },
+    { 
+        id: 3, 
+        name: 'Adhar Detail api', 
+        endpoint: 'aadhar-details', 
+        param: 'aadhar', 
+        example: '393933081942', 
+        desc: 'Aadhar Number Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}'  // ✅ {param} (pehle {param} tha hi sahi)
+    },
+    { 
+        id: 4, 
+        name: '📧 Email Lookup API', 
+        endpoint: 'email-lookup', 
+        param: 'mail', 
+        example: 'user@gmail.com', 
+        desc: 'Email Information Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-king-mail-opi.vercel.app/mail={param}'  // ✅ FIXED: {parma} → {param}
+    },
+    { 
+        id: 5, 
+        name: '📲 Telegram Number API', 
+        endpoint: 'telegram-num', 
+        param: 'id', 
+        example: '7530266953', 
+        desc: 'Telegram Number Lookup',
+        category: '🔧 Custom APIs',
+        visible: true,
+        realAPI: 'https://bronx-tg-king.vercel.app/tg?key=BRONXop&query={param}'  // ✅ {param}
+    },
+    // ... baaki empty slots same rahenge
+];
         { id: 6, name: 'Custom API 6', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
         { id: 7, name: 'Custom API 7', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
         { id: 8, name: 'Custom API 8', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
