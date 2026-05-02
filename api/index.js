@@ -1,4 +1,4 @@
-// api/index.js - BRONX OSINT API v5.0 - PROFESSIONAL DARK THEME
+// api/index.js - BRONX OSINT API v6.0 - GOD LEVEL ULTRA THEME
 const express = require('express');
 const axios = require('axios');
 
@@ -51,7 +51,6 @@ function parseExpiryDate(dateStr) {
 function initializeData() {
     const now = getIndiaDateTime();
     
-    // MASTER OWNER KEY
     keyStorage['BRONX_ULTRA_MASTER_2026'] = {
         name: '👑 BRONX ULTRA OWNER',
         scopes: ['*'],
@@ -113,77 +112,47 @@ initializeData();
 // ========== KEY MANAGEMENT ==========
 function checkKeyValid(apiKey) {
     const keyData = keyStorage[apiKey];
-    if (!keyData) {
-        return { valid: false, error: '❌ Invalid API Key. Contact @BRONX_ULTRA to purchase.' };
-    }
-    
-    if (keyData.expiry && isKeyExpired(keyData.expiry)) {
-        return { 
-            valid: false, 
-            error: '⏰ Your Key has EXPIRED! Please purchase a new key. Contact @BRONX_ULTRA on Telegram.',
-            expired: true,
-            expiredDate: keyData.expiryStr
-        };
-    }
-    
-    if (!keyData.unlimited && keyData.used >= keyData.limit) {
-        return {
-            valid: false,
-            error: `🛑 Limit Exhausted! You have used ${keyData.used}/${keyData.limit} requests. Contact @BRONX_ULTRA for more.`,
-            limitExhausted: true
-        };
-    }
-    
+    if (!keyData) return { valid: false, error: '❌ Invalid API Key. Contact @BRONX_ULTRA to purchase.' };
+    if (keyData.expiry && isKeyExpired(keyData.expiry)) return { valid: false, error: '⏰ Your Key has EXPIRED! Contact @BRONX_ULTRA on Telegram.', expired: true, expiredDate: keyData.expiryStr };
+    if (!keyData.unlimited && keyData.used >= keyData.limit) return { valid: false, error: `🛑 Limit Exhausted! Used ${keyData.used}/${keyData.limit}. Contact @BRONX_ULTRA.`, limitExhausted: true };
     return { valid: true, keyData };
 }
 
 function incrementKeyUsage(apiKey) {
-    if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) {
-        keyStorage[apiKey].used++;
-    }
+    if (keyStorage[apiKey] && !keyStorage[apiKey].unlimited) keyStorage[apiKey].used++;
     return keyStorage[apiKey];
 }
 
 function checkKeyScope(keyData, endpoint) {
     if (keyData.scopes.includes('*')) return { valid: true };
     if (keyData.scopes.includes(endpoint)) return { valid: true };
-    return { 
-        valid: false, 
-        error: `❌ This key cannot access '${endpoint}'. Allowed scopes: ${keyData.scopes.join(', ')}` 
-    };
+    return { valid: false, error: `❌ Key cannot access '${endpoint}'. Scopes: ${keyData.scopes.join(', ')}` };
 }
 
-function logRequest(key, endpoint, param, status, ip) {
+function logRequest(key, endpoint, param, status, ip, userAgent) {
     requestLogs.push({
         timestamp: getIndiaDateTime(),
         key: key ? key.substring(0, 10) + '...' : 'unknown',
         endpoint: endpoint,
         param: param,
         status: status,
-        ip: ip || 'unknown'
+        ip: ip || 'unknown',
+        browser: userAgent || 'Unknown'
     });
-    
-    if (requestLogs.length > 500) {
-        requestLogs = requestLogs.slice(-500);
-    }
+    if (requestLogs.length > 500) requestLogs = requestLogs.slice(-500);
 }
 
 // ========== ADMIN AUTH ==========
 function generateSessionToken() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let token = '';
-    for (let i = 0; i < 40; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < 40; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
     return token;
 }
 
 function isAdminAuthenticated(token) {
     if (!token || !adminSessions[token]) return false;
-    if (Date.now() > adminSessions[token].expiresAt) {
-        delete adminSessions[token];
-        return false;
-    }
+    if (Date.now() > adminSessions[token].expiresAt) { delete adminSessions[token]; return false; }
     return true;
 }
 
@@ -218,393 +187,318 @@ const endpoints = {
 
 const allScopes = [
     { value: '*', label: '🌟 ALL SCOPES' },
-    { value: 'number', label: '📱 Number Lookup' },
-    { value: 'numv2', label: '📱 Number v2' },
-    { value: 'adv', label: '📱 Advanced Lookup' },
-    { value: 'aadhar', label: '🆔 Aadhar' },
-    { value: 'adharfamily', label: '👨‍👩‍👧‍👦 Aadhar Family' },
-    { value: 'adharration', label: '📋 Aadhar Ration' },
-    { value: 'name', label: '🔍 Name Search' },
-    { value: 'upi', label: '💰 UPI' },
-    { value: 'ifsc', label: '🏦 IFSC' },
-    { value: 'pan', label: '📄 PAN' },
-    { value: 'pincode', label: '📍 Pincode' },
-    { value: 'ip', label: '🌐 IP Lookup' },
-    { value: 'vehicle', label: '🚗 Vehicle' },
-    { value: 'rc', label: '📋 RC Details' },
-    { value: 'ff', label: '🎮 Free Fire' },
-    { value: 'bgmi', label: '🎮 BGMI' },
-    { value: 'insta', label: '📸 Instagram' },
-    { value: 'git', label: '💻 GitHub' },
-    { value: 'tg', label: '📲 Telegram' },
-    { value: 'tgidinfo', label: '📲 Telegram ID' },
-    { value: 'snap', label: '👻 Snapchat' },
-    { value: 'imei', label: '📱 IMEI' },
-    { value: 'calltracer', label: '📞 Call Tracer' },
-    { value: 'pk', label: '🇵🇰 Pakistan v1' },
-    { value: 'pkv2', label: '🇵🇰 Pakistan v2' }
+    { value: 'number', label: '📱 Number' }, { value: 'numv2', label: '📱 Number v2' },
+    { value: 'adv', label: '📱 Advanced' }, { value: 'aadhar', label: '🆔 Aadhar' },
+    { value: 'adharfamily', label: '👨‍👩‍👧‍👦 Family' }, { value: 'adharration', label: '📋 Ration' },
+    { value: 'name', label: '🔍 Name' }, { value: 'upi', label: '💰 UPI' },
+    { value: 'ifsc', label: '🏦 IFSC' }, { value: 'pan', label: '📄 PAN' },
+    { value: 'pincode', label: '📍 Pin' }, { value: 'ip', label: '🌐 IP' },
+    { value: 'vehicle', label: '🚗 Vehicle' }, { value: 'rc', label: '📋 RC' },
+    { value: 'ff', label: '🎮 FF' }, { value: 'bgmi', label: '🎮 BGMI' },
+    { value: 'insta', label: '📸 Insta' }, { value: 'git', label: '💻 GitHub' },
+    { value: 'tg', label: '📲 TG' }, { value: 'tgidinfo', label: '📲 TG ID' },
+    { value: 'snap', label: '👻 Snap' }, { value: 'imei', label: '📱 IMEI' },
+    { value: 'calltracer', label: '📞 Call' }, { value: 'pk', label: '🇵🇰 PK v1' },
+    { value: 'pkv2', label: '🇵🇰 PK v2' }
 ];
 
 // ========== CLEAN RESPONSE ==========
 function cleanResponse(data) {
     if (!data) return data;
     let cleaned = JSON.parse(JSON.stringify(data));
-    
     function removeFields(obj) {
         if (!obj || typeof obj !== 'object') return;
-        if (Array.isArray(obj)) {
-            obj.forEach(item => removeFields(item));
-            return;
-        }
-        delete obj.by;
-        delete obj.channel;
-        delete obj.BY;
-        delete obj.CHANNEL;
-        delete obj.developer;
-        Object.keys(obj).forEach(key => {
-            if (obj[key] && typeof obj[key] === 'object') {
-                removeFields(obj[key]);
-            }
-        });
+        if (Array.isArray(obj)) { obj.forEach(item => removeFields(item)); return; }
+        delete obj.by; delete obj.channel; delete obj.BY; delete obj.CHANNEL; delete obj.developer;
+        Object.keys(obj).forEach(key => { if (obj[key] && typeof obj[key] === 'object') removeFields(obj[key]); });
     }
-    
     removeFields(cleaned);
     cleaned.by = "@BRONX_ULTRA";
     cleaned.powered_by = "BRONX OSINT API";
     return cleaned;
 }
 
-// ========== PROFESSIONAL DARK THEME - PUBLIC HOME ==========
+function getBrowserName(ua) {
+    if (!ua) return 'Unknown';
+    if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome';
+    if (ua.includes('Firefox')) return 'Firefox';
+    if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+    if (ua.includes('Edg')) return 'Edge';
+    if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera';
+    if (ua.includes('Brave')) return 'Brave';
+    return 'Other';
+}
+
+// ========== ULTRA PREMIUM PUBLIC HOME ==========
 function renderPublicHome() {
     const visibleAPIs = customAPIs.filter(a => a.visible && a.endpoint);
-    
-    // Group by category
     const categories = {};
     Object.entries(endpoints).forEach(([name, ep]) => {
         if (!categories[ep.category]) categories[ep.category] = [];
         categories[ep.category].push({name, ...ep});
     });
     
+    const catOrder = ['Phone Intelligence', 'Financial', 'Location', 'Vehicle', 'Gaming', 'Social', 'Pakistan'];
+    
     let endpointSections = '';
     
-    // Phone Intelligence
-    if (categories['Phone Intelligence']) {
+    catOrder.forEach(cat => {
+        if (!categories[cat]) return;
+        const eps = categories[cat];
+        const catIcons = { 'Phone Intelligence': '📱', 'Financial': '💰', 'Location': '📍', 'Vehicle': '🚗', 'Gaming': '🎮', 'Social': '🌐', 'Pakistan': '🇵🇰' };
+        
         endpointSections += `
         <div class="category-section">
             <div class="category-header">
-                <span class="category-icon">📱</span>
-                <h3>Phone Intelligence</h3>
-                <span class="category-badge">${categories['Phone Intelligence'].length} APIs</span>
+                <div class="cat-icon-wrap">
+                    <span class="cat-icon">${catIcons[cat] || '🔧'}</span>
+                </div>
+                <div class="cat-info">
+                    <h3>${cat}</h3>
+                    <span class="cat-count">${eps.length} endpoints</span>
+                </div>
+                <div class="cat-line"></div>
             </div>
             <div class="endpoint-grid">
-                ${categories['Phone Intelligence'].map(ep => `
+                ${eps.map(ep => `
                 <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
+                    <div class="ep-glow"></div>
+                    <div class="ep-inner">
+                        <div class="ep-badge-row">
+                            <span class="ep-method">GET</span>
+                            <span class="ep-icon">${ep.icon}</span>
+                        </div>
+                        <h4 class="ep-name">/${ep.name}</h4>
+                        <p class="ep-desc">${ep.desc}</p>
+                        <div class="ep-param-row">
+                            <code class="ep-param-key">${ep.param}</code>
+                            <span class="ep-param-eq">=</span>
+                            <code class="ep-param-val">${ep.example}</code>
+                        </div>
                     </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
                 </div>
                 `).join('')}
             </div>
         </div>`;
-    }
-    
-    // Financial
-    if (categories['Financial']) {
-        endpointSections += `
-        <div class="category-section">
-            <div class="category-header">
-                <span class="category-icon">💰</span>
-                <h3>Financial</h3>
-                <span class="category-badge">${categories['Financial'].length} APIs</span>
-            </div>
-            <div class="endpoint-grid">
-                ${categories['Financial'].map(ep => `
-                <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
-                    </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
-                </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    
-    // Location
-    if (categories['Location']) {
-        endpointSections += `
-        <div class="category-section">
-            <div class="category-header">
-                <span class="category-icon">📍</span>
-                <h3>Location</h3>
-                <span class="category-badge">${categories['Location'].length} APIs</span>
-            </div>
-            <div class="endpoint-grid">
-                ${categories['Location'].map(ep => `
-                <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
-                    </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
-                </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    
-    // Vehicle
-    if (categories['Vehicle']) {
-        endpointSections += `
-        <div class="category-section">
-            <div class="category-header">
-                <span class="category-icon">🚗</span>
-                <h3>Vehicle</h3>
-                <span class="category-badge">${categories['Vehicle'].length} APIs</span>
-            </div>
-            <div class="endpoint-grid">
-                ${categories['Vehicle'].map(ep => `
-                <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
-                    </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
-                </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    
-    // Gaming
-    if (categories['Gaming']) {
-        endpointSections += `
-        <div class="category-section">
-            <div class="category-header">
-                <span class="category-icon">🎮</span>
-                <h3>Gaming</h3>
-                <span class="category-badge">${categories['Gaming'].length} APIs</span>
-            </div>
-            <div class="endpoint-grid">
-                ${categories['Gaming'].map(ep => `
-                <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
-                    </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
-                </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    
-    // Social
-    if (categories['Social']) {
-        endpointSections += `
-        <div class="category-section">
-            <div class="category-header">
-                <span class="category-icon">🌐</span>
-                <h3>Social Intelligence</h3>
-                <span class="category-badge">${categories['Social'].length} APIs</span>
-            </div>
-            <div class="endpoint-grid">
-                ${categories['Social'].map(ep => `
-                <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
-                    </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
-                </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
-    
-    // Pakistan
-    if (categories['Pakistan']) {
-        endpointSections += `
-        <div class="category-section">
-            <div class="category-header">
-                <span class="category-icon">🇵🇰</span>
-                <h3>Pakistan</h3>
-                <span class="category-badge">${categories['Pakistan'].length} APIs</span>
-            </div>
-            <div class="endpoint-grid">
-                ${categories['Pakistan'].map(ep => `
-                <div class="endpoint-card" onclick="copyUrl('${ep.name}','${ep.param}','${ep.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method get">GET</span>
-                        <span class="ep-icon">${ep.icon}</span>
-                    </div>
-                    <h4 class="ep-name">${ep.name}</h4>
-                    <p class="ep-desc">${ep.desc}</p>
-                    <code class="ep-path">/api/key-bronx/${ep.name}</code>
-                    <div class="ep-param"><span>${ep.param}</span>=<span>${ep.example}</span></div>
-                </div>
-                `).join('')}
-            </div>
-        </div>`;
-    }
+    });
     
     // Custom APIs
     if (visibleAPIs.length > 0) {
         endpointSections += `
         <div class="category-section">
             <div class="category-header">
-                <span class="category-icon">🔧</span>
-                <h3>Custom Integrations</h3>
-                <span class="category-badge">${visibleAPIs.length} APIs</span>
+                <div class="cat-icon-wrap custom-cat">
+                    <span class="cat-icon">🔧</span>
+                </div>
+                <div class="cat-info">
+                    <h3>Custom Integrations</h3>
+                    <span class="cat-count">${visibleAPIs.length} custom APIs</span>
+                </div>
+                <div class="cat-line custom-line"></div>
             </div>
             <div class="endpoint-grid">
                 ${visibleAPIs.map(api => `
-                <div class="endpoint-card custom" onclick="copyUrlCustom('${api.endpoint}','${api.param}','${api.example}')">
-                    <div class="ep-top">
-                        <span class="ep-method custom-m">CUSTOM</span>
-                        <span class="ep-icon">🔧</span>
+                <div class="endpoint-card custom-card" onclick="copyUrlCustom('${api.endpoint}','${api.param}','${api.example}')">
+                    <div class="ep-glow custom-glow"></div>
+                    <div class="ep-inner">
+                        <div class="ep-badge-row">
+                            <span class="ep-method custom-method">CUSTOM</span>
+                            <span class="ep-icon">🔧</span>
+                        </div>
+                        <h4 class="ep-name">/${api.endpoint}</h4>
+                        <p class="ep-desc">${api.desc}</p>
+                        <div class="ep-param-row">
+                            <code class="ep-param-key">${api.param}</code>
+                            <span class="ep-param-eq">=</span>
+                            <code class="ep-param-val">${api.example}</code>
+                        </div>
                     </div>
-                    <h4 class="ep-name">${api.name}</h4>
-                    <p class="ep-desc">${api.desc}</p>
-                    <code class="ep-path">/api/custom/${api.endpoint}</code>
-                    <div class="ep-param"><span>${api.param}</span>=<span>${api.example}</span></div>
                 </div>
                 `).join('')}
             </div>
         </div>`;
     }
     
+    const totalEndpoints = Object.keys(endpoints).length + visibleAPIs.length;
+    const totalKeys = Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length;
+    
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRONX OSINT — Intelligence API</title>
+    <title>BRONX OSINT — Ultra Intelligence API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0d0d0d;
-            --bg-secondary: #141414;
-            --bg-card: #1a1a1a;
-            --bg-card-hover: #222222;
-            --border: #2a2a2a;
-            --border-hover: #3a3a3a;
-            --text-primary: #e0e0e0;
-            --text-secondary: #999;
-            --text-muted: #666;
-            --accent: #00e676;
-            --accent-dim: #00c853;
-            --accent-glow: rgba(0, 230, 118, 0.15);
-            --danger: #ff5252;
-            --warning: #ffb74d;
-            --info: #448aff;
-            --header-bg: #0a0a0a;
-            --overlay: rgba(0,0,0,0.4);
+            --bg: #080808;
+            --bg2: #0c0c0c;
+            --card: #111111;
+            --card-hover: #161616;
+            --border: #1f1f1f;
+            --border2: #2a2a2a;
+            --text: #e8e8e8;
+            --text2: #999;
+            --text3: #666;
+            --green: #00ff88;
+            --green2: #00cc6a;
+            --green-glow: rgba(0,255,136,0.4);
+            --green-glow2: rgba(0,255,136,0.15);
+            --blue: #448aff;
+            --blue-glow: rgba(68,138,255,0.4);
+            --orange: #ff9100;
+            --orange-glow: rgba(255,145,0,0.3);
+            --red: #ff3d3d;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
-            line-height: 1.6;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-image: 
+                radial-gradient(ellipse at 50% 0%, rgba(0,255,136,0.03) 0%, transparent 70%),
+                radial-gradient(ellipse at 80% 20%, rgba(68,138,255,0.02) 0%, transparent 50%);
         }
         
-        /* ===== SCROLLBAR ===== */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
         
-        /* ===== HERO HEADER ===== */
+        /* ===== HERO SECTION ===== */
         .hero {
             position: relative;
-            width: 100%;
-            background: var(--header-bg);
+            padding: 60px 30px 50px;
+            text-align: center;
+            background: linear-gradient(180deg, #0a0a0a 0%, var(--bg) 100%);
             border-bottom: 1px solid var(--border);
             overflow: hidden;
         }
         
-        .hero-overlay {
+        .hero-bg {
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
-            z-index: 1;
+            pointer-events: none;
+            z-index: 0;
         }
         
-        .hero-bg-pattern {
+        .hero-bg-circle {
             position: absolute;
-            inset: 0;
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(0,230,118,0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 50%, rgba(68,138,255,0.03) 0%, transparent 50%);
-            z-index: 0;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.08;
+            animation: floatCircle 8s ease-in-out infinite;
+        }
+        
+        .hero-bg-circle:nth-child(1) {
+            width: 500px; height: 500px;
+            background: var(--green);
+            top: -200px; left: -100px;
+            animation-delay: 0s;
+        }
+        
+        .hero-bg-circle:nth-child(2) {
+            width: 400px; height: 400px;
+            background: var(--blue);
+            top: -150px; right: -100px;
+            animation-delay: -3s;
+        }
+        
+        .hero-bg-circle:nth-child(3) {
+            width: 300px; height: 300px;
+            background: var(--orange);
+            bottom: -100px; left: 40%;
+            animation-delay: -6s;
+        }
+        
+        @keyframes floatCircle {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -20px) scale(1.05); }
+            66% { transform: translate(-20px, 10px) scale(0.95); }
         }
         
         .hero-content {
             position: relative;
             z-index: 2;
-            max-width: 900px;
+            max-width: 700px;
             margin: 0 auto;
-            padding: 50px 30px 40px;
-            text-align: center;
+        }
+        
+        .hero-avatar-wrap {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 25px;
+        }
+        
+        .hero-avatar-ring {
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, var(--green), var(--blue), var(--orange), var(--green)) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: ringRotate 4s linear infinite;
+        }
+        
+        @keyframes ringRotate {
+            0% { transform: rotate(0deg); filter: hue-rotate(0deg); }
+            100% { transform: rotate(360deg); filter: hue-rotate(360deg); }
         }
         
         .hero-avatar {
-            width: 110px;
-            height: 110px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
-            border: 3px solid var(--accent);
-            box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(0,230,118,0.08);
-            margin: 0 auto 20px;
-            display: block;
             object-fit: cover;
-            background: #1a1a1a;
-            transition: all 0.3s ease;
+            display: block;
+            border: 3px solid #1a1a1a;
+            box-shadow: 0 0 60px var(--green-glow2), 0 0 120px rgba(0,255,136,0.05);
+            transition: all var(--transition);
+            position: relative;
+            z-index: 1;
         }
         
         .hero-avatar:hover {
-            box-shadow: 0 0 60px rgba(0,230,118,0.25), 0 0 100px rgba(0,230,118,0.1);
-            transform: scale(1.03);
+            box-shadow: 0 0 80px var(--green-glow), 0 0 160px rgba(0,255,136,0.1);
+            transform: scale(1.05);
         }
         
         .hero-title {
-            font-size: 38px;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 0%, #ccc 50%, #fff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .hero-subtitle {
-            font-size: 16px;
-            color: var(--accent);
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--green);
             letter-spacing: 0.5px;
-            margin-bottom: 20px;
+            margin-bottom: 6px;
+        }
+        
+        .hero-desc {
+            font-size: 13px;
+            color: var(--text3);
+            margin-bottom: 22px;
+            letter-spacing: 0.3px;
         }
         
         .hero-tags {
@@ -615,75 +509,126 @@ function renderPublicHome() {
         }
         
         .hero-tag {
-            padding: 7px 18px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
             border: 1px solid;
             background: transparent;
-            transition: all 0.2s;
+            transition: all var(--transition);
+            cursor: default;
+            position: relative;
+            overflow: hidden;
         }
         
-        .tag-secure { color: var(--accent); border-color: rgba(0,230,118,0.4); background: rgba(0,230,118,0.05); }
-        .tag-realtime { color: var(--info); border-color: rgba(68,138,255,0.4); background: rgba(68,138,255,0.05); }
-        .tag-premium { color: var(--warning); border-color: rgba(255,183,77,0.4); background: rgba(255,183,77,0.05); }
+        .hero-tag::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+        
+        .hero-tag:hover::before { opacity: 1; }
+        
+        .tag-green { 
+            color: var(--green); 
+            border-color: rgba(0,255,136,0.4); 
+        }
+        .tag-green::before { background: rgba(0,255,136,0.08); }
+        .tag-green:hover { box-shadow: 0 0 25px var(--green-glow2); }
+        
+        .tag-blue { 
+            color: var(--blue); 
+            border-color: rgba(68,138,255,0.4); 
+        }
+        .tag-blue::before { background: rgba(68,138,255,0.08); }
+        .tag-blue:hover { box-shadow: 0 0 25px var(--blue-glow); }
+        
+        .tag-orange { 
+            color: var(--orange); 
+            border-color: rgba(255,145,0,0.4); 
+        }
+        .tag-orange::before { background: rgba(255,145,0,0.08); }
+        .tag-orange:hover { box-shadow: 0 0 25px var(--orange-glow); }
         
         /* ===== CONTAINER ===== */
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
             padding: 0 25px;
         }
         
-        /* ===== STATS BAR ===== */
-        .stats-bar {
+        /* ===== STATS ROW ===== */
+        .stats-row {
             display: flex;
             justify-content: center;
-            gap: 30px;
+            gap: 20px;
             flex-wrap: wrap;
-            padding: 25px 20px;
-            margin: -30px auto 30px;
-            max-width: 700px;
-            background: var(--bg-card);
+            padding: 28px 25px;
+            margin: -35px auto 35px;
+            max-width: 750px;
+            background: rgba(17,17,17,0.95);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: var(--radius);
             position: relative;
-            z-index: 3;
+            z-index: 5;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.4);
         }
         
         .stat-item {
             text-align: center;
-            min-width: 90px;
+            min-width: 80px;
+            flex: 1;
         }
         
         .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: -0.5px;
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--green), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .stat-label {
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--text-secondary);
-            margin-top: 3px;
+            letter-spacing: 2px;
+            color: var(--text3);
+            margin-top: 4px;
+            font-weight: 600;
         }
         
         .stat-divider {
             width: 1px;
-            background: var(--border);
+            background: var(--border2);
+            align-self: stretch;
+            margin: 5px 0;
         }
         
         /* ===== API TESTER ===== */
         .tester-section {
-            background: var(--bg-card);
+            background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 28px 30px;
+            border-radius: var(--radius);
+            padding: 28px;
             margin-bottom: 35px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tester-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--green), var(--blue), transparent);
+            opacity: 0.6;
         }
         
         .tester-header {
@@ -693,29 +638,30 @@ function renderPublicHome() {
             margin-bottom: 20px;
         }
         
+        .tester-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--green-glow);
+            animation: pulseDot 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulseDot {
+            0%, 100% { box-shadow: 0 0 10px var(--green-glow); }
+            50% { box-shadow: 0 0 30px var(--green-glow), 0 0 60px var(--green-glow2); }
+        }
+        
         .tester-header h3 {
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: -0.3px;
             color: #fff;
-        }
-        
-        .tester-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--accent-glow);
-            animation: pulse-dot 2s infinite;
-        }
-        
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-glow); }
-            50% { opacity: 0.5; box-shadow: 0 0 20px var(--accent-glow); }
         }
         
         .tester-form {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -723,261 +669,374 @@ function renderPublicHome() {
         .tester-form select,
         .tester-form input {
             flex: 1;
-            min-width: 180px;
-            padding: 12px 16px;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
+            min-width: 160px;
+            padding: 13px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: var(--radius-sm);
+            color: var(--text);
             font-size: 13px;
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            transition: all 0.2s;
+            transition: all var(--transition);
             outline: none;
         }
         
         .tester-form select:focus,
         .tester-form input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0,230,118,0.08);
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(0,255,136,0.06), 0 0 20px rgba(0,255,136,0.05);
         }
         
         .btn-execute {
-            padding: 12px 28px;
-            background: var(--accent);
+            padding: 13px 30px;
+            background: var(--green);
             color: #000;
             border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 13px;
             cursor: pointer;
             letter-spacing: 0.5px;
-            transition: all 0.2s;
+            transition: all var(--transition);
             white-space: nowrap;
             font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-execute::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
         }
         
         .btn-execute:hover {
-            background: var(--accent-dim);
-            box-shadow: 0 0 25px var(--accent-glow);
+            background: var(--green2);
+            box-shadow: 0 0 35px var(--green-glow), 0 0 70px var(--green-glow2);
+            transform: translateY(-1px);
+        }
+        
+        .btn-execute:hover::before {
+            transform: translateX(100%);
         }
         
         .result-box {
-            margin-top: 20px;
-            background: #0a0a0a;
+            margin-top: 18px;
+            background: #050505;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
+            border-radius: var(--radius-sm);
+            padding: 18px;
             max-height: 350px;
             overflow: auto;
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
             font-size: 12px;
             display: none;
             white-space: pre-wrap;
-            color: var(--accent);
+            color: var(--green);
         }
         
-        /* ===== CATEGORY ===== */
+        /* ===== CATEGORY SECTION ===== */
         .category-section {
-            margin-bottom: 35px;
+            margin-bottom: 40px;
         }
         
         .category-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
+            gap: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--border);
+            position: relative;
         }
         
-        .category-icon {
+        .cat-icon-wrap {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(0,255,136,0.06);
+            border: 1px solid rgba(0,255,136,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 20px;
+            flex-shrink: 0;
         }
         
-        .category-header h3 {
-            font-size: 17px;
-            font-weight: 600;
+        .custom-cat {
+            background: rgba(255,145,0,0.06);
+            border-color: rgba(255,145,0,0.15);
+        }
+        
+        .cat-info h3 {
+            font-size: 18px;
+            font-weight: 700;
             color: #fff;
             letter-spacing: -0.3px;
         }
         
-        .category-badge {
-            margin-left: auto;
-            padding: 4px 12px;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 20px;
+        .cat-count {
             font-size: 10px;
-            color: var(--text-secondary);
+            color: var(--text3);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            font-weight: 600;
         }
         
-        /* ===== ENDPOINT GRID ===== */
+        .cat-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(0,255,136,0.2), transparent);
+        }
+        
+        .custom-line {
+            background: linear-gradient(90deg, rgba(255,145,0,0.2), transparent);
+        }
+        
+        /* ===== ENDPOINT CARDS ===== */
         .endpoint-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
         }
         
         .endpoint-card {
-            background: var(--bg-card);
+            background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 18px 20px;
+            border-radius: var(--radius);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all var(--transition);
             position: relative;
+            overflow: hidden;
+        }
+        
+        .ep-glow {
+            position: absolute;
+            inset: -1px;
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, transparent, var(--green-glow2), transparent);
+            opacity: 0;
+            transition: opacity var(--transition);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .custom-glow {
+            background: linear-gradient(135deg, transparent, var(--orange-glow), transparent);
         }
         
         .endpoint-card:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--accent);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            transform: translateY(-2px);
+            background: var(--card-hover);
+            border-color: var(--green);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 60px rgba(0,255,136,0.05);
         }
         
-        .endpoint-card.custom:hover {
-            border-color: var(--warning);
+        .endpoint-card:hover .ep-glow {
+            opacity: 1;
         }
         
-        .ep-top {
+        .custom-card:hover {
+            border-color: var(--orange);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 60px rgba(255,145,0,0.05);
+        }
+        
+        .ep-inner {
+            position: relative;
+            z-index: 1;
+            padding: 20px 22px;
+        }
+        
+        .ep-badge-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         
         .ep-method {
-            padding: 3px 10px;
-            border-radius: 4px;
+            padding: 4px 12px;
+            border-radius: 6px;
             font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 1px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
+            background: rgba(0,255,136,0.1);
+            color: var(--green);
+            border: 1px solid rgba(0,255,136,0.25);
         }
         
-        .ep-method.get {
-            background: rgba(0,230,118,0.1);
-            color: var(--accent);
-            border: 1px solid rgba(0,230,118,0.3);
+        .custom-method {
+            background: rgba(255,145,0,0.1);
+            color: var(--orange);
+            border-color: rgba(255,145,0,0.25);
         }
         
-        .ep-method.custom-m {
-            background: rgba(255,183,77,0.1);
-            color: var(--warning);
-            border: 1px solid rgba(255,183,77,0.3);
+        .ep-icon {
+            font-size: 22px;
         }
-        
-        .ep-icon { font-size: 18px; }
         
         .ep-name {
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 18px;
+            font-weight: 700;
             color: #fff;
-            margin-bottom: 4px;
-            letter-spacing: -0.2px;
+            margin-bottom: 5px;
+            letter-spacing: -0.3px;
         }
         
         .ep-desc {
             font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
+            color: var(--text2);
+            margin-bottom: 14px;
         }
         
-        .ep-path {
-            display: block;
-            font-size: 11px;
-            color: var(--text-muted);
+        .ep-param-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            margin-bottom: 8px;
-            word-break: break-all;
+            font-size: 12px;
         }
         
-        .ep-param {
-            font-size: 11px;
-            color: var(--info);
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        .ep-param-key {
+            color: var(--green);
+            background: rgba(0,255,136,0.06);
+            padding: 3px 8px;
+            border-radius: 4px;
         }
         
-        .ep-param span:first-child { color: var(--warning); }
-        .ep-param span:last-child { color: var(--text-muted); }
+        .ep-param-eq {
+            color: var(--text3);
+        }
+        
+        .ep-param-val {
+            color: var(--text2);
+        }
+        
+        .custom-card .ep-param-key {
+            color: var(--orange);
+            background: rgba(255,145,0,0.06);
+        }
         
         /* ===== FOOTER ===== */
         .footer {
             text-align: center;
-            padding: 40px 20px;
+            padding: 45px 20px;
             border-top: 1px solid var(--border);
-            margin-top: 20px;
+            margin-top: 30px;
+            position: relative;
+        }
+        
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 20%;
+            right: 20%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--green), transparent);
+            opacity: 0.3;
         }
         
         .footer-brand {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: 0.5px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, var(--green), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .footer-info {
             font-size: 12px;
-            color: var(--text-muted);
+            color: var(--text3);
             margin-top: 6px;
         }
         
         .footer-link {
-            color: var(--warning);
+            color: var(--text2);
             text-decoration: none;
-            transition: color 0.2s;
+            transition: color var(--transition);
         }
         
-        .footer-link:hover { color: var(--accent); }
+        .footer-link:hover {
+            color: var(--green);
+        }
         
-        /* ===== RESPONSIVE ===== */
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--card);
+            color: var(--green);
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid rgba(0,255,136,0.3);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 30px var(--green-glow2);
+            pointer-events: none;
+        }
+        
         @media (max-width: 768px) {
-            .hero-title { font-size: 26px; }
-            .hero-subtitle { font-size: 14px; }
-            .hero-avatar { width: 85px; height: 85px; }
-            .stats-bar { gap: 15px; padding: 18px 12px; margin: -20px 15px 25px; }
+            .hero { padding: 40px 20px 35px; }
+            .hero-title { font-size: 28px; }
+            .hero-subtitle { font-size: 15px; }
+            .hero-avatar { width: 90px; height: 90px; }
+            .hero-avatar-ring { inset: -6px; }
+            .stats-row { gap: 10px; padding: 18px 12px; margin: -25px 15px 25px; }
             .stat-value { font-size: 22px; }
-            .stat-label { font-size: 9px; }
+            .stat-label { font-size: 8px; }
             .endpoint-grid { grid-template-columns: 1fr; }
+            .tester-form { flex-direction: column; }
             .tester-form select, .tester-form input { min-width: 100%; }
+            .btn-execute { width: 100%; }
         }
     </style>
 </head>
 <body>
-    <!-- ===== HERO HEADER ===== -->
+    <!-- ===== HERO ===== -->
     <header class="hero">
-        <div class="hero-bg-pattern"></div>
-        <div class="hero-overlay"></div>
+        <div class="hero-bg">
+            <div class="hero-bg-circle"></div>
+            <div class="hero-bg-circle"></div>
+            <div class="hero-bg-circle"></div>
+        </div>
         <div class="hero-content">
-            <!-- BRONX PROFILE PHOTO - Replace src with your image URL -->
-            <img 
-                src="https://i.ibb.co/YOUR-BRONX-PHOTO.jpg" 
-                alt="BRONX_ULTRA" 
-                class="hero-avatar"
-                onerror="this.style.display='none'"
-            >
+            <div class="hero-avatar-wrap">
+                <div class="hero-avatar-ring"></div>
+                <img src="https://i.ibb.co/YTjW35Hs/file-000000007b0872069c1067c615adaa48.png" alt="BRONX_ULTRA" class="hero-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><rect fill=%22%23111%22 width=%22120%22 height=%22120%22 rx=%2260%22/><text fill=%22%230f0%22 x=%2260%22 y=%2270%22 text-anchor=%22middle%22 font-size=%2240%22>B</text></svg>'">
+            </div>
             <h1 class="hero-title">WELCOME TO BRONX OSINT</h1>
-            <p class="hero-subtitle">Premium Intelligence & Investigation API</p>
+            <p class="hero-subtitle">Ultra Premium Intelligence API</p>
+            <p class="hero-desc">Enterprise-grade OSINT platform with real-time data processing</p>
             <div class="hero-tags">
-                <span class="hero-tag tag-secure">🔒 SECURE</span>
-                <span class="hero-tag tag-realtime">⚡ REAL-TIME</span>
-                <span class="hero-tag tag-premium">💎 PREMIUM</span>
+                <span class="hero-tag tag-green">🔒 Encrypted</span>
+                <span class="hero-tag tag-blue">⚡ Real-Time</span>
+                <span class="hero-tag tag-orange">💎 Premium</span>
+                <span class="hero-tag tag-green">🛡️ Secure</span>
             </div>
         </div>
     </header>
     
     <div class="container">
         <!-- ===== STATS ===== -->
-        <div class="stats-bar">
+        <div class="stats-row">
             <div class="stat-item">
-                <div class="stat-value">${Object.keys(endpoints).length + visibleAPIs.length}</div>
+                <div class="stat-value">${totalEndpoints}</div>
                 <div class="stat-label">Endpoints</div>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item">
-                <div class="stat-value">${Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length}</div>
+                <div class="stat-value">${totalKeys}</div>
                 <div class="stat-label">Active Keys</div>
             </div>
             <div class="stat-divider"></div>
@@ -1004,25 +1063,19 @@ function renderPublicHome() {
                     ${Object.entries(endpoints).map(([n, e]) => '<option value="' + n + '">' + e.icon + ' ' + n.toUpperCase() + ' — ' + e.desc + '</option>').join('')}
                     ${visibleAPIs.length > 0 ? visibleAPIs.map(a => '<option value="custom_' + a.id + '" data-custom="1" data-ep="' + a.endpoint + '" data-param="' + a.param + '">🔧 ' + a.name + '</option>').join('') : ''}
                 </select>
-                <input type="text" id="apiKey" placeholder="API Key">
+                <input type="text" id="apiKey" placeholder="Enter API Key">
                 <input type="text" id="paramVal" placeholder="Parameter Value">
                 <button class="btn-execute" onclick="testAPI()">Execute →</button>
             </div>
             <div class="result-box" id="result"></div>
         </div>
         
-        <!-- ===== ENDPOINTS ===== -->
         ${endpointSections}
     </div>
     
-    <!-- ===== FOOTER ===== -->
     <footer class="footer">
         <p class="footer-brand">BRONX OSINT</p>
-        <p class="footer-info">Powered by <strong>@BRONX_ULTRA</strong> · India Timezone (IST)</p>
-        <p class="footer-info" style="margin-top:4px;">
-            <a href="/admin" class="footer-link">Admin Panel</a> · 
-            <a href="/test" class="footer-link">API Status</a>
-        </p>
+        <p class="footer-info">Powered by <strong>@BRONX_ULTRA</strong> · India (IST) · <a href="/admin" class="footer-link">Admin</a></p>
     </footer>
     
     <script>
@@ -1030,12 +1083,12 @@ function renderPublicHome() {
         
         function copyUrl(ep, param, ex) {
             navigator.clipboard.writeText(location.origin + '/api/key-bronx/' + ep + '?key=YOUR_KEY&' + param + '=' + ex);
-            showToast('URL Copied: /' + ep);
+            showToast('✓ Copied: /' + ep);
         }
         
         function copyUrlCustom(ep, param, ex) {
             navigator.clipboard.writeText(location.origin + '/api/custom/' + ep + '?key=YOUR_KEY&' + param + '=' + ex);
-            showToast('Custom URL Copied');
+            showToast('✓ Custom URL Copied');
         }
         
         function showToast(msg) {
@@ -1043,13 +1096,13 @@ function renderPublicHome() {
             if (!t) {
                 t = document.createElement('div');
                 t.id = 'toast';
-                t.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#1a1a1a;color:#00e676;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid #00e676;z-index:9999;transition:all 0.3s;opacity:0;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
+                t.className = 'toast';
                 document.body.appendChild(t);
             }
             t.textContent = msg;
             t.style.opacity = '1';
-            clearTimeout(t._timeout);
-            t._timeout = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+            clearTimeout(t._t);
+            t._t = setTimeout(() => { t.style.opacity = '0'; }, 2200);
         }
         
         async function testAPI() {
@@ -1061,7 +1114,7 @@ function renderPublicHome() {
             const r = document.getElementById('result');
             
             if (!k || !v || !s.value) {
-                showToast('Please fill all fields');
+                showToast('⚠️ Please fill all fields');
                 return;
             }
             
@@ -1074,17 +1127,17 @@ function renderPublicHome() {
             }
             
             r.style.display = 'block';
-            r.textContent = 'Executing request...';
-            r.style.color = '#999';
+            r.textContent = '⏳ Executing request...';
+            r.style.color = '#888';
             
             try {
                 const re = await fetch(url);
                 const d = await re.json();
                 r.textContent = JSON.stringify(d, null, 2);
-                r.style.color = '#00e676';
+                r.style.color = '#00ff88';
             } catch (e) {
-                r.textContent = 'Error: ' + e.message;
-                r.style.color = '#ff5252';
+                r.textContent = '✕ Error: ' + e.message;
+                r.style.color = '#ff3d3d';
             }
         }
     </script>
@@ -1092,76 +1145,68 @@ function renderPublicHome() {
 </html>`;
 }
 
-// ========== ADMIN LOGIN PAGE ==========
+// ========== ADMIN LOGIN ==========
 function renderAdminLogin() {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRONX — Admin Authentication</title>
+    <title>BRONX — Admin Auth</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{
-            background:#0d0d0d;min-height:100vh;display:flex;justify-content:center;align-items:center;
-            font-family:'Inter',-apple-system,sans-serif;
+            background:#080808;min-height:100vh;display:flex;justify-content:center;align-items:center;
+            font-family:'Inter',sans-serif;
+            background-image:radial-gradient(ellipse at center,rgba(0,255,136,0.03) 0%,transparent 70%);
         }
         .login-box{
-            background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;
-            padding:45px 40px;width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.5);
+            background:#111;border:1px solid #1f1f1f;border-radius:16px;
+            padding:45px 40px;width:400px;box-shadow:0 16px 60px rgba(0,0,0,0.5);
+            position:relative;overflow:hidden;
         }
-        .login-box .icon{
-            width:50px;height:50px;background:rgba(0,230,118,0.1);border-radius:50%;
-            display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
-            font-size:24px;
+        .login-box::before{
+            content:'';position:absolute;top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,#00ff88,#448aff,transparent);
         }
-        .login-box h2{
-            text-align:center;color:#fff;font-size:22px;font-weight:700;
-            letter-spacing:-0.5px;margin-bottom:5px;
+        .login-icon{
+            width:56px;height:56px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            margin:0 auto 20px;font-size:24px;
         }
-        .login-box .subtitle{
-            text-align:center;color:#666;font-size:12px;margin-bottom:30px;
-            letter-spacing:0.5px;
-        }
-        .form-group{margin-bottom:18px}
-        .form-group label{
-            display:block;color:#999;font-size:11px;text-transform:uppercase;
-            letter-spacing:1px;margin-bottom:7px;font-weight:600;
-        }
+        .login-box h2{text-align:center;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px}
+        .login-sub{text-align:center;color:#666;font-size:12px;margin-bottom:28px;letter-spacing:0.5px}
+        .form-group{margin-bottom:16px}
+        .form-group label{display:block;color:#999;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;font-weight:700}
         .form-group input{
-            width:100%;padding:12px 16px;background:#0d0d0d;border:1px solid #2a2a2a;
-            border-radius:8px;color:#e0e0e0;font-size:14px;font-family:inherit;
-            transition:all 0.2s;outline:none;
+            width:100%;padding:13px 16px;background:#0a0a0a;border:1px solid #2a2a2a;
+            border-radius:10px;color:#e0e0e0;font-size:14px;font-family:inherit;
+            transition:all 0.3s;outline:none;
         }
-        .form-group input:focus{border-color:#00e676;box-shadow:0 0 0 3px rgba(0,230,118,0.08)}
+        .form-group input:focus{border-color:#00ff88;box-shadow:0 0 0 3px rgba(0,255,136,0.06),0 0 20px rgba(0,255,136,0.05)}
         .btn-login{
-            width:100%;padding:13px;background:#00e676;color:#000;border:none;
-            border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;
-            letter-spacing:0.5px;transition:all 0.2s;font-family:inherit;margin-top:5px;
+            width:100%;padding:13px;background:#00ff88;color:#000;border:none;
+            border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;
+            letter-spacing:0.5px;transition:all 0.3s;font-family:inherit;margin-top:8px;
         }
-        .btn-login:hover{background:#00c853;box-shadow:0 0 30px rgba(0,230,118,0.2)}
-        .error{color:#ff5252;text-align:center;margin-top:15px;font-size:13px;display:none}
-        .back-link{text-align:center;margin-top:20px}
-        .back-link a{color:#666;text-decoration:none;font-size:12px;transition:color 0.2s}
-        .back-link a:hover{color:#00e676}
+        .btn-login:hover{background:#00cc6a;box-shadow:0 0 35px rgba(0,255,136,0.3)}
+        .error{color:#ff3d3d;text-align:center;margin-top:14px;font-size:13px;display:none;font-weight:500}
+        .back{text-align:center;margin-top:18px}
+        .back a{color:#666;text-decoration:none;font-size:12px;transition:color 0.3s}
+        .back a:hover{color:#00ff88}
     </style>
 </head>
 <body>
     <div class="login-box">
-        <div class="icon">🛡️</div>
+        <div class="login-icon">🛡️</div>
         <h2>Admin Access</h2>
-        <p class="subtitle">BRONX OSINT Control Panel</p>
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="username" placeholder="Enter username" autocomplete="off">
-        </div>
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="password" placeholder="Enter password">
-        </div>
+        <p class="login-sub">BRONX OSINT Control Panel</p>
+        <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="Enter username" autocomplete="off"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="Enter password"></div>
         <button class="btn-login" onclick="login()">Authenticate</button>
         <div class="error" id="errorMsg"></div>
-        <div class="back-link"><a href="/">← Back to Home</a></div>
+        <div class="back"><a href="/">← Back to Home</a></div>
     </div>
     <script>
         async function login(){
@@ -1175,13 +1220,9 @@ function renderAdminLogin() {
                     body:JSON.stringify({username:u,password:p})
                 });
                 const d=await r.json();
-                if(d.success){
-                    e.style.display='block';e.style.color='#00e676';e.textContent=d.message;
-                    setTimeout(()=>{window.location.href=d.redirect},800);
-                }else{
-                    e.style.display='block';e.style.color='#ff5252';e.textContent=d.error;
-                }
-            }catch(err){e.style.display='block';e.style.color='#ff5252';e.textContent='Connection error'}
+                if(d.success){e.style.display='block';e.style.color='#00ff88';e.textContent=d.message;setTimeout(()=>{window.location.href=d.redirect},800)}
+                else{e.style.display='block';e.style.color='#ff3d3d';e.textContent=d.error}
+            }catch(err){e.style.display='block';e.style.color='#ff3d3d';e.textContent='Connection error'}
         }
         document.addEventListener('keydown',function(ev){if(ev.key==='Enter')login()});
     </script>
@@ -1202,17 +1243,27 @@ function renderAdminPanel(token) {
     const activeKeys = allKeys.filter(k => !k.hidden && !k.isExpired && !k.isExhausted).length;
     const todayReq = requestLogs.filter(l => l.timestamp.startsWith(getIndiaDate())).length;
     
+    // Build endpoint usage stats
+    const endpointUsage = {};
+    requestLogs.forEach(log => {
+        const ep = log.endpoint || 'unknown';
+        if (!endpointUsage[ep]) endpointUsage[ep] = { total: 0, success: 0, failed: 0 };
+        endpointUsage[ep].total++;
+        if (log.status === 'success') endpointUsage[ep].success++;
+        else endpointUsage[ep].failed++;
+    });
+    
     let keyRows = allKeys.map(k => {
         let status = 'Active', sc = 's-green';
         if (k.hidden) { status = 'Master'; sc = 's-purple'; }
         else if (k.isExpired) { status = 'Expired'; sc = 's-red'; }
         else if (k.isExhausted) { status = 'Limit'; sc = 's-orange'; }
         
-        const dk = k.key.length > 30 ? k.key.substring(0,27)+'...' : k.key;
+        const dk = k.key.length > 32 ? k.key.substring(0,29)+'...' : k.key;
         const sd = k.scopes.includes('*') ? '<span class="scope-tag">ALL</span>' : k.scopes.slice(0,5).map(s => '<span class="scope-tag">'+s+'</span>').join('') + (k.scopes.length>5?' <span class="scope-tag">+'+ (k.scopes.length-5) +'</span>':'');
         
         return '<tr>'+
-            '<td><code style="color:#00e676;font-size:11px" title="'+k.key+'">'+dk+'</code></td>'+
+            '<td><code style="color:#00ff88;font-size:11px" title="'+k.key+'">'+dk+'</code></td>'+
             '<td>'+ (k.name||'—') +'</td>'+
             '<td style="font-size:10px">'+sd+'</td>'+
             '<td>'+ (k.unlimited?'∞':k.limit) +'</td>'+
@@ -1228,106 +1279,175 @@ function renderAdminPanel(token) {
     
     let scb = allScopes.map(s => '<label class="cb-label"><input type="checkbox" value="'+s.value+'"> '+s.label+'</label>').join('');
     
-    let logs = requestLogs.slice(-30).reverse().map(l => {
+    // Logs with browser info
+    let logs = requestLogs.slice(-25).reverse().map(l => {
         let sc = l.status==='success'?'s-green':(l.status==='failed'?'s-red':'s-orange');
-        return '<div class="log-row"><span class="log-time">'+l.timestamp+'</span><span class="log-key">'+l.key+'</span><code>'+l.endpoint+'</code><span class="'+sc+'">'+l.status+'</span></div>';
+        let browser = getBrowserName(l.browser);
+        return '<div class="log-row"><span class="log-time">'+l.timestamp+'</span><span class="log-key">'+l.key+'</span><code class="log-ep">/'+l.endpoint+'</code><span class="log-browser">'+browser+'</span><span class="'+sc+'">'+l.status+'</span></div>';
     }).join('') || '<p style="color:#666;text-align:center;padding:20px">No requests logged</p>';
+    
+    // Endpoint usage list
+    let usageRows = Object.entries(endpointUsage).sort((a,b) => b[1].total - a[1].total).map(([ep, data]) => {
+        return '<tr><td><code style="color:#00ff88">/'+ep+'</code></td><td><b>'+data.total+'</b></td><td style="color:#00ff88">'+data.success+'</td><td style="color:#ff3d3d">'+data.failed+'</td></tr>';
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#666;padding:20px">No requests yet</td></tr>';
+    
+    // Custom API editable rows
+    let customAPIRows = customAPIs.map((api, i) => `
+        <div class="custom-api-row" id="customRow${i}">
+            <div class="custom-api-view">
+                <div class="custom-api-info">
+                    <b class="custom-slot">#${api.id}</b>
+                    <span class="custom-name">${api.name || 'Empty Slot'}</span>
+                    ${api.endpoint ? '<code class="custom-ep">/' + api.endpoint + '</code>' : '<span class="custom-empty">No endpoint</span>'}
+                    <span class="custom-status ${api.visible ? 'vis' : 'hid'}">${api.visible ? 'VISIBLE' : 'HIDDEN'}</span>
+                </div>
+                <div class="custom-api-actions">
+                    <button class="btn-xs btn-info" onclick="editCustomAPI(${i})">Edit</button>
+                    <button class="btn-xs btn-warn" onclick="toggleCustomAPI(${i})">Toggle</button>
+                </div>
+            </div>
+            <div class="custom-api-edit" id="customEdit${i}" style="display:none">
+                <div class="form-row" style="margin-top:12px">
+                    <div class="form-grp"><label>Name</label><input type="text" id="caName${i}" value="${api.name || ''}"></div>
+                    <div class="form-grp"><label>Endpoint</label><input type="text" id="caEp${i}" value="${api.endpoint || ''}"></div>
+                    <div class="form-grp"><label>Parameter</label><input type="text" id="caParam${i}" value="${api.param || ''}"></div>
+                    <div class="form-grp"><label>Example</label><input type="text" id="caEx${i}" value="${api.example || ''}"></div>
+                    <div class="form-grp"><label>Description</label><input type="text" id="caDesc${i}" value="${api.desc || ''}"></div>
+                    <div class="form-grp"><label>Real API URL</label><input type="text" id="caReal${i}" value="${api.realAPI || ''}"></div>
+                    <div class="form-grp"><label>Visible</label><select id="caVis${i}"><option value="1" ${api.visible?'selected':''}>Yes</option><option value="0" ${!api.visible?'selected':''}>No</option></select></div>
+                    <div class="form-grp full-w" style="display:flex;gap:10px">
+                        <button class="btn btn-primary btn-sm" onclick="saveCustomAPI(${i})">Save</button>
+                        <button class="btn btn-outline btn-sm" onclick="cancelEdit(${i})">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
     
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRONX — Administration</title>
+    <title>BRONX — Administration Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root{--bg:#0d0d0d;--card:#1a1a1a;--border:#2a2a2a;--text:#e0e0e0;--g:#00e676;--g-dim:#00c853;--r:#ff5252;--o:#ffb74d;--b:#448aff;--purple:#b388ff}
+        :root{--bg:#080808;--card:#111;--card2:#151515;--border:#1f1f1f;--border2:#2a2a2a;--text:#e0e0e0;--text2:#999;--text3:#666;--g:#00ff88;--g2:#00cc6a;--r:#ff3d3d;--o:#ff9100;--b:#448aff;--purple:#b388ff;--radius:14px;--radius-sm:8px}
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;min-height:100vh}
-        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+        body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:10px}
         
         .topbar{
             background:var(--card);border-bottom:1px solid var(--border);padding:14px 28px;
             display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+            position:sticky;top:0;z-index:100;backdrop-filter:blur(20px);
         }
-        .topbar h1{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+        .topbar h1{font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.5px}
         .topbar h1 span{color:var(--g)}
         .topbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-        .topbar-time{font-size:11px;color:#666;font-family:'SF Mono',monospace}
+        .topbar-time{font-size:10px;color:var(--text3);font-family:'SF Mono',monospace}
         
-        .container{max-width:1350px;margin:0 auto;padding:22px}
+        .container{max-width:1400px;margin:0 auto;padding:20px 24px}
         
-        .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
-        .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center}
-        .stat-num{font-size:36px;font-weight:700;color:var(--g)}
-        .stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#888;margin-top:4px}
+        .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+        .stat-card{
+            background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+            padding:20px;text-align:center;position:relative;overflow:hidden;
+        }
+        .stat-card::after{
+            content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;
+            background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:0.5;
+        }
+        .stat-num{font-size:36px;font-weight:900;color:var(--g);letter-spacing:-1px}
+        .stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);margin-top:4px;font-weight:600}
         
         .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
         .tab{
-            padding:9px 20px;background:var(--card);border:1px solid var(--border);border-radius:6px;
-            color:#888;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:0.5px;transition:all 0.2s;
+            padding:10px 22px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);
+            color:var(--text3);cursor:pointer;font-size:13px;font-weight:600;letter-spacing:0.5px;transition:all 0.3s;
         }
-        .tab.active{border-color:var(--g);color:var(--g);background:rgba(0,230,118,0.05)}
-        .tab:hover{border-color:#444;color:#ccc}
+        .tab.active{border-color:var(--g);color:var(--g);background:rgba(0,255,136,0.04)}
+        .tab:hover{border-color:#333;color:#ccc}
         .panel{display:none}
         .panel.active{display:block}
         
-        .section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px}
-        .section h3{font-size:16px;font-weight:600;color:#fff;margin-bottom:18px}
+        .section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative}
+        .section h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:18px;letter-spacing:-0.3px}
         
-        .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-        .form-grp label{display:block;color:#999;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:600}
+        .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+        .form-grp label{display:block;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:700}
         .form-grp input,.form-grp select{
-            width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);
-            border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:all 0.2s;
+            width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border2);
+            border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:all 0.3s;
         }
-        .form-grp input:focus,.form-grp select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(0,230,118,0.06)}
+        .form-grp input:focus,.form-grp select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(0,255,136,0.05)}
         .full-w{grid-column:1/-1}
         
-        .cb-wrap{display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow:auto;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px}
+        .cb-wrap{display:flex;flex-wrap:wrap;gap:5px;max-height:150px;overflow:auto;padding:10px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm)}
         .cb-label{display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;padding:3px 8px;border-radius:4px;transition:all 0.15s}
-        .cb-label:hover{background:rgba(255,255,255,0.04)}
+        .cb-label:hover{background:rgba(255,255,255,0.03)}
         .cb-label input{accent-color:var(--g)}
         
-        .btn{padding:10px 22px;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;border:none;letter-spacing:0.5px;transition:all 0.2s;font-family:inherit}
+        .btn{padding:10px 22px;border-radius:var(--radius-sm);font-weight:600;font-size:13px;cursor:pointer;border:none;letter-spacing:0.5px;transition:all 0.3s;font-family:inherit}
         .btn-primary{background:var(--g);color:#000}
-        .btn-primary:hover{background:var(--g-dim)}
-        .btn-xs{padding:4px 10px;font-size:10px;border-radius:4px;border:1px solid;cursor:pointer;font-weight:600}
+        .btn-primary:hover{background:var(--g2);box-shadow:0 0 30px rgba(0,255,136,0.25)}
+        .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px 18px;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:12px;transition:all 0.3s;font-family:inherit}
+        .btn-outline:hover{border-color:var(--g);color:var(--g)}
+        .btn-sm{padding:7px 16px;font-size:11px}
+        .btn-xs{padding:4px 10px;font-size:10px;border-radius:4px;border:1px solid;cursor:pointer;font-weight:600;font-family:inherit}
         .btn-info{background:rgba(68,138,255,0.1);color:var(--b);border-color:rgba(68,138,255,0.3)}
         .btn-info:hover{background:rgba(68,138,255,0.2)}
-        .btn-danger{background:rgba(255,82,82,0.1);color:var(--r);border-color:rgba(255,82,82,0.3)}
-        .btn-danger:hover{background:rgba(255,82,82,0.2)}
-        .btn-outline{padding:7px 16px;font-size:11px;background:transparent;border:1px solid var(--border);color:#aaa;border-radius:6px}
-        .btn-outline:hover{border-color:var(--g);color:var(--g)}
+        .btn-danger{background:rgba(255,61,61,0.1);color:var(--r);border-color:rgba(255,61,61,0.3)}
+        .btn-danger:hover{background:rgba(255,61,61,0.2)}
+        .btn-warn{background:rgba(255,145,0,0.1);color:var(--o);border-color:rgba(255,145,0,0.3)}
+        .btn-warn:hover{background:rgba(255,145,0,0.2)}
         
-        .tbl-wrap{max-height:420px;overflow:auto;border-radius:8px;border:1px solid var(--border)}
+        .tbl-wrap{max-height:400px;overflow:auto;border-radius:var(--radius-sm);border:1px solid var(--border)}
         table{width:100%;border-collapse:collapse;font-size:11px}
-        th{background:var(--bg);color:#999;padding:10px 8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;font-size:10px;position:sticky;top:0;z-index:10;border-bottom:2px solid var(--border)}
-        td{padding:9px 8px;border-bottom:1px solid rgba(255,255,255,0.04)}
+        th{background:var(--card2);color:var(--text3);padding:10px 8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:9px;position:sticky;top:0;z-index:10;border-bottom:2px solid var(--border)}
+        td{padding:9px 8px;border-bottom:1px solid rgba(255,255,255,0.03)}
         tr:hover{background:rgba(255,255,255,0.02)}
         
-        .status-dot{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:0.5px}
-        .s-green{background:rgba(0,230,118,0.1);color:var(--g)}
-        .s-red{background:rgba(255,82,82,0.1);color:var(--r)}
-        .s-orange{background:rgba(255,183,77,0.1);color:var(--o)}
+        .status-dot{padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:1px}
+        .s-green{background:rgba(0,255,136,0.1);color:var(--g)}
+        .s-red{background:rgba(255,61,61,0.1);color:var(--r)}
+        .s-orange{background:rgba(255,145,0,0.1);color:var(--o)}
         .s-purple{background:rgba(179,136,255,0.1);color:var(--purple)}
         
-        .scope-tag{display:inline-block;padding:1px 6px;background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.2);border-radius:8px;font-size:9px;margin:1px;color:var(--g)}
+        .scope-tag{display:inline-block;padding:1px 6px;background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);border-radius:8px;font-size:9px;margin:1px;color:var(--g)}
         
-        .logs-box{max-height:380px;overflow:auto;background:var(--bg);border-radius:8px;padding:14px;font-size:11px;font-family:'SF Mono',monospace}
-        .log-row{display:flex;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);flex-wrap:wrap;align-items:center}
-        .log-time{color:#555;min-width:130px}
-        .log-key{color:var(--g)}
+        .logs-box{max-height:350px;overflow:auto;background:var(--bg);border-radius:var(--radius-sm);padding:14px;font-size:11px;font-family:'SF Mono',monospace}
+        .log-row{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.02);flex-wrap:wrap;align-items:center}
+        .log-time{color:#444;min-width:130px;font-size:10px}
+        .log-key{color:var(--g);font-size:10px}
+        .log-ep{color:var(--b);font-size:10px}
+        .log-browser{color:var(--text3);font-size:9px}
+        
+        .custom-api-row{
+            background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);
+            padding:14px;margin-bottom:10px;transition:all 0.3s;
+        }
+        .custom-api-row:hover{border-color:#333}
+        .custom-api-view{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+        .custom-api-info{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .custom-slot{color:var(--g)}
+        .custom-name{color:#fff;font-weight:600}
+        .custom-ep{color:var(--b);font-size:11px}
+        .custom-empty{color:var(--text3);font-size:11px}
+        .custom-status{padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700}
+        .custom-status.vis{background:rgba(0,255,136,0.1);color:var(--g)}
+        .custom-status.hid{background:rgba(255,61,61,0.1);color:var(--r)}
+        .custom-api-actions{display:flex;gap:6px}
+        .custom-api-edit{margin-top:10px;padding-top:12px;border-top:1px solid var(--border)}
         
         .toast{
             position:fixed;bottom:24px;right:24px;background:var(--card);color:var(--g);
-            padding:12px 22px;border-radius:8px;font-size:13px;font-weight:600;
-            border:1px solid var(--g);z-index:9999;opacity:0;transition:opacity 0.3s;
-            box-shadow:0 4px 20px rgba(0,0,0,0.5);
+            padding:12px 22px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+            border:1px solid rgba(0,255,136,0.3);z-index:9999;opacity:0;transition:opacity 0.3s;
+            box-shadow:0 8px 40px rgba(0,0,0,0.6),0 0 30px rgba(0,255,136,0.1);
         }
         
-        @media(max-width:768px){
-            .stat-row{grid-template-columns:repeat(2,1fr)}
-        }
+        @media(max-width:768px){.stat-row{grid-template-columns:repeat(2,1fr)}}
     </style>
 </head>
 <body>
@@ -1352,7 +1472,8 @@ function renderAdminPanel(token) {
             <div class="tab active" onclick="switchTab('gen')">Key Generator</div>
             <div class="tab" onclick="switchTab('keys')">Manage Keys</div>
             <div class="tab" onclick="switchTab('custom')">Custom APIs</div>
-            <div class="tab" onclick="switchTab('logs')">Logs</div>
+            <div class="tab" onclick="switchTab('usage')">API Usage</div>
+            <div class="tab" onclick="switchTab('logs')">Request Logs</div>
         </div>
         
         <div class="panel active" id="panel-gen">
@@ -1374,7 +1495,7 @@ function renderAdminPanel(token) {
             <div class="section">
                 <h3>All API Keys</h3>
                 <div style="margin-bottom:12px;display:flex;gap:10px">
-                    <input type="text" id="keySearch" placeholder="Search keys..." onkeyup="filterKeys()" style="padding:9px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;width:260px">
+                    <input type="text" id="keySearch" placeholder="Search keys..." onkeyup="filterKeys()" style="padding:9px 14px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;width:260px">
                     <button class="btn-outline" onclick="resetAllKeys()">Reset All Usage</button>
                 </div>
                 <div class="tbl-wrap"><table><thead><tr><th>Key</th><th>Owner</th><th>Scopes</th><th>Limit</th><th>Used</th><th>Left</th><th>Expiry</th><th>Status</th><th></th></tr></thead><tbody id="keyBody">${keyRows}</tbody></table></div>
@@ -1384,14 +1505,21 @@ function renderAdminPanel(token) {
         <div class="panel" id="panel-custom">
             <div class="section">
                 <h3>Custom API Integrations (10 Slots)</h3>
-                ${customAPIs.map((a,i) => '<div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;gap:10px;align-items:center"><b style="color:var(--g)">#'+a.id+'</b> <span>'+(a.name||'Empty')+'</span> '+(a.endpoint?'<code style="color:#aaa">/'+a.endpoint+'</code>':'')+' <span style="padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;'+(a.visible?'background:rgba(0,230,118,0.1);color:#00e676':'background:rgba(255,82,82,0.1);color:#ff5252')+'">'+(a.visible?'VISIBLE':'HIDDEN')+'</span></div><span style="color:#666;font-size:10px">param: '+(a.param||'—')+'</span></div>').join('')}
-                <p style="color:#555;font-size:10px;margin-top:10px">Edit via POST /admin/custom-api with slot & api data</p>
+                <div id="customAPIsContainer">${customAPIRows}</div>
+            </div>
+        </div>
+        
+        <div class="panel" id="panel-usage">
+            <div class="section">
+                <h3>API Usage Statistics</h3>
+                <p style="font-size:11px;color:var(--text3);margin-bottom:14px">Endpoint-wise request breakdown</p>
+                <div class="tbl-wrap"><table><thead><tr><th>Endpoint</th><th>Total Requests</th><th>Success</th><th>Failed</th></tr></thead><tbody>${usageRows}</tbody></table></div>
             </div>
         </div>
         
         <div class="panel" id="panel-logs">
             <div class="section">
-                <h3>Request Logs</h3>
+                <h3>Request Logs <span style="font-size:10px;color:var(--text3);font-weight:400">(Browser + IP tracked)</span></h3>
                 <div style="margin-bottom:12px"><button class="btn-outline" onclick="clearLogs()">Clear All Logs</button></div>
                 <div class="logs-box">${logs}</div>
             </div>
@@ -1427,31 +1555,52 @@ function renderAdminPanel(token) {
         async function clearLogs(){if(!confirm('Clear all logs?'))return;await api('/admin/clear-logs');toast('Logs cleared');setTimeout(()=>location.reload(),800)}
         async function logout(){await api('/admin/logout');window.location.href='/admin'}
         function filterKeys(){const s=document.getElementById('keySearch').value.toLowerCase();document.querySelectorAll('#keyBody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(s)?'':'none'})}
+        
+        // Custom API editing
+        function editCustomAPI(i){
+            document.getElementById('customEdit'+i).style.display='block';
+            document.getElementById('customRow'+i).querySelector('.custom-api-view').style.display='none';
+        }
+        function cancelEdit(i){
+            document.getElementById('customEdit'+i).style.display='none';
+            document.getElementById('customRow'+i).querySelector('.custom-api-view').style.display='flex';
+        }
+        async function saveCustomAPI(i){
+            const data={
+                name:document.getElementById('caName'+i).value,
+                endpoint:document.getElementById('caEp'+i).value,
+                param:document.getElementById('caParam'+i).value,
+                example:document.getElementById('caEx'+i).value,
+                desc:document.getElementById('caDesc'+i).value,
+                realAPI:document.getElementById('caReal'+i).value,
+                visible:document.getElementById('caVis'+i).value==='1'
+            };
+            const d=await api('/admin/custom-api',{slot:i,api:data});
+            d.success?(toast('Custom API #'+(i+1)+' saved!'),setTimeout(()=>location.reload(),800)):toast(d.error||'Error')
+        }
+        async function toggleCustomAPI(i){
+            const d=await api('/admin/custom-api',{slot:i,api:{visible:!${JSON.stringify(customAPIs)}[i].visible}});
+            d.success?(toast('Toggled!'),setTimeout(()=>location.reload(),600)):toast(d.error||'Error')
+        }
     </script>
 </body>
 </html>`;
 }
 
-// ========== EXPRESS MIDDLEWARE ==========
+// ========== EXPRESS ==========
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
     req.clientIP = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip || 'unknown';
+    req.userAgent = req.headers['user-agent'] || 'Unknown';
     next();
 });
 
-// ========== PUBLIC ROUTES ==========
 app.get('/', (req, res) => res.send(renderPublicHome()));
+
 app.get('/test', (req, res) => {
-    res.json({ 
-        status: 'BRONX OSINT API Operational', 
-        credit: '@BRONX_ULTRA', 
-        time: getIndiaDateTime(),
-        timezone: 'Asia/Kolkata',
-        endpoints: Object.keys(endpoints).length,
-        custom_apis: customAPIs.filter(a => a.visible).length
-    });
+    res.json({ status: 'BRONX OSINT API Operational', credit: '@BRONX_ULTRA', time: getIndiaDateTime(), timezone: 'Asia/Kolkata', endpoints: Object.keys(endpoints).length, custom_apis: customAPIs.filter(a => a.visible).length });
 });
 
 app.get('/key-info', (req, res) => {
@@ -1460,18 +1609,7 @@ app.get('/key-info', (req, res) => {
     const keyData = keyStorage[apiKey];
     if (!keyData || keyData.hidden) return res.status(404).json({ success: false, error: "Key not found" });
     const now = getIndiaTime();
-    const isExpired = keyData.expiry && now > keyData.expiry;
-    const isExhausted = !keyData.unlimited && keyData.used >= keyData.limit;
-    res.json({
-        success: true,
-        key_masked: apiKey.substring(0, 6) + '****' + apiKey.substring(apiKey.length - 4),
-        owner: keyData.name, type: keyData.type, scopes: keyData.scopes,
-        limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: keyData.used,
-        remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used),
-        expiry: keyData.expiryStr || 'LIFETIME', expired: isExpired, exhausted: isExhausted,
-        status: isExpired ? 'expired' : (isExhausted ? 'exhausted' : 'active'),
-        created: keyData.created, timezone: 'Asia/Kolkata', current_time: getIndiaDateTime()
-    });
+    res.json({ success: true, key_masked: apiKey.substring(0, 6) + '****', owner: keyData.name, type: keyData.type, scopes: keyData.scopes, limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: keyData.used, remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used), expiry: keyData.expiryStr || 'LIFETIME', status: (keyData.expiry && now > keyData.expiry) ? 'expired' : ((!keyData.unlimited && keyData.used >= keyData.limit) ? 'exhausted' : 'active'), created: keyData.created, timezone: 'Asia/Kolkata' });
 });
 
 app.get('/quota', (req, res) => {
@@ -1479,59 +1617,54 @@ app.get('/quota', (req, res) => {
     if (!apiKey) return res.status(400).json({ error: "Missing key parameter" });
     const keyData = keyStorage[apiKey];
     if (!keyData || keyData.hidden) return res.status(404).json({ success: false, error: "Key not found" });
-    const remaining = keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used);
-    res.json({ success: true, key_masked: apiKey.substring(0, 6) + '****', owner: keyData.name, limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: keyData.used, remaining, expiry: keyData.expiryStr || 'LIFETIME', timezone: 'Asia/Kolkata' });
+    res.json({ success: true, key_masked: apiKey.substring(0, 6) + '****', owner: keyData.name, limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: keyData.used, remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used), expiry: keyData.expiryStr || 'LIFETIME' });
 });
 
 app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const query = req.query;
-    const apiKey = query.key || req.headers['x-api-key'];
-    const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
-    if (!customAPI) return res.status(404).json({ success: false, error: `Custom endpoint not found: ${endpoint}` });
-    if (!apiKey) { logRequest(null, `custom/${endpoint}`, 'no-key', 'failed', req.clientIP); return res.status(401).json({ success: false, error: "API Key Required" }); }
-    const keyCheck = checkKeyValid(apiKey);
-    if (!keyCheck.valid) { logRequest(apiKey, `custom/${endpoint}`, query[customAPI.param], 'failed', req.clientIP); return res.status(403).json({ success: false, error: keyCheck.error, ...(keyCheck.expired && { expired: true }), ...(keyCheck.limitExhausted && { limit_exhausted: true }) }); }
-    const keyData = keyCheck.keyData;
-    const paramValue = query[customAPI.param];
-    if (!paramValue) return res.status(400).json({ success: false, error: `Missing parameter: ${customAPI.param}`, example: `?key=KEY&${customAPI.param}=${customAPI.example}` });
+    const apiKey = req.query.key || req.headers['x-api-key'];
+    const customAPI = customAPIs.find(a => a.endpoint === endpoint && a.visible);
+    if (!customAPI) return res.status(404).json({ success: false, error: "Custom endpoint not found" });
+    if (!apiKey) { logRequest(null, 'custom/'+endpoint, 'no-key', 'failed', req.clientIP, req.userAgent); return res.status(401).json({ success: false, error: "API Key Required" }); }
+    const kc = checkKeyValid(apiKey);
+    if (!kc.valid) { logRequest(apiKey, 'custom/'+endpoint, req.query[customAPI.param], 'failed', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: kc.error, ...(kc.expired && { expired: true }), ...(kc.limitExhausted && { limit_exhausted: true }) }); }
+    const pv = req.query[customAPI.param];
+    if (!pv) return res.status(400).json({ success: false, error: 'Missing param: '+customAPI.param });
     try {
-        const realUrl = customAPI.realAPI.replace('{param}', encodeURIComponent(paramValue));
-        const response = await axios.get(realUrl, { timeout: 30000 });
+        const ru = customAPI.realAPI.replace('{param}', encodeURIComponent(pv));
+        const resp = await axios.get(ru, { timeout: 30000 });
         incrementKeyUsage(apiKey);
-        logRequest(apiKey, `custom/${endpoint}`, paramValue, 'success', req.clientIP);
-        const cleanedData = cleanResponse(response.data);
-        cleanedData.api_info = { powered_by: "@BRONX_ULTRA", endpoint, type: 'custom', key_owner: keyData.name, timestamp: getIndiaDateTime() };
-        res.json(cleanedData);
-    } catch (error) { logRequest(apiKey, `custom/${endpoint}`, paramValue, 'error', req.clientIP); res.status(500).json({ success: false, error: error.message }); }
+        logRequest(apiKey, 'custom/'+endpoint, pv, 'success', req.clientIP, req.userAgent);
+        const cd = cleanResponse(resp.data);
+        cd.api_info = { powered_by: "@BRONX_ULTRA", endpoint, type: 'custom', key_owner: kc.keyData.name, timestamp: getIndiaDateTime() };
+        res.json(cd);
+    } catch (e) { logRequest(apiKey, 'custom/'+endpoint, pv, 'error', req.clientIP, req.userAgent); res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.get('/api/key-bronx/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const query = req.query;
-    const apiKey = query.key || req.headers['x-api-key'];
-    if (!endpoints[endpoint]) return res.status(404).json({ success: false, error: `Endpoint not found: ${endpoint}`, available: Object.keys(endpoints) });
-    if (!apiKey) { logRequest(null, endpoint, 'no-key', 'failed', req.clientIP); return res.status(401).json({ success: false, error: "API Key Required" }); }
-    const keyCheck = checkKeyValid(apiKey);
-    if (!keyCheck.valid) { logRequest(apiKey, endpoint, query[endpoints[endpoint].param], 'failed', req.clientIP); return res.status(403).json({ success: false, error: keyCheck.error, ...(keyCheck.expired && { expired: true }), ...(keyCheck.limitExhausted && { limit_exhausted: true }) }); }
-    const keyData = keyCheck.keyData;
-    const scopeCheck = checkKeyScope(keyData, endpoint);
-    if (!scopeCheck.valid) { logRequest(apiKey, endpoint, query[endpoints[endpoint].param], 'scope-denied', req.clientIP); return res.status(403).json({ success: false, error: scopeCheck.error }); }
+    const apiKey = req.query.key || req.headers['x-api-key'];
+    if (!endpoints[endpoint]) return res.status(404).json({ success: false, error: "Not found: "+endpoint });
+    if (!apiKey) { logRequest(null, endpoint, 'no-key', 'failed', req.clientIP, req.userAgent); return res.status(401).json({ success: false, error: "API Key Required" }); }
+    const kc = checkKeyValid(apiKey);
+    if (!kc.valid) { logRequest(apiKey, endpoint, req.query[endpoints[endpoint].param], 'failed', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: kc.error, ...(kc.expired && { expired: true }), ...(kc.limitExhausted && { limit_exhausted: true }) }); }
+    const sc = checkKeyScope(kc.keyData, endpoint);
+    if (!sc.valid) { logRequest(apiKey, endpoint, req.query[endpoints[endpoint].param], 'scope-denied', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: sc.error }); }
     const ep = endpoints[endpoint];
-    const paramValue = query[ep.param];
-    if (!paramValue) return res.status(400).json({ success: false, error: `Missing parameter: ${ep.param}`, example: `?key=KEY&${ep.param}=${ep.example}` });
+    const pv = req.query[ep.param];
+    if (!pv) return res.status(400).json({ success: false, error: 'Missing: '+ep.param });
     try {
-        const realUrl = `${REAL_API_BASE}/${endpoint}?key=${REAL_API_KEY}&${ep.param}=${encodeURIComponent(paramValue)}`;
-        const response = await axios.get(realUrl, { timeout: 30000 });
-        const updatedKey = incrementKeyUsage(apiKey);
-        logRequest(apiKey, endpoint, paramValue, 'success', req.clientIP);
-        const cleanedData = cleanResponse(response.data);
-        cleanedData.api_info = { powered_by: "@BRONX_ULTRA", endpoint, key_owner: keyData.name, key_type: keyData.type, limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: updatedKey ? updatedKey.used : keyData.used, remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - (updatedKey ? updatedKey.used : keyData.used)), expiry: keyData.expiryStr || 'LIFETIME', timezone: 'Asia/Kolkata', timestamp: getIndiaDateTime() };
-        res.json(cleanedData);
-    } catch (error) { logRequest(apiKey, endpoint, paramValue, 'error', req.clientIP); if (error.response) return res.status(error.response.status).json(cleanResponse(error.response.data)); res.status(500).json({ success: false, error: error.message }); }
+        const ru = REAL_API_BASE+'/'+endpoint+'?key='+REAL_API_KEY+'&'+ep.param+'='+encodeURIComponent(pv);
+        const resp = await axios.get(ru, { timeout: 30000 });
+        const uk = incrementKeyUsage(apiKey);
+        logRequest(apiKey, endpoint, pv, 'success', req.clientIP, req.userAgent);
+        const cd = cleanResponse(resp.data);
+        cd.api_info = { powered_by: "@BRONX_ULTRA", endpoint, key_owner: kc.keyData.name, key_type: kc.keyData.type, limit: kc.keyData.unlimited ? 'Unlimited' : kc.keyData.limit, used: uk ? uk.used : kc.keyData.used, remaining: kc.keyData.unlimited ? 'Unlimited' : Math.max(0, kc.keyData.limit - (uk ? uk.used : kc.keyData.used)), expiry: kc.keyData.expiryStr || 'LIFETIME', timezone: 'Asia/Kolkata', timestamp: getIndiaDateTime() };
+        res.json(cd);
+    } catch (e) { logRequest(apiKey, endpoint, pv, 'error', req.clientIP, req.userAgent); if (e.response) return res.status(e.response.status).json(cleanResponse(e.response.data)); res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ========== ADMIN ROUTES ==========
+// Admin routes
 app.get('/admin', (req, res) => {
     const token = req.query.token || req.headers['x-admin-token'];
     isAdminAuthenticated(token) ? res.send(renderAdminPanel(token)) : res.send(renderAdminLogin());
@@ -1542,91 +1675,65 @@ app.post('/admin/login', (req, res) => {
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         const token = generateSessionToken();
         adminSessions[token] = { expiresAt: Date.now() + (30 * 60 * 1000) };
-        res.json({ success: true, token, message: 'Authenticated successfully', redirect: '/admin?token=' + token });
-    } else { res.status(401).json({ success: false, error: 'Invalid credentials' }); }
+        res.json({ success: true, token, message: 'Authenticated', redirect: '/admin?token=' + token });
+    } else res.status(401).json({ success: false, error: 'Invalid credentials' });
 });
 
-app.post('/admin/logout', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (token) delete adminSessions[token];
-    res.json({ success: true, message: 'Logged out' });
-});
-
-app.get('/admin/check-auth', (req, res) => {
-    const token = req.query.token || req.headers['x-admin-token'];
-    res.json({ authenticated: isAdminAuthenticated(token) });
-});
+app.post('/admin/logout', (req, res) => { const token = req.headers['x-admin-token'] || req.query.token; if (token) delete adminSessions[token]; res.json({ success: true }); });
+app.get('/admin/check-auth', (req, res) => res.json({ authenticated: isAdminAuthenticated(req.query.token || req.headers['x-admin-token']) }));
 
 app.post('/admin/generate-key', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const { keyName, keyOwner, scopes, limit, expiryDate, keyType } = req.body;
-    if (!keyName || !keyOwner || !scopes || scopes.length === 0) return res.status(400).json({ success: false, error: 'Missing required fields' });
-    if (keyStorage[keyName]) return res.status(400).json({ success: false, error: 'Key already exists' });
-    const isUnlimited = limit === 'unlimited' || parseInt(limit) >= 999999;
-    keyStorage[keyName] = { name: keyOwner, scopes, type: keyType || 'premium', limit: isUnlimited ? 999999 : parseInt(limit) || 100, used: 0, expiry: expiryDate && expiryDate !== 'LIFETIME' ? parseExpiryDate(expiryDate) : null, expiryStr: expiryDate || 'LIFETIME', created: getIndiaDateTime(), resetType: 'never', unlimited: isUnlimited, hidden: false };
-    res.json({ success: true, message: 'Key generated successfully', key: { name: keyName, owner: keyOwner, scopes, limit: isUnlimited ? 'Unlimited' : keyStorage[keyName].limit, expiry: expiryDate || 'LIFETIME' } });
+    if (!keyName || !keyOwner || !scopes?.length) return res.status(400).json({ success: false, error: 'Missing fields' });
+    if (keyStorage[keyName]) return res.status(400).json({ success: false, error: 'Key exists' });
+    const isUnl = limit === 'unlimited' || parseInt(limit) >= 999999;
+    keyStorage[keyName] = { name: keyOwner, scopes, type: keyType || 'premium', limit: isUnl ? 999999 : parseInt(limit) || 100, used: 0, expiry: expiryDate && expiryDate !== 'LIFETIME' ? parseExpiryDate(expiryDate) : null, expiryStr: expiryDate || 'LIFETIME', created: getIndiaDateTime(), resetType: 'never', unlimited: isUnl, hidden: false };
+    res.json({ success: true, message: 'Key generated' });
 });
 
 app.post('/admin/delete-key', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
     const { keyName } = req.body;
-    if (!keyName) return res.status(400).json({ success: false, error: 'Key name required' });
     if (keyName === 'BRONX_ULTRA_MASTER_2026') return res.status(400).json({ success: false, error: 'Cannot delete master key' });
-    if (keyStorage[keyName]) { delete keyStorage[keyName]; res.json({ success: true, message: 'Key deleted' }); }
-    else res.status(404).json({ success: false, error: 'Key not found' });
+    if (keyStorage[keyName]) { delete keyStorage[keyName]; res.json({ success: true }); } else res.status(404).json({ success: false });
 });
 
 app.post('/admin/reset-key-usage', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
     const { keyName } = req.body;
-    if (!keyName) return res.status(400).json({ success: false, error: 'Key name required' });
-    if (keyStorage[keyName]) { keyStorage[keyName].used = 0; res.json({ success: true, message: 'Usage reset' }); }
-    else res.status(404).json({ success: false, error: 'Key not found' });
+    if (keyStorage[keyName]) { keyStorage[keyName].used = 0; res.json({ success: true }); } else res.status(404).json({ success: false });
 });
 
 app.get('/admin/keys', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
-    const allKeys = Object.entries(keyStorage).map(([key, data]) => ({ key, name: data.name, scopes: data.scopes, type: data.type, limit: data.unlimited ? 'Unlimited' : data.limit, used: data.used, remaining: data.unlimited ? 'Unlimited' : Math.max(0, data.limit - data.used), expiry: data.expiryStr || 'LIFETIME', created: data.created, hidden: data.hidden || false, isExpired: data.expiry && isKeyExpired(data.expiry), isExhausted: !data.unlimited && data.used >= data.limit }));
-    res.json({ success: true, totalKeys: allKeys.length, keys: allKeys });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
+    res.json({ success: true, keys: Object.entries(keyStorage).map(([k,d]) => ({ key: k, name: d.name, scopes: d.scopes, type: d.type, limit: d.unlimited?'Unlimited':d.limit, used: d.used, remaining: d.unlimited?'Unlimited':Math.max(0,d.limit-d.used), expiry: d.expiryStr||'LIFETIME', hidden: d.hidden })) });
 });
 
 app.get('/admin/logs', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
-    const limit = parseInt(req.query.limit) || 100;
-    res.json({ success: true, totalLogs: requestLogs.length, logs: requestLogs.slice(-limit).reverse() });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
+    res.json({ success: true, logs: requestLogs.slice(-(parseInt(req.query.limit)||100)).reverse() });
 });
 
 app.post('/admin/clear-logs', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
-    requestLogs = [];
-    res.json({ success: true, message: 'All logs cleared' });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
+    requestLogs = []; res.json({ success: true });
 });
 
 app.post('/admin/custom-api', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
     const { slot, api } = req.body;
-    if (slot === undefined || slot < 0 || slot >= customAPIs.length) return res.status(400).json({ success: false, error: 'Invalid slot' });
+    if (slot === undefined || slot < 0 || slot >= customAPIs.length) return res.status(400).json({ success: false });
     customAPIs[slot] = { ...customAPIs[slot], ...api };
-    res.json({ success: true, message: 'Custom API updated', api: customAPIs[slot] });
+    res.json({ success: true, api: customAPIs[slot] });
 });
 
 app.get('/admin/stats', (req, res) => {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!isAdminAuthenticated(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
     const totalKeys = Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length;
-    const activeKeys = Object.entries(keyStorage).filter(([_, d]) => !d.hidden && !isKeyExpired(d.expiry) && !(d.used >= d.limit && !d.unlimited)).length;
-    res.json({ success: true, stats: { totalKeys, activeKeys, totalRequests: requestLogs.length, todayRequests: requestLogs.filter(l => l.timestamp.startsWith(getIndiaDate())).length, totalEndpoints: Object.keys(endpoints).length, totalCustomAPIs: customAPIs.filter(a => a.visible).length, serverTime: getIndiaDateTime() } });
+    res.json({ success: true, stats: { totalKeys, activeKeys: Object.entries(keyStorage).filter(([_,d])=>!d.hidden&&!isKeyExpired(d.expiry)&&!(d.used>=d.limit&&!d.unlimited)).length, totalRequests: requestLogs.length, todayRequests: requestLogs.filter(l=>l.timestamp.startsWith(getIndiaDate())).length, totalEndpoints: Object.keys(endpoints).length, totalCustomAPIs: customAPIs.filter(a=>a.visible).length, serverTime: getIndiaDateTime() } });
 });
 
-app.use((req, res) => {
-    res.status(404).json({ success: false, error: "Not found", endpoints: ["/", "/test", "/key-info", "/quota", "/api/key-bronx/:endpoint", "/api/custom/:endpoint", "/admin"], contact: "@BRONX_ULTRA" });
-});
+app.use((req, res) => res.status(404).json({ success: false, error: "Not found", contact: "@BRONX_ULTRA" }));
 
 module.exports = app;
