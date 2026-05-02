@@ -1,4 +1,4 @@
-// api/index.js - BRONX OSINT API v6.0 - GOD LEVEL ULTRA THEME
+// api/index.js - BRONX OSINT API v7.0 - ULTIMATE FIXED VERSION
 const express = require('express');
 const axios = require('axios');
 
@@ -93,66 +93,12 @@ function initializeData() {
         hidden: false
     };
     
-    // initializeData() function mein yeh changes karo:
-
-customAPIs = [
-    { 
-        id: 1, 
-        name: 'Number Info backup ✅', 
-        endpoint: 'bronx-apiop', 
-        param: 'num', 
-        example: '9876543210', 
-        desc: 'India Number Lookup Vip Bronx api',
-        category: '🔧 Custom APIs',
-        visible: true,
-        realAPI: 'https://rajput-api.vercel.app/search?num={param}'  // ✅ {param}
-    },
-    { 
-        id: 2, 
-        name: 'Vehicle Details Api 🚕', 
-        endpoint: 'rc-details', 
-        param: 'ca_number', 
-        example: 'MH02FZ0555', 
-        desc: 'Vehicle RC Details Lookup',
-        category: '🔧 Custom APIs',
-        visible: true,
-        realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}'  // ✅ {param}
-    },
-    { 
-        id: 3, 
-        name: 'Adhar Detail api', 
-        endpoint: 'aadhar-details', 
-        param: 'aadhar', 
-        example: '393933081942', 
-        desc: 'Aadhar Number Lookup',
-        category: '🔧 Custom APIs',
-        visible: true,
-        realAPI: 'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}'  // ✅ {param} (pehle {param} tha hi sahi)
-    },
-    { 
-        id: 4, 
-        name: '📧 Email Lookup API', 
-        endpoint: 'email-lookup', 
-        param: 'mail', 
-        example: 'user@gmail.com', 
-        desc: 'Email Information Lookup',
-        category: '🔧 Custom APIs',
-        visible: true,
-        realAPI: 'https://bronx-king-mail-opi.vercel.app/mail={param}'  // ✅ FIXED: {parma} → {param}
-    },
-    { 
-        id: 5, 
-        name: '📲 Telegram Number API', 
-        endpoint: 'telegram-num', 
-        param: 'id', 
-        example: '7530266953', 
-        desc: 'Telegram Number Lookup',
-        category: '🔧 Custom APIs',
-        visible: true,
-        realAPI: 'https://bronx-tg-king.vercel.app/tg?key=BRONXop&query={param}'  // ✅ {param}
-    },
-    // ... baaki empty slots same rahenge
-];
+    customAPIs = [
+        { id: 1, name: 'Number Info backup ✅', endpoint: 'rajput-api', param: 'num', example: '9876543210', desc: 'India Number Lookup Vip Bronx api', category: '🔧 Custom APIs', visible: true, realAPI: 'https://rajput-api.vercel.app/search?num={param}' },
+        { id: 2, name: 'Vehicle Details Api 🚕', endpoint: 'rc-details', param: 'ca_number', example: 'MH02FZ0555', desc: 'Vehicle RC Details Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}' },
+        { id: 3, name: 'Adhar Detail api', endpoint: 'aadhar-details', param: 'aadhar', example: '393933081942', desc: 'Aadhar Number Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'https://bronx-adhar-api.vercel.app/aadhar={param}' },
+        { id: 4, name: '📧 Email Lookup API', endpoint: 'email-lookup', param: 'mail', example: 'user@gmail.com', desc: 'Email Information Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'https://bronx-mail-api.vercel.app/mail={param}' },
+        { id: 5, name: '📲 Telegram Number API', endpoint: 'telegram-num', param: 'id', example: '7530266953', desc: 'Telegram Number Lookup', category: '🔧 Custom APIs', visible: true, realAPI: 'http://45.91.248.51:3000/api/tgnum?id={param}' },
         { id: 6, name: 'Custom API 6', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
         { id: 7, name: 'Custom API 7', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
         { id: 8, name: 'Custom API 8', endpoint: '', param: '', example: '', desc: '', category: '🔧 Custom APIs', visible: false, realAPI: '' },
@@ -336,7 +282,6 @@ function renderPublicHome() {
         </div>`;
     });
     
-    // Custom APIs
     if (visibleAPIs.length > 0) {
         endpointSections += `
         <div class="category-section">
@@ -428,7 +373,6 @@ function renderPublicHome() {
         ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
         
-        /* ===== HERO SECTION ===== */
         .hero {
             position: relative;
             padding: 60px 30px 50px;
@@ -608,14 +552,12 @@ function renderPublicHome() {
         .tag-orange::before { background: rgba(255,145,0,0.08); }
         .tag-orange:hover { box-shadow: 0 0 25px var(--orange-glow); }
         
-        /* ===== CONTAINER ===== */
         .container {
             max-width: 1280px;
             margin: 0 auto;
             padding: 0 25px;
         }
         
-        /* ===== STATS ROW ===== */
         .stats-row {
             display: flex;
             justify-content: center;
@@ -665,7 +607,6 @@ function renderPublicHome() {
             margin: 5px 0;
         }
         
-        /* ===== API TESTER ===== */
         .tester-section {
             background: var(--card);
             border: 1px solid var(--border);
@@ -792,7 +733,6 @@ function renderPublicHome() {
             color: var(--green);
         }
         
-        /* ===== CATEGORY SECTION ===== */
         .category-section {
             margin-bottom: 40px;
         }
@@ -850,7 +790,6 @@ function renderPublicHome() {
             background: linear-gradient(90deg, rgba(255,145,0,0.2), transparent);
         }
         
-        /* ===== ENDPOINT CARDS ===== */
         .endpoint-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -975,7 +914,6 @@ function renderPublicHome() {
             background: rgba(255,145,0,0.06);
         }
         
-        /* ===== FOOTER ===== */
         .footer {
             text-align: center;
             padding: 45px 20px;
@@ -1021,7 +959,6 @@ function renderPublicHome() {
             color: var(--green);
         }
         
-        /* ===== TOAST ===== */
         .toast {
             position: fixed;
             bottom: 30px;
@@ -1057,7 +994,6 @@ function renderPublicHome() {
     </style>
 </head>
 <body>
-    <!-- ===== HERO ===== -->
     <header class="hero">
         <div class="hero-bg">
             <div class="hero-bg-circle"></div>
@@ -1082,7 +1018,6 @@ function renderPublicHome() {
     </header>
     
     <div class="container">
-        <!-- ===== STATS ===== -->
         <div class="stats-row">
             <div class="stat-item">
                 <div class="stat-value">${totalEndpoints}</div>
@@ -1105,7 +1040,6 @@ function renderPublicHome() {
             </div>
         </div>
         
-        <!-- ===== API TESTER ===== -->
         <div class="tester-section">
             <div class="tester-header">
                 <div class="tester-dot"></div>
@@ -1133,73 +1067,28 @@ function renderPublicHome() {
     </footer>
     
     <script>
-        const endpoints = ${JSON.stringify(endpoints)};
-        
-        function copyUrl(ep, param, ex) {
-            navigator.clipboard.writeText(location.origin + '/api/key-bronx/' + ep + '?key=YOUR_KEY&' + param + '=' + ex);
-            showToast('✓ Copied: /' + ep);
-        }
-        
-        function copyUrlCustom(ep, param, ex) {
-            navigator.clipboard.writeText(location.origin + '/api/custom/' + ep + '?key=YOUR_KEY&' + param + '=' + ex);
-            showToast('✓ Custom URL Copied');
-        }
-        
-        function showToast(msg) {
-            let t = document.getElementById('toast');
-            if (!t) {
-                t = document.createElement('div');
-                t.id = 'toast';
-                t.className = 'toast';
-                document.body.appendChild(t);
-            }
-            t.textContent = msg;
-            t.style.opacity = '1';
-            clearTimeout(t._t);
-            t._t = setTimeout(() => { t.style.opacity = '0'; }, 2200);
-        }
-        
-        async function testAPI() {
-            const s = document.getElementById('epSelect');
-            const o = s.options[s.selectedIndex];
-            const isC = o.dataset.custom === '1';
-            const k = document.getElementById('apiKey').value;
-            const v = document.getElementById('paramVal').value;
-            const r = document.getElementById('result');
-            
-            if (!k || !v || !s.value) {
-                showToast('⚠️ Please fill all fields');
-                return;
-            }
-            
+        const endpoints=${JSON.stringify(endpoints)};
+        function copyUrl(e,p,ex){navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+e+'?key=YOUR_KEY&'+p+'='+ex);showToast('✓ Copied: /'+e)}
+        function copyUrlCustom(e,p,ex){navigator.clipboard.writeText(location.origin+'/api/custom/'+e+'?key=YOUR_KEY&'+p+'='+ex);showToast('✓ Custom URL Copied')}
+        function showToast(m){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>{t.style.opacity='0'},2200)}
+        async function testAPI(){
+            const s=document.getElementById('epSelect');const o=s.options[s.selectedIndex];
+            const isC=o.dataset.custom==='1';const k=document.getElementById('apiKey').value;
+            const v=document.getElementById('paramVal').value;const r=document.getElementById('result');
+            if(!k||!v||!s.value){showToast('⚠️ Please fill all fields');return}
             let url;
-            if (isC) {
-                url = '/api/custom/' + o.dataset.ep + '?key=' + k + '&' + o.dataset.param + '=' + v;
-            } else {
-                const ep = s.value;
-                url = '/api/key-bronx/' + ep + '?key=' + k + '&' + endpoints[ep].param + '=' + v;
-            }
-            
-            r.style.display = 'block';
-            r.textContent = '⏳ Executing request...';
-            r.style.color = '#888';
-            
-            try {
-                const re = await fetch(url);
-                const d = await re.json();
-                r.textContent = JSON.stringify(d, null, 2);
-                r.style.color = '#00ff88';
-            } catch (e) {
-                r.textContent = '✕ Error: ' + e.message;
-                r.style.color = '#ff3d3d';
-            }
+            if(isC){url='/api/custom/'+o.dataset.ep+'?key='+k+'&'+o.dataset.param+'='+v}
+            else{const ep=s.value;url='/api/key-bronx/'+ep+'?key='+k+'&'+endpoints[ep].param+'='+v}
+            r.style.display='block';r.textContent='⏳ Executing request...';r.style.color='#888';
+            try{const re=await fetch(url);const d=await re.json();r.textContent=JSON.stringify(d,null,2);r.style.color='#00ff88'}
+            catch(e){r.textContent='✕ Error: '+e.message;r.style.color='#ff3d3d'}
         }
     </script>
 </body>
 </html>`;
 }
 
-// ========== ADMIN LOGIN ==========
+// ========== ADMIN LOGIN PAGE ==========
 function renderAdminLogin() {
     return `<!DOCTYPE html>
 <html lang="en">
@@ -1210,40 +1099,17 @@ function renderAdminLogin() {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            background:#080808;min-height:100vh;display:flex;justify-content:center;align-items:center;
-            font-family:'Inter',sans-serif;
-            background-image:radial-gradient(ellipse at center,rgba(0,255,136,0.03) 0%,transparent 70%);
-        }
-        .login-box{
-            background:#111;border:1px solid #1f1f1f;border-radius:16px;
-            padding:45px 40px;width:400px;box-shadow:0 16px 60px rgba(0,0,0,0.5);
-            position:relative;overflow:hidden;
-        }
-        .login-box::before{
-            content:'';position:absolute;top:0;left:0;right:0;height:2px;
-            background:linear-gradient(90deg,transparent,#00ff88,#448aff,transparent);
-        }
-        .login-icon{
-            width:56px;height:56px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);
-            border-radius:50%;display:flex;align-items:center;justify-content:center;
-            margin:0 auto 20px;font-size:24px;
-        }
+        body{background:#080808;min-height:100vh;display:flex;justify-content:center;align-items:center;font-family:'Inter',sans-serif;background-image:radial-gradient(ellipse at center,rgba(0,255,136,0.03) 0%,transparent 70%)}
+        .login-box{background:#111;border:1px solid #1f1f1f;border-radius:16px;padding:45px 40px;width:400px;box-shadow:0 16px 60px rgba(0,0,0,0.5);position:relative;overflow:hidden}
+        .login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00ff88,#448aff,transparent)}
+        .login-icon{width:56px;height:56px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:24px}
         .login-box h2{text-align:center;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px}
         .login-sub{text-align:center;color:#666;font-size:12px;margin-bottom:28px;letter-spacing:0.5px}
         .form-group{margin-bottom:16px}
         .form-group label{display:block;color:#999;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;font-weight:700}
-        .form-group input{
-            width:100%;padding:13px 16px;background:#0a0a0a;border:1px solid #2a2a2a;
-            border-radius:10px;color:#e0e0e0;font-size:14px;font-family:inherit;
-            transition:all 0.3s;outline:none;
-        }
+        .form-group input{width:100%;padding:13px 16px;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;color:#e0e0e0;font-size:14px;font-family:inherit;transition:all 0.3s;outline:none}
         .form-group input:focus{border-color:#00ff88;box-shadow:0 0 0 3px rgba(0,255,136,0.06),0 0 20px rgba(0,255,136,0.05)}
-        .btn-login{
-            width:100%;padding:13px;background:#00ff88;color:#000;border:none;
-            border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;
-            letter-spacing:0.5px;transition:all 0.3s;font-family:inherit;margin-top:8px;
-        }
+        .btn-login{width:100%;padding:13px;background:#00ff88;color:#000;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;letter-spacing:0.5px;transition:all 0.3s;font-family:inherit;margin-top:8px}
         .btn-login:hover{background:#00cc6a;box-shadow:0 0 35px rgba(0,255,136,0.3)}
         .error{color:#ff3d3d;text-align:center;margin-top:14px;font-size:13px;display:none;font-weight:500}
         .back{text-align:center;margin-top:18px}
@@ -1297,7 +1163,6 @@ function renderAdminPanel(token) {
     const activeKeys = allKeys.filter(k => !k.hidden && !k.isExpired && !k.isExhausted).length;
     const todayReq = requestLogs.filter(l => l.timestamp.startsWith(getIndiaDate())).length;
     
-    // Build endpoint usage stats
     const endpointUsage = {};
     requestLogs.forEach(log => {
         const ep = log.endpoint || 'unknown';
@@ -1333,19 +1198,16 @@ function renderAdminPanel(token) {
     
     let scb = allScopes.map(s => '<label class="cb-label"><input type="checkbox" value="'+s.value+'"> '+s.label+'</label>').join('');
     
-    // Logs with browser info
     let logs = requestLogs.slice(-25).reverse().map(l => {
         let sc = l.status==='success'?'s-green':(l.status==='failed'?'s-red':'s-orange');
         let browser = getBrowserName(l.browser);
         return '<div class="log-row"><span class="log-time">'+l.timestamp+'</span><span class="log-key">'+l.key+'</span><code class="log-ep">/'+l.endpoint+'</code><span class="log-browser">'+browser+'</span><span class="'+sc+'">'+l.status+'</span></div>';
     }).join('') || '<p style="color:#666;text-align:center;padding:20px">No requests logged</p>';
     
-    // Endpoint usage list
     let usageRows = Object.entries(endpointUsage).sort((a,b) => b[1].total - a[1].total).map(([ep, data]) => {
         return '<tr><td><code style="color:#00ff88">/'+ep+'</code></td><td><b>'+data.total+'</b></td><td style="color:#00ff88">'+data.success+'</td><td style="color:#ff3d3d">'+data.failed+'</td></tr>';
     }).join('') || '<tr><td colspan="4" style="text-align:center;color:#666;padding:20px">No requests yet</td></tr>';
     
-    // Custom API editable rows
     let customAPIRows = customAPIs.map((api, i) => `
         <div class="custom-api-row" id="customRow${i}">
             <div class="custom-api-view">
@@ -1430,11 +1292,12 @@ function renderAdminPanel(token) {
         
         .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
         .form-grp label{display:block;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:700}
-        .form-grp input,.form-grp select{
+        .form-grp input,.form-grp select,.form-grp textarea{
             width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border2);
             border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:all 0.3s;
         }
-        .form-grp input:focus,.form-grp select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(0,255,136,0.05)}
+        .form-grp input:focus,.form-grp select:focus,.form-grp textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(0,255,136,0.05)}
+        .form-grp textarea{resize:vertical;min-height:80px;font-family:'SF Mono',monospace;font-size:11px}
         .full-w{grid-column:1/-1}
         
         .cb-wrap{display:flex;flex-wrap:wrap;gap:5px;max-height:150px;overflow:auto;padding:10px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm)}
@@ -1494,6 +1357,17 @@ function renderAdminPanel(token) {
         .custom-api-actions{display:flex;gap:6px}
         .custom-api-edit{margin-top:10px;padding-top:12px;border-top:1px solid var(--border)}
         
+        .import-export-box{
+            background:var(--card);border:1px solid var(--o);border-radius:var(--radius);padding:20px;margin-bottom:20px;
+        }
+        .import-export-box h3{color:var(--o);font-size:15px;margin-bottom:12px}
+        .import-export-box textarea{
+            width:100%;min-height:120px;background:var(--bg);border:1px solid var(--border2);
+            color:var(--text);padding:12px;border-radius:var(--radius-sm);font-family:'SF Mono',monospace;
+            font-size:11px;resize:vertical;
+        }
+        .import-export-box textarea:focus{outline:none;border-color:var(--o)}
+        
         .toast{
             position:fixed;bottom:24px;right:24px;background:var(--card);color:var(--g);
             padding:12px 22px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
@@ -1525,6 +1399,7 @@ function renderAdminPanel(token) {
         <div class="tabs">
             <div class="tab active" onclick="switchTab('gen')">Key Generator</div>
             <div class="tab" onclick="switchTab('keys')">Manage Keys</div>
+            <div class="tab" onclick="switchTab('io')">Import/Export</div>
             <div class="tab" onclick="switchTab('custom')">Custom APIs</div>
             <div class="tab" onclick="switchTab('usage')">API Usage</div>
             <div class="tab" onclick="switchTab('logs')">Request Logs</div>
@@ -1553,6 +1428,21 @@ function renderAdminPanel(token) {
                     <button class="btn-outline" onclick="resetAllKeys()">Reset All Usage</button>
                 </div>
                 <div class="tbl-wrap"><table><thead><tr><th>Key</th><th>Owner</th><th>Scopes</th><th>Limit</th><th>Used</th><th>Left</th><th>Expiry</th><th>Status</th><th></th></tr></thead><tbody id="keyBody">${keyRows}</tbody></table></div>
+            </div>
+        </div>
+        
+        <div class="panel" id="panel-io">
+            <div class="import-export-box">
+                <h3>📤 Export Keys</h3>
+                <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Copy this JSON to backup all keys</p>
+                <textarea readonly id="exportData" onclick="this.select()">${JSON.stringify(keyStorage, null, 2).replace(/"/g, '&quot;').replace(/</g, '&lt;')}</textarea>
+                <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="copyExport()">Copy to Clipboard</button>
+            </div>
+            <div class="import-export-box" style="border-color:var(--b)">
+                <h3 style="color:var(--b)">📥 Import Keys</h3>
+                <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Paste JSON to import keys (merges with existing)</p>
+                <textarea id="importData" placeholder="Paste JSON here..."></textarea>
+                <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="importKeys()">Import Keys</button>
             </div>
         </div>
         
@@ -1610,6 +1500,23 @@ function renderAdminPanel(token) {
         async function logout(){await api('/admin/logout');window.location.href='/admin'}
         function filterKeys(){const s=document.getElementById('keySearch').value.toLowerCase();document.querySelectorAll('#keyBody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(s)?'':'none'})}
         
+        // Import/Export
+        function copyExport(){
+            const ta=document.getElementById('exportData');
+            ta.select();document.execCommand('copy');
+            toast('Keys copied to clipboard!')
+        }
+        
+        async function importKeys(){
+            const raw=document.getElementById('importData').value.trim();
+            if(!raw){toast('Paste JSON data first');return}
+            try{
+                const data=JSON.parse(raw);
+                const d=await api('/admin/import-keys',{keys:data});
+                d.success?(toast('Imported: '+d.imported+' keys'),setTimeout(()=>location.reload(),1000)):toast(d.error||'Import failed')
+            }catch(e){toast('Invalid JSON format!')}
+        }
+        
         // Custom API editing
         function editCustomAPI(i){
             document.getElementById('customEdit'+i).style.display='block';
@@ -1641,7 +1548,7 @@ function renderAdminPanel(token) {
 </html>`;
 }
 
-// ========== EXPRESS ==========
+// ========== EXPRESS MIDDLEWARE ==========
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -1651,10 +1558,11 @@ app.use((req, res, next) => {
     next();
 });
 
+// ========== PUBLIC ROUTES ==========
 app.get('/', (req, res) => res.send(renderPublicHome()));
 
 app.get('/test', (req, res) => {
-    res.json({ status: 'BRONX OSINT API Operational', credit: '@BRONX_ULTRA', time: getIndiaDateTime(), timezone: 'Asia/Kolkata', endpoints: Object.keys(endpoints).length, custom_apis: customAPIs.filter(a => a.visible).length });
+    res.json({ status: 'BRONX OSINT API v7.0 Operational', credit: '@BRONX_ULTRA', time: getIndiaDateTime(), timezone: 'Asia/Kolkata', endpoints: Object.keys(endpoints).length, custom_apis: customAPIs.filter(a => a.visible).length, total_keys: Object.keys(keyStorage).filter(k => !keyStorage[k].hidden).length });
 });
 
 app.get('/key-info', (req, res) => {
@@ -1674,77 +1582,13 @@ app.get('/quota', (req, res) => {
     res.json({ success: true, key_masked: apiKey.substring(0, 6) + '****', owner: keyData.name, limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: keyData.used, remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used), expiry: keyData.expiryStr || 'LIFETIME' });
 });
 
-// ========== OLD CODE (DELETE THIS) ==========
+// ========== FIXED CUSTOM API ENDPOINT ==========
 app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
     const query = req.query;
     const apiKey = query.key || req.headers['x-api-key'];
     
-    const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
-    if (!customAPI) {
-        return res.status(404).json({ success: false, error: `❌ Custom endpoint not found: ${endpoint}` });
-    }
-    
-    if (!apiKey) {
-        logRequest(null, `custom/${endpoint}`, 'no-key', 'failed', req.clientIP);
-        return res.status(401).json({ success: false, error: "❌ API Key Required. Use ?key=YOUR_KEY" });
-    }
-    
-    const keyCheck = checkKeyValid(apiKey);
-    if (!keyCheck.valid) {
-        logRequest(apiKey, `custom/${endpoint}`, query[customAPI.param], 'failed', req.clientIP);
-        return res.status(403).json({ 
-            success: false, 
-            error: keyCheck.error,
-            ...(keyCheck.expired && { expired: true }),
-            ...(keyCheck.limitExhausted && { limit_exhausted: true })
-        });
-    }
-    
-    const keyData = keyCheck.keyData;
-    const paramValue = query[customAPI.param];
-    
-    if (!paramValue) {
-        return res.status(400).json({ 
-            success: false, 
-            error: `❌ Missing parameter: ${customAPI.param}`, 
-            example: `?key=YOUR_KEY&${customAPI.param}=${customAPI.example}` 
-        });
-    }
-    
-    try {
-        const realUrl = customAPI.realAPI.replace('{param}', encodeURIComponent(paramValue));
-        console.log(`📡 [Custom] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
-        
-        const response = await axios.get(realUrl, { timeout: 30000 });
-        
-        incrementKeyUsage(apiKey);
-        logRequest(apiKey, `custom/${endpoint}`, paramValue, 'success', req.clientIP);
-        
-        const cleanedData = cleanResponse(response.data);
-        cleanedData.api_info = {
-            powered_by: "@BRONX_ULTRA",
-            endpoint: endpoint,
-            type: 'custom',
-            key_owner: keyData.name,
-            timestamp: getIndiaDateTime()
-        };
-        
-        res.json(cleanedData);
-    } catch (error) {
-        console.error(`❌ Custom API Error [${endpoint}]:`, error.message);
-        logRequest(apiKey, `custom/${endpoint}`, paramValue, 'error', req.clientIP);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ========== CUSTOM API ENDPOINT - FIXED ==========
-app.get('/api/custom/:endpoint', async (req, res) => {
-    const { endpoint } = req.params;
-    const query = req.query;
-    const apiKey = query.key || req.headers['x-api-key'];
-    
-    // Find custom API by endpoint
+    // Find custom API
     const customAPI = customAPIs.find(function(api) {
         return api.endpoint === endpoint && api.visible === true;
     });
@@ -1763,7 +1607,6 @@ app.get('/api/custom/:endpoint', async (req, res) => {
         return res.status(401).json({ success: false, error: "API Key Required. Use ?key=YOUR_KEY" });
     }
     
-    // Check API key validity
     const kc = checkKeyValid(apiKey);
     if (!kc.valid) {
         logRequest(apiKey, 'custom/' + endpoint, query[customAPI.param], 'failed', req.clientIP, req.userAgent);
@@ -1790,25 +1633,17 @@ app.get('/api/custom/:endpoint', async (req, res) => {
     }
     
     try {
-        // ====== FIX: Replace {param} with actual value ======
+        // FIX: Replace {param} with actual value (handles both {param} and {parma} typos)
         var realUrl = customAPI.realAPI;
-        
-        // Replace ALL occurrences of {param} (case-insensitive fix)
         realUrl = realUrl.replace(/\{param\}/gi, encodeURIComponent(paramValue));
-        realUrl = realUrl.replace(/\{parma\}/gi, encodeURIComponent(paramValue)); // backup fix for typo
+        realUrl = realUrl.replace(/\{parma\}/gi, encodeURIComponent(paramValue));
         
-        console.log('========================================');
-        console.log('Custom API Call:');
-        console.log('Endpoint: ' + endpoint);
-        console.log('Param: ' + customAPI.param + ' = ' + paramValue);
+        console.log('Custom API Call: ' + endpoint + ' | Param: ' + customAPI.param + '=' + paramValue);
         console.log('Real URL: ' + realUrl);
-        console.log('========================================');
         
         const response = await axios.get(realUrl, { 
             timeout: 30000,
-            headers: {
-                'User-Agent': 'BRONX-OSINT-API/4.0'
-            }
+            headers: { 'User-Agent': 'BRONX-OSINT-API/7.0' }
         });
         
         incrementKeyUsage(apiKey);
@@ -1820,19 +1655,15 @@ app.get('/api/custom/:endpoint', async (req, res) => {
             endpoint: endpoint,
             type: 'custom',
             key_owner: keyData.name,
-            timestamp: getIndiaDateTime(),
-            called_url: realUrl // Debug info
+            timestamp: getIndiaDateTime()
         };
         
         res.json(cleanedData);
         
     } catch (error) {
         console.error('Custom API Error [' + endpoint + ']: ' + error.message);
-        console.error('Attempted URL: ' + realUrl);
-        
         logRequest(apiKey, 'custom/' + endpoint, paramValue, 'error', req.clientIP, req.userAgent);
         
-        // Better error response
         res.status(500).json({ 
             success: false, 
             error: error.message,
@@ -1847,7 +1678,37 @@ app.get('/api/custom/:endpoint', async (req, res) => {
     }
 });
 
-// Admin routes
+// Main API endpoint
+app.get('/api/key-bronx/:endpoint', async (req, res) => {
+    const { endpoint } = req.params;
+    const apiKey = req.query.key || req.headers['x-api-key'];
+    
+    if (!endpoints[endpoint]) return res.status(404).json({ success: false, error: "Not found: "+endpoint, available: Object.keys(endpoints) });
+    if (!apiKey) { logRequest(null, endpoint, 'no-key', 'failed', req.clientIP, req.userAgent); return res.status(401).json({ success: false, error: "API Key Required" }); }
+    
+    const kc = checkKeyValid(apiKey);
+    if (!kc.valid) { logRequest(apiKey, endpoint, req.query[endpoints[endpoint].param], 'failed', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: kc.error, ...(kc.expired && { expired: true }), ...(kc.limitExhausted && { limit_exhausted: true }) }); }
+    
+    const sc = checkKeyScope(kc.keyData, endpoint);
+    if (!sc.valid) { logRequest(apiKey, endpoint, req.query[endpoints[endpoint].param], 'scope-denied', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: sc.error }); }
+    
+    const ep = endpoints[endpoint];
+    const pv = req.query[ep.param];
+    if (!pv) return res.status(400).json({ success: false, error: 'Missing: '+ep.param, example: '?key=KEY&'+ep.param+'='+ep.example });
+    
+    try {
+        const ru = REAL_API_BASE+'/'+endpoint+'?key='+REAL_API_KEY+'&'+ep.param+'='+encodeURIComponent(pv);
+        const resp = await axios.get(ru, { timeout: 30000 });
+        const uk = incrementKeyUsage(apiKey);
+        logRequest(apiKey, endpoint, pv, 'success', req.clientIP, req.userAgent);
+        
+        const cd = cleanResponse(resp.data);
+        cd.api_info = { powered_by: "@BRONX_ULTRA", endpoint, key_owner: kc.keyData.name, key_type: kc.keyData.type, limit: kc.keyData.unlimited ? 'Unlimited' : kc.keyData.limit, used: uk ? uk.used : kc.keyData.used, remaining: kc.keyData.unlimited ? 'Unlimited' : Math.max(0, kc.keyData.limit - (uk ? uk.used : kc.keyData.used)), expiry: kc.keyData.expiryStr || 'LIFETIME', timezone: 'Asia/Kolkata', timestamp: getIndiaDateTime() };
+        res.json(cd);
+    } catch (e) { logRequest(apiKey, endpoint, pv, 'error', req.clientIP, req.userAgent); if (e.response) return res.status(e.response.status).json(cleanResponse(e.response.data)); res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ========== ADMIN ROUTES ==========
 app.get('/admin', (req, res) => {
     const token = req.query.token || req.headers['x-admin-token'];
     isAdminAuthenticated(token) ? res.send(renderAdminPanel(token)) : res.send(renderAdminLogin());
@@ -1872,7 +1733,7 @@ app.post('/admin/generate-key', (req, res) => {
     if (keyStorage[keyName]) return res.status(400).json({ success: false, error: 'Key exists' });
     const isUnl = limit === 'unlimited' || parseInt(limit) >= 999999;
     keyStorage[keyName] = { name: keyOwner, scopes, type: keyType || 'premium', limit: isUnl ? 999999 : parseInt(limit) || 100, used: 0, expiry: expiryDate && expiryDate !== 'LIFETIME' ? parseExpiryDate(expiryDate) : null, expiryStr: expiryDate || 'LIFETIME', created: getIndiaDateTime(), resetType: 'never', unlimited: isUnl, hidden: false };
-    res.json({ success: true, message: 'Key generated' });
+    res.json({ success: true, message: 'Key generated', key: keyName });
 });
 
 app.post('/admin/delete-key', (req, res) => {
@@ -1893,14 +1754,37 @@ app.get('/admin/keys', (req, res) => {
     res.json({ success: true, keys: Object.entries(keyStorage).map(([k,d]) => ({ key: k, name: d.name, scopes: d.scopes, type: d.type, limit: d.unlimited?'Unlimited':d.limit, used: d.used, remaining: d.unlimited?'Unlimited':Math.max(0,d.limit-d.used), expiry: d.expiryStr||'LIFETIME', hidden: d.hidden })) });
 });
 
-app.get('/admin/logs', (req, res) => {
-    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
-    res.json({ success: true, logs: requestLogs.slice(-(parseInt(req.query.limit)||100)).reverse() });
-});
-
-app.post('/admin/clear-logs', (req, res) => {
-    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
-    requestLogs = []; res.json({ success: true });
+// ========== KEY IMPORT/EXPORT ==========
+app.post('/admin/import-keys', (req, res) => {
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    
+    const { keys } = req.body;
+    if (!keys || typeof keys !== 'object') return res.status(400).json({ success: false, error: 'Invalid keys data. Provide JSON object.' });
+    
+    let imported = 0;
+    let skipped = 0;
+    
+    Object.entries(keys).forEach(([keyName, keyData]) => {
+        if (keyName === 'BRONX_ULTRA_MASTER_2026') { skipped++; return; }
+        if (keyStorage[keyName]) { skipped++; return; }
+        
+        keyStorage[keyName] = {
+            name: keyData.name || 'Imported Key',
+            scopes: keyData.scopes || ['number'],
+            type: keyData.type || 'imported',
+            limit: keyData.limit || 100,
+            used: keyData.used || 0,
+            expiry: keyData.expiryStr && keyData.expiryStr !== 'LIFETIME' ? parseExpiryDate(keyData.expiryStr) : null,
+            expiryStr: keyData.expiryStr || 'LIFETIME',
+            created: keyData.created || getIndiaDateTime(),
+            resetType: 'never',
+            unlimited: keyData.unlimited || false,
+            hidden: keyData.hidden || false
+        };
+        imported++;
+    });
+    
+    res.json({ success: true, message: `Imported ${imported} keys, skipped ${skipped}`, imported, skipped });
 });
 
 app.post('/admin/custom-api', (req, res) => {
@@ -1909,6 +1793,16 @@ app.post('/admin/custom-api', (req, res) => {
     if (slot === undefined || slot < 0 || slot >= customAPIs.length) return res.status(400).json({ success: false });
     customAPIs[slot] = { ...customAPIs[slot], ...api };
     res.json({ success: true, api: customAPIs[slot] });
+});
+
+app.get('/admin/logs', (req, res) => {
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
+    res.json({ success: true, logs: requestLogs.slice(-(parseInt(req.query.limit)||100)).reverse() });
+});
+
+app.post('/admin/clear-logs', (req, res) => {
+    if (!isAdminAuthenticated(req.headers['x-admin-token'] || req.query.token)) return res.status(401).json({ success: false });
+    requestLogs = []; res.json({ success: true });
 });
 
 app.get('/admin/stats', (req, res) => {
