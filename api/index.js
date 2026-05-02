@@ -1620,48 +1620,177 @@ app.get('/quota', (req, res) => {
     res.json({ success: true, key_masked: apiKey.substring(0, 6) + '****', owner: keyData.name, limit: keyData.unlimited ? 'Unlimited' : keyData.limit, used: keyData.used, remaining: keyData.unlimited ? 'Unlimited' : Math.max(0, keyData.limit - keyData.used), expiry: keyData.expiryStr || 'LIFETIME' });
 });
 
+// ========== OLD CODE (DELETE THIS) ==========
 app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const apiKey = req.query.key || req.headers['x-api-key'];
-    const customAPI = customAPIs.find(a => a.endpoint === endpoint && a.visible);
-    if (!customAPI) return res.status(404).json({ success: false, error: "Custom endpoint not found" });
-    if (!apiKey) { logRequest(null, 'custom/'+endpoint, 'no-key', 'failed', req.clientIP, req.userAgent); return res.status(401).json({ success: false, error: "API Key Required" }); }
-    const kc = checkKeyValid(apiKey);
-    if (!kc.valid) { logRequest(apiKey, 'custom/'+endpoint, req.query[customAPI.param], 'failed', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: kc.error, ...(kc.expired && { expired: true }), ...(kc.limitExhausted && { limit_exhausted: true }) }); }
-    const pv = req.query[customAPI.param];
-    if (!pv) return res.status(400).json({ success: false, error: 'Missing param: '+customAPI.param });
+    const query = req.query;
+    const apiKey = query.key || req.headers['x-api-key'];
+    
+    const customAPI = customAPIs.find(api => api.endpoint === endpoint && api.visible);
+    if (!customAPI) {
+        return res.status(404).json({ success: false, error: `❌ Custom endpoint not found: ${endpoint}` });
+    }
+    
+    if (!apiKey) {
+        logRequest(null, `custom/${endpoint}`, 'no-key', 'failed', req.clientIP);
+        return res.status(401).json({ success: false, error: "❌ API Key Required. Use ?key=YOUR_KEY" });
+    }
+    
+    const keyCheck = checkKeyValid(apiKey);
+    if (!keyCheck.valid) {
+        logRequest(apiKey, `custom/${endpoint}`, query[customAPI.param], 'failed', req.clientIP);
+        return res.status(403).json({ 
+            success: false, 
+            error: keyCheck.error,
+            ...(keyCheck.expired && { expired: true }),
+            ...(keyCheck.limitExhausted && { limit_exhausted: true })
+        });
+    }
+    
+    const keyData = keyCheck.keyData;
+    const paramValue = query[customAPI.param];
+    
+    if (!paramValue) {
+        return res.status(400).json({ 
+            success: false, 
+            error: `❌ Missing parameter: ${customAPI.param}`, 
+            example: `?key=YOUR_KEY&${customAPI.param}=${customAPI.example}` 
+        });
+    }
+    
     try {
-        const ru = customAPI.realAPI.replace('{param}', encodeURIComponent(pv));
-        const resp = await axios.get(ru, { timeout: 30000 });
+        const realUrl = customAPI.realAPI.replace('{param}', encodeURIComponent(paramValue));
+        console.log(`📡 [Custom] ${endpoint} -> ${paramValue} | Key: ${apiKey.substring(0, 8)}...`);
+        
+        const response = await axios.get(realUrl, { timeout: 30000 });
+        
         incrementKeyUsage(apiKey);
-        logRequest(apiKey, 'custom/'+endpoint, pv, 'success', req.clientIP, req.userAgent);
-        const cd = cleanResponse(resp.data);
-        cd.api_info = { powered_by: "@BRONX_ULTRA", endpoint, type: 'custom', key_owner: kc.keyData.name, timestamp: getIndiaDateTime() };
-        res.json(cd);
-    } catch (e) { logRequest(apiKey, 'custom/'+endpoint, pv, 'error', req.clientIP, req.userAgent); res.status(500).json({ success: false, error: e.message }); }
+        logRequest(apiKey, `custom/${endpoint}`, paramValue, 'success', req.clientIP);
+        
+        const cleanedData = cleanResponse(response.data);
+        cleanedData.api_info = {
+            powered_by: "@BRONX_ULTRA",
+            endpoint: endpoint,
+            type: 'custom',
+            key_owner: keyData.name,
+            timestamp: getIndiaDateTime()
+        };
+        
+        res.json(cleanedData);
+    } catch (error) {
+        console.error(`❌ Custom API Error [${endpoint}]:`, error.message);
+        logRequest(apiKey, `custom/${endpoint}`, paramValue, 'error', req.clientIP);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-app.get('/api/key-bronx/:endpoint', async (req, res) => {
+// ========== CUSTOM API ENDPOINT - FIXED ==========
+app.get('/api/custom/:endpoint', async (req, res) => {
     const { endpoint } = req.params;
-    const apiKey = req.query.key || req.headers['x-api-key'];
-    if (!endpoints[endpoint]) return res.status(404).json({ success: false, error: "Not found: "+endpoint });
-    if (!apiKey) { logRequest(null, endpoint, 'no-key', 'failed', req.clientIP, req.userAgent); return res.status(401).json({ success: false, error: "API Key Required" }); }
+    const query = req.query;
+    const apiKey = query.key || req.headers['x-api-key'];
+    
+    // Find custom API by endpoint
+    const customAPI = customAPIs.find(function(api) {
+        return api.endpoint === endpoint && api.visible === true;
+    });
+    
+    if (!customAPI) {
+        logRequest(null, 'custom/' + endpoint, 'not-found', 'failed', req.clientIP, req.userAgent);
+        return res.status(404).json({ 
+            success: false, 
+            error: 'Custom endpoint not found: ' + endpoint,
+            availableCustomAPIs: customAPIs.filter(function(a) { return a.visible && a.endpoint; }).map(function(a) { return a.endpoint; })
+        });
+    }
+    
+    if (!apiKey) {
+        logRequest(null, 'custom/' + endpoint, 'no-key', 'failed', req.clientIP, req.userAgent);
+        return res.status(401).json({ success: false, error: "API Key Required. Use ?key=YOUR_KEY" });
+    }
+    
+    // Check API key validity
     const kc = checkKeyValid(apiKey);
-    if (!kc.valid) { logRequest(apiKey, endpoint, req.query[endpoints[endpoint].param], 'failed', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: kc.error, ...(kc.expired && { expired: true }), ...(kc.limitExhausted && { limit_exhausted: true }) }); }
-    const sc = checkKeyScope(kc.keyData, endpoint);
-    if (!sc.valid) { logRequest(apiKey, endpoint, req.query[endpoints[endpoint].param], 'scope-denied', req.clientIP, req.userAgent); return res.status(403).json({ success: false, error: sc.error }); }
-    const ep = endpoints[endpoint];
-    const pv = req.query[ep.param];
-    if (!pv) return res.status(400).json({ success: false, error: 'Missing: '+ep.param });
+    if (!kc.valid) {
+        logRequest(apiKey, 'custom/' + endpoint, query[customAPI.param], 'failed', req.clientIP, req.userAgent);
+        return res.status(403).json({ 
+            success: false, 
+            error: kc.error,
+            expired: kc.expired || false,
+            limitExhausted: kc.limitExhausted || false
+        });
+    }
+    
+    const keyData = kc.keyData;
+    const paramValue = query[customAPI.param];
+    
+    if (!paramValue) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Missing parameter: ' + customAPI.param, 
+            example: '?key=YOUR_KEY&' + customAPI.param + '=' + customAPI.example,
+            customAPIName: customAPI.name,
+            customAPIParam: customAPI.param,
+            customAPIEndpoint: customAPI.endpoint
+        });
+    }
+    
     try {
-        const ru = REAL_API_BASE+'/'+endpoint+'?key='+REAL_API_KEY+'&'+ep.param+'='+encodeURIComponent(pv);
-        const resp = await axios.get(ru, { timeout: 30000 });
-        const uk = incrementKeyUsage(apiKey);
-        logRequest(apiKey, endpoint, pv, 'success', req.clientIP, req.userAgent);
-        const cd = cleanResponse(resp.data);
-        cd.api_info = { powered_by: "@BRONX_ULTRA", endpoint, key_owner: kc.keyData.name, key_type: kc.keyData.type, limit: kc.keyData.unlimited ? 'Unlimited' : kc.keyData.limit, used: uk ? uk.used : kc.keyData.used, remaining: kc.keyData.unlimited ? 'Unlimited' : Math.max(0, kc.keyData.limit - (uk ? uk.used : kc.keyData.used)), expiry: kc.keyData.expiryStr || 'LIFETIME', timezone: 'Asia/Kolkata', timestamp: getIndiaDateTime() };
-        res.json(cd);
-    } catch (e) { logRequest(apiKey, endpoint, pv, 'error', req.clientIP, req.userAgent); if (e.response) return res.status(e.response.status).json(cleanResponse(e.response.data)); res.status(500).json({ success: false, error: e.message }); }
+        // ====== FIX: Replace {param} with actual value ======
+        var realUrl = customAPI.realAPI;
+        
+        // Replace ALL occurrences of {param} (case-insensitive fix)
+        realUrl = realUrl.replace(/\{param\}/gi, encodeURIComponent(paramValue));
+        realUrl = realUrl.replace(/\{parma\}/gi, encodeURIComponent(paramValue)); // backup fix for typo
+        
+        console.log('========================================');
+        console.log('Custom API Call:');
+        console.log('Endpoint: ' + endpoint);
+        console.log('Param: ' + customAPI.param + ' = ' + paramValue);
+        console.log('Real URL: ' + realUrl);
+        console.log('========================================');
+        
+        const response = await axios.get(realUrl, { 
+            timeout: 30000,
+            headers: {
+                'User-Agent': 'BRONX-OSINT-API/4.0'
+            }
+        });
+        
+        incrementKeyUsage(apiKey);
+        logRequest(apiKey, 'custom/' + endpoint, paramValue, 'success', req.clientIP, req.userAgent);
+        
+        const cleanedData = cleanResponse(response.data);
+        cleanedData.api_info = {
+            powered_by: "@BRONX_ULTRA",
+            endpoint: endpoint,
+            type: 'custom',
+            key_owner: keyData.name,
+            timestamp: getIndiaDateTime(),
+            called_url: realUrl // Debug info
+        };
+        
+        res.json(cleanedData);
+        
+    } catch (error) {
+        console.error('Custom API Error [' + endpoint + ']: ' + error.message);
+        console.error('Attempted URL: ' + realUrl);
+        
+        logRequest(apiKey, 'custom/' + endpoint, paramValue, 'error', req.clientIP, req.userAgent);
+        
+        // Better error response
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            debug_info: {
+                endpoint: endpoint,
+                param: customAPI.param,
+                value: paramValue,
+                called_url: realUrl,
+                original_api: customAPI.realAPI
+            }
+        });
+    }
 });
 
 // Admin routes
