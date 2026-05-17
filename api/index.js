@@ -17,32 +17,76 @@ const PAYMENT_INFO = {
     telegramUser: '@BRONX_ULTRA'
 };
 
-// ========== 🗄️ YOUR OWN STORAGE API ==========
+// ========== 🗄️ YOUR OWN STORAGE API (FIXED) ==========
 const STORAGE_URL = 'https://bromx-db-stroge.onrender.com';
 
-// ========== MEMORY STORAGE ==========
-let keyStorage = {};
-let customAPIs = [];
-let requestLogs = [];
-let adminSessions = {};
-let permanentTokens = {};
-let bannedIPs = [];
-let cooldownTimers = {};
-
-// ========== STORAGE FUNCTIONS (USING YOUR API) ==========
+// FIXED: Save function - ab sahi endpoint pe data bhejega
 async function saveToStorage() {
     try {
-        await axios.post(`${STORAGE_URL}/keys`, {
-            keys: keyStorage,
-            apis: customAPIs,
-            tokens: permanentTokens,
-            banned: bannedIPs,
-            timestamp: new Date().toISOString()
+        // Har section alag-alag save karo
+        await axios.post(`${STORAGE_URL}/store`, {
+            id: 'keys',
+            data: keyStorage
         }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
-        console.log('💾 Saved to storage');
+        
+        await axios.post(`${STORAGE_URL}/store`, {
+            id: 'apis',
+            data: customAPIs
+        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        
+        await axios.post(`${STORAGE_URL}/store`, {
+            id: 'tokens',
+            data: permanentTokens
+        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        
+        await axios.post(`${STORAGE_URL}/store`, {
+            id: 'banned',
+            data: bannedIPs
+        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        
+        console.log('💾 Saved all data to storage!');
         return true;
     } catch (e) {
         console.log('⚠️ Save error:', e.message);
+        return false;
+    }
+}
+
+// FIXED: Load function - sahi endpoint se data lega
+async function loadFromStorage() {
+    try {
+        // Get all data
+        const res = await axios.get(`${STORAGE_URL}/get/all`, { timeout: 10000 });
+        
+        if (res.data && res.data.sections && res.data.sections.length > 0) {
+            // Sections mein se data nikalna
+            for (const section of res.data.sections) {
+                if (section.id === 'keys' && section.data) {
+                    keyStorage = section.data;
+                }
+                if (section.id === 'apis' && section.data) {
+                    customAPIs = section.data;
+                }
+                if (section.id === 'tokens' && section.data) {
+                    permanentTokens = section.data;
+                    Object.entries(permanentTokens).forEach(([token, data]) => {
+                        adminSessions[token] = { 
+                            expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000), 
+                            permanent: true 
+                        };
+                    });
+                }
+                if (section.id === 'banned' && section.data) {
+                    bannedIPs = section.data;
+                }
+            }
+            
+            console.log('📥 Loaded from storage! Keys:', Object.keys(keyStorage).length);
+            return Object.keys(keyStorage).length > 0;
+        }
+        return false;
+    } catch (e) {
+        console.log('⚠️ Load error:', e.message);
         return false;
     }
 }
