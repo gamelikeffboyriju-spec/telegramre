@@ -11,8 +11,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'BRONX@2026#OWNER';
 const MASTER_API_KEY = process.env.MASTER_API_KEY || 'BRONX_MASTER_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
 const PAYMENT_INFO = {
-    upiId: '👇@BRONX_ULTRA Message me for telegram 👇',
-    scannerImage: '👇YOUR_QR_SCANNER_IMAGE_URL👇',
+    upiId: '8509561376@ibl',
+    scannerImage: 'https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg',
     telegramUser: '@BRONX_ULTRA'
 };
 
@@ -71,7 +71,18 @@ function isAdminAuth(t) { if (!t) return false; if (adminSessions[t]) { if (admi
 function isIPBanned(ip) { return ip && ip !== 'unknown' && bannedIPs.includes(ip); }
 function banIP(ip) { if (ip && ip !== 'unknown' && !bannedIPs.includes(ip)) { bannedIPs.push(ip); scheduleSave(); } }
 function unbanIP(ip) { const i = bannedIPs.indexOf(ip); if (i > -1) { bannedIPs.splice(i, 1); scheduleSave(); } }
-function sanitizeResponse(d) { if (!d) return d; try { const c = JSON.parse(JSON.stringify(d)); c.powered_by = "BRONX OSINT v21"; return c; } catch (e) { return d; } }
+function sanitizeResponse(d) { 
+    if (!d) return d; 
+    try { 
+        const c = JSON.parse(JSON.stringify(d)); 
+        // SAB EXTRA FIELDS DELETE - SIRF APNA NAAM RAHEGA
+        delete c.truecaller_name; delete c.cached; delete c.cached_at; 
+        delete c.by; delete c.channel; delete c.developer; delete c.api_key; 
+        delete c.real_url; delete c.source_url; delete c.internal_id;
+        c.powered_by = "BRONX_ULTRA"; 
+        return c; 
+    } catch (e) { return d; } 
+}
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 
 function createMasterKey() { return { name: '👑 OWNER', scopes: ['*'], type: 'owner', limit: 999999, used: 0, cooldown: 0, expiry: null, expiryStr: 'LIFETIME', created: getIndiaDateTime(), unlimited: true, hidden: true }; }
@@ -442,7 +453,13 @@ body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif;overfl
 <h3>💎 GET PAID API KEY</h3>
 <div class="pg"><div class="pc"><div class="d">10 Days</div><div class="a">₹100</div></div><div class="pc"><div class="d">20 Days</div><div class="a">₹200</div></div><div class="pc"><div class="d">30 Days</div><div class="a">₹300</div></div><div class="pc"><div class="d">40 Days</div><div class="a">₹400</div></div><div class="pc"><div class="d">50 Days</div><div class="a">₹500</div></div><div class="pc"><div class="d">60 Days</div><div class="a">₹600</div></div><div class="pc lt"><div class="d">👑 LIFETIME</div><div class="a">₹3000</div></div></div>
 <div class="pm"><span class="pb">📱 UPI</span><span class="pb">💳 PhonePe</span><span class="pb">🏦 Navi</span><span class="pb">💰 Paytm</span></div>
-<div class="upi"><p class="id">${PAYMENT_INFO.upiId}</p><img src="${PAYMENT_INFO.scannerImage}" alt="QR" onerror="this.style.display='none'"><button class="cpb" onclick="navigator.clipboard.writeText('${PAYMENT_INFO.upiId}');toast('Copied!')">📋 Copy UPI</button></div>
+<div class="upi">
+<a href="upi://pay?pa=bronxultra@upi&pn=BRONX_ULTRA&cu=INR" style="text-decoration:none">
+<p class="id" style="cursor:pointer;font-size:14px;color:#ff922b;font-family:'JetBrains Mono',monospace;font-weight:700">📱 Click to Pay via UPI</p>
+</a>
+<img src="https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg" alt="QR Code" style="max-width:200px;border-radius:12px;margin:10px auto;display:block;border:2px solid rgba(255,146,43,.3)">
+<button class="cpb" onclick="navigator.clipboard.writeText('bronxultra@upi');toast('📋 UPI Copied!')">📋 Copy UPI ID</button>
+</div> alt="QR" onerror="this.style.display='none'"><button class="cpb" onclick="navigator.clipboard.writeText('${PAYMENT_INFO.upiId}');toast('Copied!')">📋 Copy UPI</button></div>
 <p class="tgl">After Payment Send Screenshot → <a href="https://t.me/${PAYMENT_INFO.telegramUser.replace('@','')}">${PAYMENT_INFO.telegramUser}</a></p>
 </div>
 <div class="pl"><h3>🧪 API Playground</h3><div class="plf"><select id="es"><option value="">Select</option>${opts}</select><input id="ak" placeholder="API Key..."><input id="pv" placeholder="Parameter..."><button class="btx" onclick="ta()">⚡ Run</button></div><div class="rb" id="rb"></div></div>
