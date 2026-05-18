@@ -28,23 +28,30 @@ let permanentTokens = {};
 let bannedIPs = [];
 let cooldownTimers = {};
 
-// ========== STORAGE FUNCTIONS ==========
+// ========== STORAGE FUNCTIONS (NEW API v2.0) ==========
 async function saveToStorage() {
     try {
         const data = { keys: keyStorage, apis: customAPIs, tokens: permanentTokens, banned: bannedIPs };
-        await axios.post(`${STORAGE_URL}/store`, { id: 'all_data', data: data }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        // NAYA API: POST /keys
+        await axios.post(`${STORAGE_URL}/keys`, data, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
         console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
     } catch (e) { console.log('⚠️ Save error:', e.message); }
 }
 
 async function loadFromStorage() {
     try {
-        const res = await axios.get(`${STORAGE_URL}/get/all_data`, { timeout: 10000 });
-        if (res.data && res.data.data) {
-            const d = res.data.data;
+        // NAYA API: GET /keys
+        const res = await axios.get(`${STORAGE_URL}/keys`, { timeout: 10000 });
+        if (res.data && res.data.keys) {
+            const d = res.data;
             if (d.keys) keyStorage = d.keys;
             if (d.apis) customAPIs = d.apis;
-            if (d.tokens) { permanentTokens = d.tokens; Object.entries(permanentTokens).forEach(([t, v]) => { adminSessions[t] = { expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000, permanent: true }; }); }
+            if (d.tokens) { 
+                permanentTokens = d.tokens; 
+                Object.entries(permanentTokens).forEach(([t, v]) => { 
+                    adminSessions[t] = { expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000, permanent: true }; 
+                }); 
+            }
             if (d.banned) bannedIPs = d.banned;
             console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length);
             return Object.keys(keyStorage).length > 0;
@@ -52,9 +59,6 @@ async function loadFromStorage() {
         return false;
     } catch (e) { console.log('⚠️ Load error:', e.message); return false; }
 }
-
-function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
-setInterval(() => scheduleSave(), 3 * 60 * 1000);
 
 // ========== HELPERS ==========
 function getIndiaTime() { return new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000)); }
