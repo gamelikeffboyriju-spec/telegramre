@@ -1,4 +1,4 @@
-// api/index.js - BRONX OSINT v21 - FULLY FIXED VERSION
+// api/index.js - BRONX OSINT v21 - COMPLETE FIXED FINAL
 const express = require('express');
 const axios = require('axios');
 const app = express();
@@ -10,13 +10,6 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'BRONX_ULTRA';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'BRONX@2026#OWNER';
 const MASTER_API_KEY = process.env.MASTER_API_KEY || 'BRONX_MASTER_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
-const PAYMENT_INFO = {
-    upiId: '8509561376@ibl',
-    scannerImage: 'https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg',
-    telegramUser: '@BRONX_ULTRA'
-};
-
-// ========== STORAGE API ==========
 const STORAGE_URL = 'https://bromx-db-stroge.onrender.com';
 
 // ========== MEMORY ==========
@@ -32,7 +25,6 @@ let cooldownTimers = {};
 async function saveToStorage() {
     try {
         const data = { keys: keyStorage, apis: customAPIs, tokens: permanentTokens, banned: bannedIPs };
-        // NAYA API: POST /keys
         await axios.post(`${STORAGE_URL}/keys`, data, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
         console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
     } catch (e) { console.log('⚠️ Save error:', e.message); }
@@ -40,25 +32,25 @@ async function saveToStorage() {
 
 async function loadFromStorage() {
     try {
-        // NAYA API: GET /keys
         const res = await axios.get(`${STORAGE_URL}/keys`, { timeout: 10000 });
-        if (res.data && res.data.keys) {
+        if (res.data) {
             const d = res.data;
-            if (d.keys) keyStorage = d.keys;
-            if (d.apis) customAPIs = d.apis;
-            if (d.tokens) { 
-                permanentTokens = d.tokens; 
-                Object.entries(permanentTokens).forEach(([t, v]) => { 
-                    adminSessions[t] = { expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000, permanent: true }; 
-                }); 
+            if (d.keys && typeof d.keys === 'object' && Object.keys(d.keys).length > 0) keyStorage = d.keys;
+            if (d.apis && Array.isArray(d.apis)) customAPIs = d.apis;
+            if (d.tokens && typeof d.tokens === 'object') {
+                permanentTokens = d.tokens;
+                Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; });
             }
-            if (d.banned) bannedIPs = d.banned;
+            if (d.banned && Array.isArray(d.banned)) bannedIPs = d.banned;
             console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length);
             return Object.keys(keyStorage).length > 0;
         }
         return false;
     } catch (e) { console.log('⚠️ Load error:', e.message); return false; }
 }
+
+function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
+setInterval(() => scheduleSave(), 3 * 60 * 1000);
 
 // ========== HELPERS ==========
 function getIndiaTime() { return new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000)); }
@@ -75,419 +67,86 @@ function isAdminAuth(t) { if (!t) return false; if (adminSessions[t]) { if (admi
 function isIPBanned(ip) { return ip && ip !== 'unknown' && bannedIPs.includes(ip); }
 function banIP(ip) { if (ip && ip !== 'unknown' && !bannedIPs.includes(ip)) { bannedIPs.push(ip); scheduleSave(); } }
 function unbanIP(ip) { const i = bannedIPs.indexOf(ip); if (i > -1) { bannedIPs.splice(i, 1); scheduleSave(); } }
-function sanitizeResponse(d) { 
-    if (!d) return d; 
-    try { 
-        const c = JSON.parse(JSON.stringify(d)); 
-        // SAB EXTRA FIELDS DELETE - SIRF APNA NAAM RAHEGA
-        delete c.truecaller_name; delete c.cached; delete c.cached_at; 
-        delete c.by; delete c.channel; delete c.developer; delete c.api_key; 
-        delete c.real_url; delete c.source_url; delete c.internal_id;
-        c.powered_by = "BRONX_ULTRA"; 
-        return c; 
-    } catch (e) { return d; } 
-}
-function esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+function sanitizeResponse(d) { if (!d) return d; try { const c = JSON.parse(JSON.stringify(d)); delete c.truecaller_name; delete c.cached; delete c.cached_at; delete c.by; delete c.channel; delete c.developer; delete c.api_key; delete c.real_url; delete c.source_url; delete c.internal_id; c.powered_by = "BRONX_ULTRA"; return c; } catch (e) { return d; } }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
-function createMasterKey() { return { name: '👑 OWNER', scopes: ['*'], type: 'owner', limit: 999999, used: 0, cooldown: 0, expiry: null, expiryStr: 'LIFETIME', created: getIndiaDateTime(), unlimited: true, hidden: true }; }
+function createMasterKey() { return { name:'👑 OWNER',scopes:['*'],type:'owner',limit:999999,used:0,cooldown:0,expiry:null,expiryStr:'LIFETIME',created:getIndiaDateTime(),unlimited:true,hidden:true }; }
 
 function initDefaultData() {
     const now = getIndiaDateTime(); keyStorage = {}; keyStorage[MASTER_API_KEY] = createMasterKey();
     const dk = [
-        { key: 'BRONX_DEMO_001', name: '🎁 Premium', scopes: ['*'], limit: 1000, cooldown: 0, expiry: '31-12-2027' },
-        { key: 'BRONX_DEMO_002', name: '🎁 Basic', scopes: ['number', 'aadhar', 'pan', 'upi'], limit: 500, cooldown: 2, expiry: '30-06-2027' },
-        { key: 'BRONX_DEMO_003', name: '🎁 Starter', scopes: ['number', 'ip', 'pincode'], limit: 200, cooldown: 1, expiry: '31-12-2027' },
-        { key: 'BRONX_OP_KEY', name: '🎁 OP', scopes: ['*'], limit: 999, cooldown: 0, expiry: '31-12-2027' },
-        { key: 'BRONX_PRO_KEY', name: '🎁 Pro', scopes: ['*'], limit: 5000, cooldown: 0, expiry: '31-12-2028' },
-        { key: 'BRONX_BOMBER', name: '🎁 Bomber', scopes: ['number', 'custom'], limit: 300, cooldown: 3, expiry: '31-12-2027' },
+        { key:'BRONX_DEMO_001',name:'🎁 Premium',scopes:['*'],limit:1000,cooldown:0,expiry:'31-12-2027' },
+        { key:'BRONX_DEMO_002',name:'🎁 Basic',scopes:['number','aadhar','pan','upi'],limit:500,cooldown:2,expiry:'30-06-2027' },
+        { key:'BRONX_DEMO_003',name:'🎁 Starter',scopes:['number','ip','pincode'],limit:200,cooldown:1,expiry:'31-12-2027' },
+        { key:'BRONX_OP_KEY',name:'🎁 OP',scopes:['*'],limit:999,cooldown:0,expiry:'31-12-2027' },
+        { key:'BRONX_PRO_KEY',name:'🎁 Pro',scopes:['*'],limit:5000,cooldown:0,expiry:'31-12-2028' },
+        { key:'BRONX_BOMBER',name:'🎁 Bomber',scopes:['number','custom'],limit:300,cooldown:3,expiry:'31-12-2027' },
     ];
-    dk.forEach(d => { keyStorage[d.key] = { name: d.name, scopes: d.scopes, type: 'demo', limit: d.limit, used: 0, cooldown: d.cooldown || 0, expiry: parseExpiryDate(d.expiry), expiryStr: d.expiry, created: now, unlimited: false, hidden: false }; });
+    dk.forEach(d => { keyStorage[d.key] = { name:d.name,scopes:d.scopes,type:'demo',limit:d.limit,used:0,cooldown:d.cooldown||0,expiry:parseExpiryDate(d.expiry),expiryStr:d.expiry,created:now,unlimited:false,hidden:false }; });
 }
 
 function initCustomAPIs() {
     customAPIs = [
-        { id: 1, name: 'Number Info', endpoint: 'number-advanced', param: 'num', example: '9876543210', visible: true, realAPI: 'https://num-tg-info-api.vercel.app/info?number={param}' },
-        { id: 2, name: 'Vehicle RC', endpoint: 'rc-details', param: 'ca_number', example: 'MH02FZ0555', visible: true, realAPI: 'https://bronx-rc-api.vercel.app/?ca_number={param}' },
-        { id: 3, name: 'Aadhar', endpoint: 'aadhar-verify', param: 'aadhar', example: '393933081942', visible: true, realAPI: 'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}' },
-        { id: 4, name: 'Email', endpoint: 'email-lookup', param: 'mail', example: 'user@gmail.com', visible: true, realAPI: 'https://bronx-king-mail-opi.vercel.app/mail={param}' },
-        { id: 5, name: 'Telegram', endpoint: 'telegram-scan', param: 'id', example: '7530266953', visible: true, realAPI: 'https://bronx-tg-king-bro.vercel.app/tg?key=BRONXop&query={param}' },
-        { id: 6, name: 'SMS Bomber', endpoint: 'sms-bomber', param: 'number', example: '1234567890', visible: true, realAPI: 'https://bronx-sms-api-ulimate.vercel.app/api/key-bronx-paid-vip?number={param}&counter=10' },
-        { id: 7, name: 'Slot 7', endpoint: '', param: '', example: '', visible: false, realAPI: '' },
-        { id: 8, name: 'Slot 8', endpoint: '', param: '', example: '', visible: false, realAPI: '' },
-        { id: 9, name: 'Slot 9', endpoint: '', param: '', example: '', visible: false, realAPI: '' },
-        { id: 10, name: 'Slot 10', endpoint: '', param: '', example: '', visible: false, realAPI: '' }
+        { id:1,name:'Number Info',endpoint:'number-advanced',param:'num',example:'9876543210',visible:true,realAPI:'https://num-tg-info-api.vercel.app/info?number={param}' },
+        { id:2,name:'Vehicle RC',endpoint:'rc-details',param:'ca_number',example:'MH02FZ0555',visible:true,realAPI:'https://bronx-rc-api.vercel.app/?ca_number={param}' },
+        { id:3,name:'Aadhar',endpoint:'aadhar-verify',param:'aadhar',example:'393933081942',visible:true,realAPI:'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}' },
+        { id:4,name:'Email',endpoint:'email-lookup',param:'mail',example:'user@gmail.com',visible:true,realAPI:'https://bronx-king-mail-opi.vercel.app/mail={param}' },
+        { id:5,name:'Telegram',endpoint:'telegram-scan',param:'id',example:'7530266953',visible:true,realAPI:'https://bronx-tg-king-bro.vercel.app/tg?key=BRONXop&query={param}' },
+        { id:6,name:'SMS Bomber',endpoint:'sms-bomber',param:'number',example:'1234567890',visible:true,realAPI:'https://bronx-sms-api-ulimate.vercel.app/api/key-bronx-paid-vip?number={param}&counter=10' },
+        { id:7,name:'Slot 7',endpoint:'',param:'',example:'',visible:false,realAPI:'' },
+        { id:8,name:'Slot 8',endpoint:'',param:'',example:'',visible:false,realAPI:'' },
+        { id:9,name:'Slot 9',endpoint:'',param:'',example:'',visible:false,realAPI:'' },
+        { id:10,name:'Slot 10',endpoint:'',param:'',example:'',visible:false,realAPI:'' }
     ];
 }
 
 const endpoints = {
-    number: { p: 'num', i: '📱', e: '9876543210', d: 'Mobile Lookup', c: 'phone' },
-    aadhar: { p: 'num', i: '🆔', e: '393933081942', d: 'Aadhaar Details', c: 'phone' },
-    name: { p: 'name', i: '🔍', e: 'abhiraaj', d: 'Name Search', c: 'phone' },
-    numv2: { p: 'num', i: '📱', e: '6205949840', d: 'Number v2', c: 'phone' },
-    adv: { p: 'num', i: '📱', e: '9876543210', d: 'Advanced Intel', c: 'phone' },
-    adharfamily: { p: 'num', i: '👨‍👩‍👧‍👦', e: '984154610245', d: 'Family Details', c: 'phone' },
-    adharration: { p: 'num', i: '📋', e: '701984830542', d: 'Ration Card', c: 'phone' },
-    imei: { p: 'imei', i: '📱', e: '357817383506298', d: 'IMEI Info', c: 'phone' },
-    calltracer: { p: 'num', i: '📞', e: '9876543210', d: 'Call Tracer', c: 'phone' },
-    upi: { p: 'upi', i: '💰', e: 'example@ybl', d: 'UPI Lookup', c: 'finance' },
-    ifsc: { p: 'ifsc', i: '🏦', e: 'SBIN0001234', d: 'IFSC Details', c: 'finance' },
-    pan: { p: 'pan', i: '📄', e: 'AXDPR2606K', d: 'PAN Card', c: 'finance' },
-    pincode: { p: 'pin', i: '📍', e: '110001', d: 'Pincode', c: 'location' },
-    ip: { p: 'ip', i: '🌐', e: '8.8.8.8', d: 'IP Lookup', c: 'location' },
-    vehicle: { p: 'vehicle', i: '🚗', e: 'MH02FZ0555', d: 'Vehicle Info', c: 'vehicle' },
-    rc: { p: 'owner', i: '📋', e: 'UP92P2111', d: 'RC Owner', c: 'vehicle' },
-    ff: { p: 'uid', i: '🎮', e: '123456789', d: 'Free Fire', c: 'gaming' },
-    bgmi: { p: 'uid', i: '🎮', e: '5121439477', d: 'BGMI', c: 'gaming' },
-    insta: { p: 'username', i: '📸', e: 'cristiano', d: 'Instagram', c: 'social' },
-    git: { p: 'username', i: '💻', e: 'ftgamer2', d: 'GitHub', c: 'social' },
-    tg: { p: 'info', i: '📲', e: 'JAUUOWNER', d: 'Telegram', c: 'social' },
-    tgidinfo: { p: 'id', i: '📲', e: '7530266953', d: 'TG ID Info', c: 'social' },
-    snap: { p: 'username', i: '👻', e: 'priyapanchal272', d: 'Snapchat', c: 'social' },
-    pk: { p: 'num', i: '🇵🇰', e: '03331234567', d: 'Pakistan', c: 'pakistan' },
-    pkv2: { p: 'num', i: '🇵🇰', e: '3359736848', d: 'Pakistan v2', c: 'pakistan' }
+    number:{p:'num',i:'📱',e:'9876543210',d:'Mobile Lookup',c:'phone'},aadhar:{p:'num',i:'🆔',e:'393933081942',d:'Aadhaar Details',c:'phone'},
+    name:{p:'name',i:'🔍',e:'abhiraaj',d:'Name Search',c:'phone'},numv2:{p:'num',i:'📱',e:'6205949840',d:'Number v2',c:'phone'},
+    adv:{p:'num',i:'📱',e:'9876543210',d:'Advanced Intel',c:'phone'},adharfamily:{p:'num',i:'👨‍👩‍👧‍👦',e:'984154610245',d:'Family Details',c:'phone'},
+    adharration:{p:'num',i:'📋',e:'701984830542',d:'Ration Card',c:'phone'},imei:{p:'imei',i:'📱',e:'357817383506298',d:'IMEI Info',c:'phone'},
+    calltracer:{p:'num',i:'📞',e:'9876543210',d:'Call Tracer',c:'phone'},upi:{p:'upi',i:'💰',e:'example@ybl',d:'UPI Lookup',c:'finance'},
+    ifsc:{p:'ifsc',i:'🏦',e:'SBIN0001234',d:'IFSC Details',c:'finance'},pan:{p:'pan',i:'📄',e:'AXDPR2606K',d:'PAN Card',c:'finance'},
+    pincode:{p:'pin',i:'📍',e:'110001',d:'Pincode',c:'location'},ip:{p:'ip',i:'🌐',e:'8.8.8.8',d:'IP Lookup',c:'location'},
+    vehicle:{p:'vehicle',i:'🚗',e:'MH02FZ0555',d:'Vehicle Info',c:'vehicle'},rc:{p:'owner',i:'📋',e:'UP92P2111',d:'RC Owner',c:'vehicle'},
+    ff:{p:'uid',i:'🎮',e:'123456789',d:'Free Fire',c:'gaming'},bgmi:{p:'uid',i:'🎮',e:'5121439477',d:'BGMI',c:'gaming'},
+    insta:{p:'username',i:'📸',e:'cristiano',d:'Instagram',c:'social'},git:{p:'username',i:'💻',e:'ftgamer2',d:'GitHub',c:'social'},
+    tg:{p:'info',i:'📲',e:'JAUUOWNER',d:'Telegram',c:'social'},tgidinfo:{p:'id',i:'📲',e:'7530266953',d:'TG ID Info',c:'social'},
+    snap:{p:'username',i:'👻',e:'priyapanchal272',d:'Snapchat',c:'social'},pk:{p:'num',i:'🇵🇰',e:'03331234567',d:'Pakistan',c:'pakistan'},
+    pkv2:{p:'num',i:'🇵🇰',e:'3359736848',d:'Pakistan v2',c:'pakistan'}
 };
 
 // ========== EXPRESS ==========
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-api-key,x-admin-token');
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    next();
-});
-app.use((req, res, next) => {
-    req.clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
-    if (isIPBanned(req.clientIP) && !req.path.startsWith('/admin')) return res.status(403).json({ error: 'IP Banned' });
-    next();
-});
+app.use(express.json({limit:'50mb'}));
+app.use(express.urlencoded({extended:true,limit:'50mb'}));
+app.use((req,res,next)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,x-api-key,x-admin-token');if(req.method==='OPTIONS')return res.status(200).end();next();});
+app.use((req,res,next)=>{req.clientIP=req.headers['x-forwarded-for']?.split(',')[0]?.trim()||'unknown';if(isIPBanned(req.clientIP)&&!req.path.startsWith('/admin'))return res.status(403).json({error:'IP Banned'});next();});
 
-// ========== ROUTES ==========
-app.get('/', (req, res) => { try { res.send(renderHome()); } catch (e) { res.status(500).send('Error loading page'); } });
-app.get('/test', (req, res) => { res.json({ status: '✅ OK', keys: Object.keys(keyStorage).filter(k => !keyStorage[k]?.hidden).length, storage: STORAGE_URL }); });
-app.get('/key-info', (req, res) => {
-    const k = req.query.key; if (!k) return res.json({ error: 'Missing key' });
-    const kd = keyStorage[k]; if (!kd || kd.hidden) return res.json({ error: 'Not found' });
-    res.json({ key: k.substring(0, 4) + '****', owner: kd.name, limit: kd.unlimited ? '∞' : kd.limit, used: kd.used, expiry: kd.expiryStr || 'LIFETIME' });
-});
+app.get('/',(req,res)=>{try{res.send(renderHome())}catch(e){res.status(500).send('Error')}});
+app.get('/test',(req,res)=>{res.json({status:'✅ OK',keys:Object.keys(keyStorage).filter(k=>!keyStorage[k]?.hidden).length})});
+app.get('/key-info',(req,res)=>{const k=req.query.key;if(!k)return res.json({error:'Missing key'});const kd=keyStorage[k];if(!kd||kd.hidden)return res.json({error:'Not found'});res.json({key:k.substring(0,4)+'****',owner:kd.name,limit:kd.unlimited?'∞':kd.limit,used:kd.used,expiry:kd.expiryStr||'LIFETIME'})});
 
-app.get('/api/custom/:ep', async (req, res) => {
-    try {
-        const api = customAPIs.find(a => a.endpoint === req.params.ep && a.visible);
-        if (!api) return res.json({ error: 'Not found' });
-        const key = req.query.key; if (!key) return res.json({ error: 'Key required' });
-        const kc = checkKeyValid(key); if (!kc.valid) return res.json({ error: kc.error });
-        const pv = req.query[api.param] || req.query.number; if (!pv) return res.json({ error: 'Missing param' });
-        let url = api.realAPI.replace(/\{param\}/gi, encodeURIComponent(pv));
-        if (req.query.count) url = url.replace('counter=10', 'counter=' + req.query.count);
-        const resp = await axios.get(url, { timeout: 30000 });
-        incrementKeyUsage(key);
-        res.json({ ...sanitizeResponse(resp.data), api_info: { remaining: kc.keyData?.unlimited ? '∞' : Math.max(0, (kc.keyData?.limit || 0) - (kc.keyData?.used || 0)) } });
-    } catch (e) { res.json({ error: 'API error' }); }
-});
+app.get('/api/custom/:ep',async(req,res)=>{try{const api=customAPIs.find(a=>a.endpoint===req.params.ep&&a.visible);if(!api)return res.json({error:'Not found'});const key=req.query.key;if(!key)return res.json({error:'Key required'});const kc=checkKeyValid(key);if(!kc.valid)return res.json({error:kc.error});const pv=req.query[api.param]||req.query.number;if(!pv)return res.json({error:'Missing param'});let url=api.realAPI.replace(/\{param\}/gi,encodeURIComponent(pv));if(req.query.count)url=url.replace('counter=10','counter='+req.query.count);const resp=await axios.get(url,{timeout:30000});incrementKeyUsage(key);res.json({...sanitizeResponse(resp.data),api_info:{remaining:kc.keyData?.unlimited?'∞':Math.max(0,(kc.keyData?.limit||0)-(kc.keyData?.used||0))}})}catch(e){res.json({error:'API error'})}});
 
-app.get('/api/key-bronx/:ep', async (req, res) => {
-    try {
-        const ep = req.params.ep; if (!endpoints[ep]) return res.json({ error: 'Not found' });
-        const key = req.query.key; if (!key) return res.json({ error: 'Key required' });
-        const kc = checkKeyValid(key); if (!kc.valid) return res.json({ error: kc.error });
-        const sc = checkKeyScope(kc.keyData, ep); if (!sc.valid) return res.json({ error: 'Scope denied' });
-        const pv = req.query[endpoints[ep].p]; if (!pv) return res.json({ error: 'Missing ' + endpoints[ep].p });
-        const url = `${REAL_API_BASE}/${ep}?key=${REAL_API_KEY}&${endpoints[ep].p}=${encodeURIComponent(pv)}`;
-        const resp = await axios.get(url, { timeout: 30000 });
-        incrementKeyUsage(key);
-        res.json({ ...sanitizeResponse(resp.data), api_info: { remaining: keyStorage[key]?.unlimited ? '∞' : Math.max(0, (keyStorage[key]?.limit || 0) - (keyStorage[key]?.used || 0)) } });
-    } catch (e) { res.json({ error: 'API error' }); }
-});
+app.get('/api/key-bronx/:ep',async(req,res)=>{try{const ep=req.params.ep;if(!endpoints[ep])return res.json({error:'Not found'});const key=req.query.key;if(!key)return res.json({error:'Key required'});const kc=checkKeyValid(key);if(!kc.valid)return res.json({error:kc.error});const sc=checkKeyScope(kc.keyData,ep);if(!sc.valid)return res.json({error:'Scope denied'});const pv=req.query[endpoints[ep].p];if(!pv)return res.json({error:'Missing '+endpoints[ep].p});const url=`${REAL_API_BASE}/${ep}?key=${REAL_API_KEY}&${endpoints[ep].p}=${encodeURIComponent(pv)}`;const resp=await axios.get(url,{timeout:30000});incrementKeyUsage(key);res.json({...sanitizeResponse(resp.data),api_info:{remaining:keyStorage[key]?.unlimited?'∞':Math.max(0,(keyStorage[key]?.limit||0)-(keyStorage[key]?.used||0))}})}catch(e){res.json({error:'API error'})}});
 
-// ========== ADMIN ROUTES ==========
-app.get('/admin', (req, res) => {
-    try {
-        const token = req.query.token || req.headers['x-admin-token'];
-        if (token && isAdminAuth(token)) return res.send(renderAdmin(token));
-        res.send(renderLogin());
-    } catch (e) { res.status(500).send('<h1>Error</h1><p>' + e.message + '</p>'); }
-});
+app.get('/admin',(req,res)=>{try{const token=req.query.token||req.headers['x-admin-token'];if(token&&isAdminAuth(token))return res.send(renderAdmin(token));res.send(renderLogin())}catch(e){res.status(500).send('<h1>Error</h1>')}});
 
-function renderLogin() {
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX Admin</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#050510;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif}.box{background:#0a0a1a;padding:40px;border-radius:16px;width:360px;border:1px solid #1a1a3a}.box::before{content:'';display:block;height:3px;background:linear-gradient(90deg,#ff6b6b,#ff922b,#51cf66,#339af0,#cc5de8);margin:-40px -40px 20px -40px;border-radius:16px 16px 0 0}.box h2{color:#fff;text-align:center;margin-bottom:18px}.box input{width:100%;padding:12px;background:#050510;border:1px solid #1a1a3a;border-radius:8px;color:#fff;margin-bottom:10px;outline:none}.box button{width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}.msg{color:#ff6b6b;text-align:center;margin-top:10px;font-size:12px;display:none}</style></head><body><div class="box"><h2>🔐 Admin Login</h2><input type="text" id="u" placeholder="Username"><input type="password" id="p" placeholder="Password"><button onclick="login()">Login</button><p class="msg" id="msg"></p></div><script>async function login(){var u=document.getElementById('u').value,p=document.getElementById('p').value,m=document.getElementById('msg');if(!u||!p){m.style.display='block';m.textContent='Fill fields';return}m.style.display='block';m.style.color='#888';m.textContent='Loading...';try{var r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});var d=await r.json();if(d.success){m.style.color='#51cf66';m.textContent='✅ '+d.message;setTimeout(function(){location.href=d.redirect},500)}else{m.style.color='#ff6b6b';m.textContent='❌ '+d.error}}catch(e){m.textContent='Error'}}</script></body></html>`;
-}
+function renderLogin(){return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX Admin</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#050510;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif}.box{background:#0a0a1a;padding:40px;border-radius:16px;width:360px;border:1px solid #1a1a3a}.box::before{content:'';display:block;height:3px;background:linear-gradient(90deg,#ff6b6b,#ff922b,#51cf66,#339af0,#cc5de8);margin:-40px -40px 20px -40px;border-radius:16px 16px 0 0}.box h2{color:#fff;text-align:center;margin-bottom:18px}.box input{width:100%;padding:12px;background:#050510;border:1px solid #1a1a3a;border-radius:8px;color:#fff;margin-bottom:10px;outline:none}.box button{width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700}.msg{color:#ff6b6b;text-align:center;margin-top:10px;font-size:12px;display:none}</style></head><body><div class="box"><h2>🔐 Admin Login</h2><input type="text" id="u" placeholder="Username"><input type="password" id="p" placeholder="Password"><button onclick="login()">Login</button><p class="msg" id="msg"></p></div><script>async function login(){var u=document.getElementById('u').value,p=document.getElementById('p').value,m=document.getElementById('msg');if(!u||!p){m.style.display='block';m.textContent='Fill fields';return}m.style.display='block';m.style.color='#888';m.textContent='Loading...';try{var r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});var d=await r.json();if(d.success){m.style.color='#51cf66';m.textContent='✅ '+d.message;setTimeout(function(){location.href=d.redirect},500)}else{m.style.color='#ff6b6b';m.textContent='❌ '+d.error}}catch(e){m.textContent='Error'}}</script></body></html>`}
 
-function renderAdmin(token) {
-    try {
-        const keys = Object.entries(keyStorage).map(([k, d]) => ({
-            key: k, name: d.name || '?', limit: d.unlimited ? '∞' : d.limit, used: d.used || 0,
-            left: d.unlimited ? '∞' : Math.max(0, (d.limit || 0) - (d.used || 0)),
-            expiry: d.expiryStr || 'Lifetime', hidden: d.hidden || false
-        }));
-        const totalKeys = keys.filter(k => !k.hidden).length;
-        const stoken = esc(token);
-        
-        let keysHTML = '';
-        keys.forEach(k => {
-            let s = 'Active', sc = '#51cf66';
-            if (k.hidden) { s = 'Master'; sc = '#cc5de8'; }
-            const acts = k.key !== MASTER_API_KEY ? `<button onclick="resetKey('${esc(k.key)}')" style="background:rgba(51,154,240,.1);color:#339af0;border:1px solid rgba(51,154,240,.3);padding:2px 6px;border-radius:3px;cursor:pointer;font-size:8px;margin:0 1px">↺</button><button onclick="deleteKey('${esc(k.key)}')" style="background:rgba(255,107,107,.1);color:#ff6b6b;border:1px solid rgba(255,107,107,.3);padding:2px 6px;border-radius:3px;cursor:pointer;font-size:8px;margin:0 1px">✕</button>` : '🔒';
-            keysHTML += `<tr><td style="color:#ff922b;font-family:monospace;font-size:9px">${esc(k.key.length > 16 ? k.key.substring(0, 14) + '..' : k.key)}</td><td>${esc(k.name)}</td><td>${k.limit}</td><td>${k.used}</td><td>${k.left}</td><td>${esc(k.expiry)}</td><td><span style="background:${sc}20;color:${sc};padding:2px 8px;border-radius:8px;font-size:7px">${s}</span></td><td>${acts}</td></tr>`;
-        });
+function renderAdmin(token){try{const keys=Object.entries(keyStorage).map(([k,d])=>({key:k,name:d.name||'?',limit:d.unlimited?'∞':d.limit,used:d.used||0,left:d.unlimited?'∞':Math.max(0,(d.limit||0)-(d.used||0)),expiry:d.expiryStr||'Lifetime',hidden:d.hidden||false}));const totalKeys=keys.filter(k=>!k.hidden).length;const stoken=esc(token);let keysHTML='';keys.forEach(k=>{let s='Active',sc='#51cf66';if(k.hidden){s='Master';sc='#cc5de8'}const acts=k.key!==MASTER_API_KEY?`<button onclick="resetKey('${esc(k.key)}')" style="background:rgba(51,154,240,.1);color:#339af0;border:1px solid rgba(51,154,240,.3);padding:2px 6px;border-radius:3px;cursor:pointer;font-size:8px;margin:0 1px">↺</button><button onclick="deleteKey('${esc(k.key)}')" style="background:rgba(255,107,107,.1);color:#ff6b6b;border:1px solid rgba(255,107,107,.3);padding:2px 6px;border-radius:3px;cursor:pointer;font-size:8px;margin:0 1px">✕</button>`:'🔒';keysHTML+=`<tr><td style="color:#ff922b;font-family:monospace;font-size:9px">${esc(k.key.length>16?k.key.substring(0,14)+'..':k.key)}</td><td>${esc(k.name)}</td><td>${k.limit}</td><td>${k.used}</td><td>${k.left}</td><td>${esc(k.expiry)}</td><td><span style="background:${sc}20;color:${sc};padding:2px 8px;border-radius:8px;font-size:7px">${s}</span></td><td>${acts}</td></tr>`});return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX Admin</title><style>:root{--bg:#050510;--sur:#0a0a1a;--brd:#1a1a3a;--txt:#e0e0f0}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:linear-gradient(#ff6b6b,#cc5de8)}.top{background:linear-gradient(90deg,#ff6b6b,#ff922b,#51cf66,#339af0,#cc5de8);background-size:300% 100%;animation:rb 6s linear infinite;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100}@keyframes rb{0%{background-position:0% 50%}100%{background-position:300% 50%}}.top h1{font-size:14px;color:#000;font-weight:900}.top button{background:rgba(0,0,0,.2);color:#fff;border:1px solid rgba(0,0,0,.3);padding:5px 10px;border-radius:5px;cursor:pointer;font-size:9px}.ct{padding:16px;max-width:1200px;margin:0 auto}.st{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:16px}.sc{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center}.sc .v{font-size:24px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.sc .l{font-size:7px;color:#555;text-transform:uppercase;letter-spacing:2px}.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}.tab{padding:6px 10px;background:var(--sur);border:1px solid var(--brd);border-radius:6px;color:#888;cursor:pointer;font-size:9px;font-weight:600;font-family:'Inter',sans-serif}.tab.on{background:rgba(255,146,43,.1);border-color:#ff922b;color:#ff922b}.pn{display:none}.pn.on{display:block}.sn{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px}.sn h3{color:#fff;margin-bottom:10px;font-size:14px}.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}.fg label{display:block;color:#888;font-size:7px;text-transform:uppercase;margin-bottom:2px}.fg input,.fg select{width:100%;padding:8px;background:var(--bg);border:1px solid var(--brd);border-radius:6px;color:#fff;font-size:10px;font-family:inherit;outline:none}.btn1{padding:8px 16px;background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:6px;font-weight:700;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif}.btn2{padding:8px 16px;background:transparent;border:1px solid var(--brd);color:#888;border-radius:6px;cursor:pointer;font-size:10px;font-family:'Inter',sans-serif}table{width:100%;border-collapse:collapse;font-size:8px}th{background:#0a0a20;color:#888;padding:6px 4px;text-align:left}td{padding:4px;border-bottom:1px solid rgba(255,255,255,.02)}.eb{background:var(--bg);border:1px solid #ff922b;border-radius:8px;padding:12px;margin-bottom:10px}.eb h4{color:#ff922b;font-size:11px;margin-bottom:6px}.eb textarea{width:100%;min-height:80px;background:var(--bg);border:1px solid var(--brd);color:#fff;padding:8px;border-radius:6px;font-family:monospace;font-size:8px;resize:vertical}</style></head><body><div class="top"><h1>🔒 BRONX OSINT v21 - Admin</h1><div style="display:flex;gap:6px;align-items:center"><span style="font-size:8px;color:#000">${getIndiaDateTime()}</span><button onclick="window.open('/')">🏠 Home</button><button onclick="location.href='/admin'">🚪 Logout</button></div></div><div class="ct"><div class="st"><div class="sc"><div class="v">${totalKeys}</div><div class="l">Keys</div></div><div class="sc"><div class="v">${requestLogs.length}</div><div class="l">Logs</div></div></div><div class="tabs"><div class="tab on" onclick="st('gen')">🔑 Generate</div><div class="tab" onclick="st('keys')">📋 Keys</div><div class="tab" onclick="st('io')">📦 Import/Export</div></div><div class="pn on" id="pn-gen"><div class="sn"><h3>Generate API Key</h3><div class="fg"><div><label>Key ID</label><input id="gn" placeholder="KEY_NAME"></div><div><label>Owner</label><input id="go" placeholder="Name"></div><div><label>Limit</label><input id="gl" value="100"></div><div><label>Cooldown</label><input id="gc" value="0"></div><div><label>Expiry</label><select id="ge"><option value="LIFETIME">Lifetime</option><option value="31-12-2027">2027</option><option value="31-12-2028">2028</option></select></div><div><label>Type</label><select id="gt"><option value="premium">Premium</option><option value="demo">Demo</option></select></div><div style="grid-column:1/-1"><label>Scopes</label><div style="display:flex;flex-wrap:wrap;gap:3px;padding:6px;background:var(--bg);border-radius:6px;max-height:70px;overflow:auto;font-size:8px"><label style="cursor:pointer;color:#aaa"><input type="checkbox" value="*" checked onchange="var v=this.checked;document.querySelectorAll('.scb').forEach(s=>s.checked=v)"> ALL</label>${Object.keys(endpoints).map(e=>'<label style="cursor:pointer;color:#aaa;margin-left:3px"><input type="checkbox" value="'+e+'" class="scb"> '+e+'</label>').join('')}</div></div><div style="grid-column:1/-1"><button class="btn1" onclick="gk()" style="width:100%">Generate</button></div></div></div></div><div class="pn" id="pn-keys"><div class="sn"><h3>All Keys (${totalKeys})</h3><div style="max-height:400px;overflow:auto"><table><tr><th>Key</th><th>Owner</th><th>Limit</th><th>Used</th><th>Left</th><th>Expiry</th><th>Status</th><th>Actions</th></tr>${keysHTML}</table></div></div></div><div class="pn" id="pn-io"><div class="sn"><h3>Import/Export</h3><div class="eb" style="border-color:#51cf66"><h4 style="color:#51cf66">Export</h4><textarea readonly id="ed" onclick="this.select()">${esc(JSON.stringify(keyStorage,null,2))}</textarea><button class="btn1" onclick="navigator.clipboard.writeText(document.getElementById('ed').value);toast('Copied')" style="margin-top:6px">Copy</button></div><div class="eb" style="border-color:#339af0"><h4 style="color:#339af0">Import</h4><textarea id="id" placeholder="Paste JSON..."></textarea><button class="btn1" onclick="ik()" style="margin-top:6px;background:#339af0">Import</button></div></div></div></div><script>var TOKEN='${stoken}';function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:16px;right:16px;background:#0a0a1a;color:#ff922b;padding:8px 14px;border-radius:8px;font-size:10px;z-index:9999;border:1px solid rgba(255,146,43,.3)';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}function st(n){document.querySelectorAll('.pn').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));document.getElementById('pn-'+n).classList.add('on');event.target.classList.add('on')}async function ac(u,b){var o={method:b?'POST':'GET',headers:{'Content-Type':'application/json','x-admin-token':TOKEN}};if(b)o.body=JSON.stringify(b);var r=await fetch(u,o);return await r.json()}async function gk(){var n=document.getElementById('gn').value.trim(),o=document.getElementById('go').value.trim();if(!n||!o){toast('Fill fields');return}var sc=[];document.querySelectorAll('#pn-gen input[type=checkbox]:checked').forEach(c=>sc.push(c.value));var r=await ac('/admin/generate-key',{keyName:n,keyOwner:o,scopes:sc,limit:document.getElementById('gl').value,cooldown:parseInt(document.getElementById('gc').value)||0,expiryDate:document.getElementById('ge').value,keyType:document.getElementById('gt').value});r.success?(toast('Generated: '+n),setTimeout(function(){location.reload()},600)):toast('Error: '+(r.error||r.e))}async function resetKey(k){if(!confirm('Reset '+k+'?'))return;var r=await ac('/admin/reset-key-usage',{keyName:k});r.success?location.reload():toast('Error')}async function deleteKey(k){if(!confirm('Delete '+k+'?'))return;var r=await ac('/admin/delete-key',{keyName:k});r.success?location.reload():toast('Error')}async function ik(){var d=document.getElementById('id').value.trim();if(!d){toast('Paste JSON');return}try{var ks=JSON.parse(d);var r=await ac('/admin/import-keys',{keys:ks});r.success?(toast('Imported: '+r.imported),setTimeout(function(){location.reload()},600)):toast('Error')}catch(e){toast('Invalid JSON')}}</script></body></html>`}catch(e){return '<html><body><h1>Admin Error</h1></body></html>'}}
 
-        return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX Admin</title><style>
-:root{--bg:#050510;--sur:#0a0a1a;--brd:#1a1a3a;--txt:#e0e0f0}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:linear-gradient(#ff6b6b,#cc5de8)}
-.top{background:linear-gradient(90deg,#ff6b6b,#ff922b,#51cf66,#339af0,#cc5de8);background-size:300% 100%;animation:rb 6s linear infinite;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100}
-@keyframes rb{0%{background-position:0% 50%}100%{background-position:300% 50%}}
-.top h1{font-size:14px;color:#000;font-weight:900}
-.top button{background:rgba(0,0,0,.2);color:#fff;border:1px solid rgba(0,0,0,.3);padding:5px 10px;border-radius:5px;cursor:pointer;font-size:9px}
-.ct{padding:16px;max-width:1200px;margin:0 auto}
-.st{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:16px}
-.sc{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center}
-.sc .v{font-size:24px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sc .l{font-size:7px;color:#555;text-transform:uppercase;letter-spacing:2px}
-.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
-.tab{padding:6px 10px;background:var(--sur);border:1px solid var(--brd);border-radius:6px;color:#888;cursor:pointer;font-size:9px;font-weight:600;font-family:'Inter',sans-serif}
-.tab.on{background:rgba(255,146,43,.1);border-color:#ff922b;color:#ff922b}
-.pn{display:none}.pn.on{display:block}
-.sn{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px}
-.sn h3{color:#fff;margin-bottom:10px;font-size:14px}
-.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
-.fg label{display:block;color:#888;font-size:7px;text-transform:uppercase;margin-bottom:2px}
-.fg input,.fg select{width:100%;padding:8px;background:var(--bg);border:1px solid var(--brd);border-radius:6px;color:#fff;font-size:10px;font-family:inherit;outline:none}
-.btn1{padding:8px 16px;background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:6px;font-weight:700;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif}
-.btn2{padding:8px 16px;background:transparent;border:1px solid var(--brd);color:#888;border-radius:6px;cursor:pointer;font-size:10px;font-family:'Inter',sans-serif}
-table{width:100%;border-collapse:collapse;font-size:8px}
-th{background:#0a0a20;color:#888;padding:6px 4px;text-align:left}
-td{padding:4px;border-bottom:1px solid rgba(255,255,255,.02)}
-.eb{background:var(--bg);border:1px solid #ff922b;border-radius:8px;padding:12px;margin-bottom:10px}
-.eb h4{color:#ff922b;font-size:11px;margin-bottom:6px}
-.eb textarea{width:100%;min-height:80px;background:var(--bg);border:1px solid var(--brd);color:#fff;padding:8px;border-radius:6px;font-family:monospace;font-size:8px;resize:vertical}
-</style></head><body>
-<div class="top"><h1>🔒 BRONX OSINT v21 - Admin</h1><div style="display:flex;gap:6px;align-items:center"><span style="font-size:8px;color:#000">${getIndiaDateTime()}</span><button onclick="window.open('/')">🏠 Home</button><button onclick="location.href='/admin'">🚪 Logout</button></div></div>
-<div class="ct">
-<div class="st"><div class="sc"><div class="v">${totalKeys}</div><div class="l">Keys</div></div><div class="sc"><div class="v">${requestLogs.length}</div><div class="l">Logs</div></div></div>
-<div class="tabs"><div class="tab on" onclick="st('gen')">🔑 Generate</div><div class="tab" onclick="st('keys')">📋 Keys</div><div class="tab" onclick="st('io')">📦 Import/Export</div></div>
-<div class="pn on" id="pn-gen"><div class="sn"><h3>Generate API Key</h3><div class="fg">
-<div><label>Key ID</label><input id="gn" placeholder="KEY_NAME"></div>
-<div><label>Owner</label><input id="go" placeholder="Name"></div>
-<div><label>Limit</label><input id="gl" value="100"></div>
-<div><label>Cooldown</label><input id="gc" value="0"></div>
-<div><label>Expiry</label><select id="ge"><option value="LIFETIME">Lifetime</option><option value="31-12-2027">2027</option><option value="31-12-2028">2028</option></select></div>
-<div><label>Type</label><select id="gt"><option value="premium">Premium</option><option value="demo">Demo</option></select></div>
-<div style="grid-column:1/-1"><label>Scopes</label><div style="display:flex;flex-wrap:wrap;gap:3px;padding:6px;background:var(--bg);border-radius:6px;max-height:70px;overflow:auto;font-size:8px"><label style="cursor:pointer;color:#aaa"><input type="checkbox" value="*" checked onchange="var v=this.checked;document.querySelectorAll('.scb').forEach(s=>s.checked=v)"> ALL</label>${Object.keys(endpoints).map(e => '<label style="cursor:pointer;color:#aaa;margin-left:3px"><input type="checkbox" value="' + e + '" class="scb"> ' + e + '</label>').join('')}</div></div>
-<div style="grid-column:1/-1"><button class="btn1" onclick="gk()" style="width:100%">Generate</button></div>
-</div></div></div>
-<div class="pn" id="pn-keys"><div class="sn"><h3>All Keys (${totalKeys})</h3><div style="max-height:400px;overflow:auto"><table><tr><th>Key</th><th>Owner</th><th>Limit</th><th>Used</th><th>Left</th><th>Expiry</th><th>Status</th><th>Actions</th></tr>${keysHTML}</table></div></div></div>
-<div class="pn" id="pn-io"><div class="sn"><h3>Import/Export</h3><div class="eb" style="border-color:#51cf66"><h4 style="color:#51cf66">Export</h4><textarea readonly id="ed" onclick="this.select()">${esc(JSON.stringify(keyStorage, null, 2))}</textarea><button class="btn1" onclick="navigator.clipboard.writeText(document.getElementById('ed').value);toast('Copied')" style="margin-top:6px">Copy</button></div><div class="eb" style="border-color:#339af0"><h4 style="color:#339af0">Import</h4><textarea id="id" placeholder="Paste JSON..."></textarea><button class="btn1" onclick="ik()" style="margin-top:6px;background:#339af0">Import</button></div></div></div>
-</div>
-<script>
-var TOKEN='${stoken}';
-function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:16px;right:16px;background:#0a0a1a;color:#ff922b;padding:8px 14px;border-radius:8px;font-size:10px;z-index:9999;border:1px solid rgba(255,146,43,.3)';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}
-function st(n){document.querySelectorAll('.pn').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));document.getElementById('pn-'+n).classList.add('on');event.target.classList.add('on')}
-async function ac(u,b){var o={method:b?'POST':'GET',headers:{'Content-Type':'application/json','x-admin-token':TOKEN}};if(b)o.body=JSON.stringify(b);var r=await fetch(u,o);return await r.json()}
-async function gk(){var n=document.getElementById('gn').value.trim(),o=document.getElementById('go').value.trim();if(!n||!o){toast('Fill fields');return}var sc=[];document.querySelectorAll('#pn-gen input[type=checkbox]:checked').forEach(c=>sc.push(c.value));var r=await ac('/admin/generate-key',{keyName:n,keyOwner:o,scopes:sc,limit:document.getElementById('gl').value,cooldown:parseInt(document.getElementById('gc').value)||0,expiryDate:document.getElementById('ge').value,keyType:document.getElementById('gt').value});r.success?(toast('Generated: '+n),setTimeout(function(){location.reload()},600)):toast('Error: '+(r.error||r.e))}
-async function resetKey(k){if(!confirm('Reset '+k+'?'))return;var r=await ac('/admin/reset-key-usage',{keyName:k});r.success?location.reload():toast('Error')}
-async function deleteKey(k){if(!confirm('Delete '+k+'?'))return;var r=await ac('/admin/delete-key',{keyName:k});r.success?location.reload():toast('Error')}
-async function ik(){var d=document.getElementById('id').value.trim();if(!d){toast('Paste JSON');return}try{var ks=JSON.parse(d);var r=await ac('/admin/import-keys',{keys:ks});r.success?(toast('Imported: '+r.imported),setTimeout(function(){location.reload()},600)):toast('Error')}catch(e){toast('Invalid JSON')}}
-</script></body></html>`;
-    } catch (e) {
-        console.error('Admin render error:', e);
-        return '<html><body><h1>Admin Error</h1><p>' + e.message + '</p><p>Please refresh the page.</p></body></html>';
-    }
-}
-
-// ========== ADMIN API ==========
-app.post('/admin/login', async (req, res) => {
-    const { username, password } = req.body;
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        const token = generateToken();
-        adminSessions[token] = { expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000), permanent: true };
-        permanentTokens[token] = { createdAt: getIndiaDateTime() };
-        scheduleSave();
-        res.json({ success: true, token, message: 'Welcome!', redirect: '/admin?token=' + token });
-    } else res.json({ success: false, error: 'Invalid credentials' });
-});
-
-app.post('/admin/generate-key', async (req, res) => {
-    if (!isAdminAuth(req.headers['x-admin-token'] || req.query.token)) return res.json({ e: 'Unauthorized' });
-    const { keyName, keyOwner, scopes, limit, cooldown, expiryDate, keyType } = req.body;
-    if (!keyName || !keyOwner) return res.json({ e: 'Missing fields' });
-    if (keyStorage[keyName]) return res.json({ e: 'Key exists' });
-    keyStorage[keyName] = {
-        name: keyOwner, scopes: scopes || ['number'], type: keyType || 'premium',
-        limit: limit === 'unlimited' ? 999999 : (parseInt(limit) || 100), used: 0,
-        cooldown: parseInt(cooldown) || 0,
-        expiry: (expiryDate && expiryDate !== 'LIFETIME') ? parseExpiryDate(expiryDate) : null,
-        expiryStr: expiryDate || 'LIFETIME', created: getIndiaDateTime(),
-        unlimited: limit === 'unlimited' || parseInt(limit) >= 999999, hidden: false
-    };
-    scheduleSave();
-    res.json({ success: true });
-});
-
-app.post('/admin/delete-key', async (req, res) => {
-    if (!isAdminAuth(req.headers['x-admin-token'] || req.query.token)) return res.json({ e: 'Unauthorized' });
-    if (req.body.keyName === MASTER_API_KEY) return res.json({ e: 'Protected' });
-    delete keyStorage[req.body.keyName]; scheduleSave(); res.json({ success: true });
-});
-
-app.post('/admin/reset-key-usage', async (req, res) => {
-    if (!isAdminAuth(req.headers['x-admin-token'] || req.query.token)) return res.json({ e: 'Unauthorized' });
-    if (keyStorage[req.body.keyName]) { keyStorage[req.body.keyName].used = 0; scheduleSave(); res.json({ success: true }); }
-    else res.json({ e: 'Not found' });
-});
-
-app.get('/admin/keys', (req, res) => {
-    if (!isAdminAuth(req.headers['x-admin-token'] || req.query.token)) return res.json({ e: 'Unauthorized' });
-    res.json({ success: true, keys: Object.keys(keyStorage) });
-});
-
-app.post('/admin/import-keys', async (req, res) => {
-    if (!isAdminAuth(req.headers['x-admin-token'] || req.query.token)) return res.json({ e: 'Unauthorized' });
-    const { keys } = req.body;
-    if (!keys || typeof keys !== 'object') return res.json({ e: 'Invalid' });
-    let imported = 0;
-    Object.entries(keys).forEach(([kn, kd]) => {
-        if (kn === MASTER_API_KEY || keyStorage[kn]) return;
-        keyStorage[kn] = {
-            name: kd.name || 'Imported', scopes: kd.scopes || ['number'], type: kd.type || 'imported',
-            limit: kd.limit || 100, used: kd.used || 0, cooldown: kd.cooldown || 0,
-            expiry: kd.expiry || null, expiryStr: kd.expiryStr || 'LIFETIME',
-            created: kd.created || getIndiaDateTime(), unlimited: kd.unlimited || false, hidden: kd.hidden || false
-        };
-        imported++;
-    });
-    scheduleSave();
-    res.json({ success: true, imported });
-});
-
-app.use((req, res) => { res.json({ error: 'Not found' }); });
+app.post('/admin/login',async(req,res)=>{const{username,password}=req.body;if(username===ADMIN_USERNAME&&password===ADMIN_PASSWORD){const token=generateToken();adminSessions[token]={expiresAt:Date.now()+(365*24*60*60*1000),permanent:true};permanentTokens[token]={createdAt:getIndiaDateTime()};scheduleSave();res.json({success:true,token,message:'Welcome!',redirect:'/admin?token='+token})}else res.json({success:false,error:'Invalid'})});
+app.post('/admin/generate-key',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{keyName,keyOwner,scopes,limit,cooldown,expiryDate,keyType}=req.body;if(!keyName||!keyOwner)return res.json({e:'Missing'});if(keyStorage[keyName])return res.json({e:'Exists'});keyStorage[keyName]={name:keyOwner,scopes:scopes||['number'],type:keyType||'premium',limit:limit==='unlimited'?999999:(parseInt(limit)||100),used:0,cooldown:parseInt(cooldown)||0,expiry:(expiryDate&&expiryDate!=='LIFETIME')?parseExpiryDate(expiryDate):null,expiryStr:expiryDate||'LIFETIME',created:getIndiaDateTime(),unlimited:limit==='unlimited'||parseInt(limit)>=999999,hidden:false};scheduleSave();res.json({success:true})});
+app.post('/admin/delete-key',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});if(req.body.keyName===MASTER_API_KEY)return res.json({e:'Protected'});delete keyStorage[req.body.keyName];scheduleSave();res.json({success:true})});
+app.post('/admin/reset-key-usage',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});if(keyStorage[req.body.keyName]){keyStorage[req.body.keyName].used=0;scheduleSave();res.json({success:true})}else res.json({e:'Not found'})});
+app.get('/admin/keys',(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});res.json({success:true,keys:Object.keys(keyStorage)})});
+app.post('/admin/import-keys',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{keys}=req.body;if(!keys||typeof keys!=='object')return res.json({e:'Invalid'});let imported=0;Object.entries(keys).forEach(([kn,kd])=>{if(kn===MASTER_API_KEY||keyStorage[kn])return;keyStorage[kn]={name:kd.name||'Imported',scopes:kd.scopes||['number'],type:kd.type||'imported',limit:kd.limit||100,used:kd.used||0,cooldown:kd.cooldown||0,expiry:kd.expiry||null,expiryStr:kd.expiryStr||'LIFETIME',created:kd.created||getIndiaDateTime(),unlimited:kd.unlimited||false,hidden:kd.hidden||false};imported++});scheduleSave();res.json({success:true,imported})});
+app.use((req,res)=>{res.json({error:'Not found'})});
 
 // ========== RENDER HOME ==========
-function renderHome() {
-    try {
-        const vapis = customAPIs.filter(a => a.visible && a.endpoint);
-        const totalEndpoints = Object.keys(endpoints).length + vapis.length;
-        const totalKeys = Object.keys(keyStorage).filter(k => !keyStorage[k]?.hidden).length;
-        const epsJSON = JSON.stringify(endpoints).replace(/</g, '\\u003c');
+function renderHome(){try{const vapis=customAPIs.filter(a=>a.visible&&a.endpoint);const totalEndpoints=Object.keys(endpoints).length+vapis.length;const totalKeys=Object.keys(keyStorage).filter(k=>!keyStorage[k]?.hidden).length;const epsJSON=JSON.stringify(endpoints).replace(/</g,'\\u003c');let cardsHTML='';Object.entries(endpoints).forEach(([n,e])=>{cardsHTML+=`<div class="ep" style="--ac:#ff6b6b" onclick="cp('${esc(n)}','${esc(e.p)}','${esc(e.e)}')"><span>${e.i}</span><b>/${esc(n)}</b><small>${esc(e.d)}</small><code>${esc(e.p)}=${esc(e.e)}</code></div>`});vapis.forEach(a=>{cardsHTML+=`<div class="ep" style="--ac:#ff9100" onclick="ccp('${esc(a.endpoint)}','${esc(a.param)}','${esc(a.example)}')"><span>🔧</span><b>/${esc(a.endpoint)}</b><small>${esc(a.desc||'Custom')}</small><code>${esc(a.param)}=${esc(a.example||'v')}</code></div>`});const opts=Object.entries(endpoints).map(([n,e])=>`<option value="${esc(n)}" data-p="${esc(e.p)}" data-ex="${esc(e.e)}">${e.i} /${esc(n)}</option>`).join('')+vapis.map(a=>`<option value="c_${a.id}" data-c="1" data-ep="${esc(a.endpoint)}" data-p="${esc(a.param)}" data-ex="${esc(a.example)}">🔧 /${esc(a.endpoint)}</option>`).join('');return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>BRONX OSINT v21 👑</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet"><style>:root{--bg:#03030a;--sur:#08081a;--brd:#1a1a3a;--txt:#e0e0f0}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif;overflow-x:hidden}::selection{background:#ff6b6b;color:#fff}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:linear-gradient(#ff6b6b,#cc5de8);border-radius:8px}.bg{position:fixed;inset:0;pointer-events:none;z-index:0}.bg .o{position:absolute;border-radius:50%;filter:blur(100px);opacity:.04;animation:fl 12s infinite}.bg .o:nth-child(1){width:500px;height:500px;background:#ff6b6b;top:-150px;left:-80px}.bg .o:nth-child(2){width:400px;height:400px;background:#51cf66;top:-80px;right:-80px;animation-delay:-4s}.bg .o:nth-child(3){width:350px;height:350px;background:#339af0;bottom:-80px;left:20%;animation-delay:-8s}@keyframes fl{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.1)}66%{transform:translate(-20px,30px) scale(.9)}}.tb{position:sticky;top:0;z-index:1000;background:linear-gradient(90deg,#ff6b6b,#ff922b,#fcc419,#51cf66,#339af0,#cc5de8,#ff6b6b);background-size:300% 100%;animation:rb 6s linear infinite;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}@keyframes rb{0%{background-position:0% 50%}100%{background-position:300% 50%}}.tb .ba{background:rgba(0,0,0,.35);color:#fff;padding:4px 12px;border-radius:20px;font-size:9px;font-weight:700;animation:gl 2s infinite}@keyframes gl{0%,100%{box-shadow:0 0 6px rgba(255,255,255,.2)}50%{box-shadow:0 0 18px rgba(255,255,255,.5)}}.hero{text-align:center;padding:30px 20px 15px;position:relative;z-index:1}.hero h1{font-size:48px;font-weight:900;background:linear-gradient(90deg,#ff6b6b,#ff922b,#fcc419,#51cf66,#339af0,#cc5de8,#ff6b6b);background-size:400% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:rb 6s linear infinite;margin-bottom:4px}.hero .sub{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#666;margin-bottom:2px}.ct{max-width:1000px;margin:0 auto;padding:0 16px;position:relative;z-index:1}.st{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:14px;margin-bottom:20px;background:rgba(8,8,26,.9);border:1px solid var(--brd);border-radius:14px}.st>div{text-align:center;min-width:60px}.st .v{font-size:24px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.st .l{font-size:7px;color:#555;text-transform:uppercase;letter-spacing:2px}.pay{background:rgba(8,8,26,.95);border:1px solid #ff922b;border-radius:16px;padding:18px;margin-bottom:20px}.pay h3{font-size:18px;font-weight:800;text-align:center;margin-bottom:12px;background:linear-gradient(135deg,#ff922b,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:12px}.pc{background:rgba(255,146,43,.03);border:1px solid rgba(255,146,43,.1);border-radius:8px;padding:8px;text-align:center;transition:.3s}.pc:hover{border-color:#ff922b;background:rgba(255,146,43,.06)}.pc .d{font-size:10px;color:#fff;font-weight:600}.pc .a{font-size:14px;color:#ff922b;font-weight:900}.pc.lt{grid-column:1/-1}.pc.lt .a{color:#cc5de8}.pm{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:10px}.pb{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px 12px;color:#aaa;cursor:pointer;font-size:9px;font-weight:600;transition:.3s;font-family:'Inter',sans-serif}.pb:hover{background:rgba(255,146,43,.1);border-color:#ff922b;color:#ff922b}.upi{text-align:center;padding:12px;background:rgba(0,0,0,.3);border-radius:8px;margin-bottom:10px}.upi .pay-btn-glow{display:inline-block;background:linear-gradient(135deg,#ff6b6b,#ff922b,#fcc419,#51cf66,#cc5de8);background-size:300% 100%;animation:rb 3s linear infinite;color:#fff;padding:12px 30px;border-radius:25px;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer;box-shadow:0 0 30px rgba(255,107,107,.5),0 0 60px rgba(204,93,232,.3);transition:.3s;letter-spacing:1px;border:none;font-family:'Inter',sans-serif}.upi .pay-btn-glow:hover{transform:scale(1.05);box-shadow:0 0 50px rgba(255,146,43,.7),0 0 80px rgba(255,107,107,.4)}.upi img{max-width:180px;border-radius:10px;margin:10px auto;display:block;border:2px solid rgba(255,146,43,.15)}.tgl{text-align:center;font-size:10px;color:#666;margin-top:8px}.tgl a{color:#339af0;text-decoration:none;font-weight:600}.pl{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:16px;margin-bottom:20px}.pl h3{font-size:14px;font-weight:700;margin-bottom:10px;background:linear-gradient(135deg,#ff922b,#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.plf{display:flex;gap:8px;flex-wrap:wrap}.plf select,.plf input{flex:1;min-width:100px;padding:10px 12px;background:var(--bg);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-size:10px;font-family:'JetBrains Mono',monospace;outline:none}.plf select:focus,.plf input:focus{border-color:#ff922b}.btx{padding:10px 18px;background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:7px;font-weight:700;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif}.rb{margin-top:10px;background:#020210;border:1px solid var(--brd);border-radius:7px;padding:10px;max-height:250px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:8px;display:none;white-space:pre-wrap;color:#51cf66}.eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:20px}.ep{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;cursor:pointer;transition:.3s;border-top:3px solid var(--ac,#ff6b6b)}.ep:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.4)}.ep span{font-size:18px;display:block;margin-bottom:2px}.ep b{font-size:14px;color:#fff;display:block;margin-bottom:2px}.ep small{font-size:9px;color:#666;display:block;margin-bottom:6px}.ep code{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ac,#ff6b6b);background:rgba(0,0,0,.3);padding:3px 5px;border-radius:3px}.ft{text-align:center;padding:20px;border-top:1px solid var(--brd);position:relative;z-index:1}.ft .fb{font-size:16px;font-weight:900;background:linear-gradient(90deg,#ff6b6b,#ff922b,#51cf66,#339af0,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.ft .fi{font-size:9px;color:#555;margin-top:2px}.ft .fi a{color:#666;text-decoration:none}@media(max-width:768px){.hero h1{font-size:30px}.eg{grid-template-columns:1fr}.plf{flex-direction:column}}</style></head><body><div class="bg"><div class="o"></div><div class="o"></div><div class="o"></div></div><div class="tb"><span style="color:#000;font-weight:800;font-size:10px">👑 BRONX ULTRA KING</span><span class="ba">✅ Paid API Available</span></div><header class="hero"><h1>BRONX OSINT v21</h1><p class="sub">KILLER ULTRA KING</p><p style="color:#555;font-size:9px;margin-top:4px">👑 King Always King 👑 · Unlimited · Real-Time · No Error</p></header><div class="ct"><div class="st"><div><div class="v">${totalEndpoints}</div><div class="l">Endpoints</div></div><div><div class="v">${totalKeys}</div><div class="l">Keys</div></div><div><div class="v">∞</div><div class="l">Requests</div></div><div><div class="v">100%</div><div class="l">Working</div></div></div><div class="pay"><h3>💎 GET PAID API KEY</h3><div class="pg"><div class="pc"><div class="d">10 Days</div><div class="a">₹100</div></div><div class="pc"><div class="d">20 Days</div><div class="a">₹200</div></div><div class="pc"><div class="d">30 Days</div><div class="a">₹300</div></div><div class="pc"><div class="d">40 Days</div><div class="a">₹400</div></div><div class="pc"><div class="d">50 Days</div><div class="a">₹500</div></div><div class="pc"><div class="d">60 Days</div><div class="a">₹600</div></div><div class="pc lt"><div class="d">👑 LIFETIME</div><div class="a">₹3000</div></div></div><div class="pm"><span class="pb">📱 UPI</span><span class="pb">💳 PhonePe</span><span class="pb">🏦 Navi</span><span class="pb">💰 Paytm</span></div><div class="upi"><a href="upi://pay?pa=bronxultra@upi&pn=BRONX_ULTRA&cu=INR" class="pay-btn-glow">⚡ CLICK TO PAY NOW ⚡</a><img src="https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg" alt="QR" onerror="this.style.display='none'"></div><p class="tgl">After Payment Send Screenshot → <a href="https://t.me/BRONX_ULTRA">@BRONX_ULTRA</a></p></div><div class="pl"><h3>🧪 API Playground</h3><div class="plf"><select id="es"><option value="">Select</option>${opts}</select><input id="ak" placeholder="API Key..."><input id="pv" placeholder="Parameter..."><button class="btx" onclick="ta()">⚡ Run</button></div><div class="rb" id="rb"></div></div><div class="eg">${cardsHTML}</div></div><footer class="ft"><p class="fb">BRONX OSINT v21 👑</p><p class="fi">@BRONX_ULTRA · <a href="/admin">Admin</a> · <a href="/test">Status</a></p></footer><script>var eps=${epsJSON};function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:16px;right:16px;background:#08081a;color:#ff922b;padding:8px 14px;border-radius:8px;font-size:10px;z-index:9999;border:1px solid rgba(255,146,43,.3)';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}function cp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('Copied!')})}function ccp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/custom/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('Copied!')})}async function ta(){var s=document.getElementById('es'),o=s.options[s.selectedIndex],k=document.getElementById('ak').value,v=document.getElementById('pv').value,rb=document.getElementById('rb');if(!s.value||!k||!v){toast('Fill all fields');return}var url=o.dataset.c==='1'?'/api/custom/'+o.dataset.ep+'?key='+k+'&'+o.dataset.p+'='+v:'/api/key-bronx/'+s.value+'?key='+k+'&'+eps[s.value].p+'='+v;rb.style.display='block';rb.style.color='#51cf66';rb.textContent='Loading...';try{var r=await fetch(url);var d=await r.json();rb.textContent=JSON.stringify(d,null,2);if(d.error)rb.style.color='#ff6b6b'}catch(e){rb.textContent='Error: '+e.message;rb.style.color='#ff6b6b'}}</script></body></html>`}catch(e){return '<html><body><h1>Error</h1></body></html>'}}
 
-        let cardsHTML = '';
-        Object.entries(endpoints).forEach(([n, e]) => {
-            cardsHTML += `<div class="ep" style="--ac:#ff6b6b" onclick="cp('${esc(n)}','${esc(e.p)}','${esc(e.e)}')"><span>${e.i}</span><b>/${esc(n)}</b><small>${esc(e.d)}</small><code>${esc(e.p)}=${esc(e.e)}</code></div>`;
-        });
-        vapis.forEach(a => {
-            cardsHTML += `<div class="ep" style="--ac:#ff9100" onclick="ccp('${esc(a.endpoint)}','${esc(a.param)}','${esc(a.example)}')"><span>🔧</span><b>/${esc(a.endpoint)}</b><small>${esc(a.desc||'Custom')}</small><code>${esc(a.param)}=${esc(a.example||'v')}</code></div>`;
-        });
-
-        const opts = Object.entries(endpoints).map(([n, e]) => `<option value="${esc(n)}" data-p="${esc(e.p)}" data-ex="${esc(e.e)}">${e.i} /${esc(n)}</option>`).join('') + vapis.map(a => `<option value="c_${a.id}" data-c="1" data-ep="${esc(a.endpoint)}" data-p="${esc(a.param)}" data-ex="${esc(a.example)}">🔧 /${esc(a.endpoint)}</option>`).join('');
-
-        return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>BRONX OSINT v21 👑</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet"><style>
-:root{--bg:#03030a;--sur:#08081a;--brd:#1a1a3a;--txt:#e0e0f0}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif;overflow-x:hidden}
-::selection{background:#ff6b6b;color:#fff}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:linear-gradient(#ff6b6b,#cc5de8);border-radius:8px}
-.bg{position:fixed;inset:0;pointer-events:none;z-index:0}
-.bg .o{position:absolute;border-radius:50%;filter:blur(100px);opacity:.04;animation:fl 12s infinite}
-.bg .o:nth-child(1){width:500px;height:500px;background:#ff6b6b;top:-150px;left:-80px}
-.bg .o:nth-child(2){width:400px;height:400px;background:#51cf66;top:-80px;right:-80px;animation-delay:-4s}
-.bg .o:nth-child(3){width:350px;height:350px;background:#339af0;bottom:-80px;left:20%;animation-delay:-8s}
-@keyframes fl{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.1)}66%{transform:translate(-20px,30px) scale(.9)}}
-.tb{position:sticky;top:0;z-index:1000;background:linear-gradient(90deg,#ff6b6b,#ff922b,#fcc419,#51cf66,#339af0,#cc5de8,#ff6b6b);background-size:300% 100%;animation:rb 6s linear infinite;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
-@keyframes rb{0%{background-position:0% 50%}100%{background-position:300% 50%}}
-.tb .ba{background:rgba(0,0,0,.35);color:#fff;padding:4px 12px;border-radius:20px;font-size:9px;font-weight:700;animation:gl 2s infinite}
-@keyframes gl{0%,100%{box-shadow:0 0 6px rgba(255,255,255,.2)}50%{box-shadow:0 0 18px rgba(255,255,255,.5)}}
-.hero{text-align:center;padding:30px 20px 15px;position:relative;z-index:1}
-.hero h1{font-size:48px;font-weight:900;background:linear-gradient(90deg,#ff6b6b,#ff922b,#fcc419,#51cf66,#339af0,#cc5de8,#ff6b6b);background-size:400% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:rb 6s linear infinite;margin-bottom:4px}
-.hero .sub{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#666;margin-bottom:2px}
-.ct{max-width:1000px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
-.st{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:14px;margin-bottom:20px;background:rgba(8,8,26,.9);border:1px solid var(--brd);border-radius:14px}
-.st>div{text-align:center;min-width:60px}
-.st .v{font-size:24px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.st .l{font-size:7px;color:#555;text-transform:uppercase;letter-spacing:2px}
-.pay{background:rgba(8,8,26,.95);border:1px solid #ff922b;border-radius:16px;padding:18px;margin-bottom:20px}
-.pay h3{font-size:18px;font-weight:800;text-align:center;margin-bottom:12px;background:linear-gradient(135deg,#ff922b,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:12px}
-.pc{background:rgba(255,146,43,.03);border:1px solid rgba(255,146,43,.1);border-radius:8px;padding:8px;text-align:center;transition:.3s}
-.pc:hover{border-color:#ff922b;background:rgba(255,146,43,.06)}
-.pc .d{font-size:10px;color:#fff;font-weight:600}
-.pc .a{font-size:14px;color:#ff922b;font-weight:900}
-.pc.lt{grid-column:1/-1}
-.pc.lt .a{color:#cc5de8}
-.pm{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:10px}
-.pb{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px 12px;color:#aaa;cursor:pointer;font-size:9px;font-weight:600;transition:.3s;font-family:'Inter',sans-serif}
-.pb:hover{background:rgba(255,146,43,.1);border-color:#ff922b;color:#ff922b}
-.upi{text-align:center;padding:12px;background:rgba(0,0,0,.3);border-radius:8px;margin-bottom:10px}
-.upi .id{font-size:14px;color:#ff922b;font-family:'JetBrains Mono',monospace;font-weight:700}
-.upi img{max-width:160px;border-radius:8px;margin:6px auto;display:block;border:2px solid rgba(255,146,43,.15)}
-.cpb{background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:9px;font-weight:700;margin-top:4px;font-family:'Inter',sans-serif}
-.tgl{text-align:center;font-size:10px;color:#666;margin-top:8px}
-.tgl a{color:#339af0;text-decoration:none;font-weight:600}
-.pl{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:16px;margin-bottom:20px}
-.pl h3{font-size:14px;font-weight:700;margin-bottom:10px;background:linear-gradient(135deg,#ff922b,#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.plf{display:flex;gap:8px;flex-wrap:wrap}
-.plf select,.plf input{flex:1;min-width:100px;padding:10px 12px;background:var(--bg);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-size:10px;font-family:'JetBrains Mono',monospace;outline:none}
-.plf select:focus,.plf input:focus{border-color:#ff922b}
-.btx{padding:10px 18px;background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:7px;font-weight:700;font-size:10px;cursor:pointer;font-family:'Inter',sans-serif}
-.rb{margin-top:10px;background:#020210;border:1px solid var(--brd);border-radius:7px;padding:10px;max-height:250px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:8px;display:none;white-space:pre-wrap;color:#51cf66}
-.eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:20px}
-.ep{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;cursor:pointer;transition:.3s;border-top:3px solid var(--ac,#ff6b6b)}
-.ep:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.4)}
-.ep span{font-size:18px;display:block;margin-bottom:2px}
-.ep b{font-size:14px;color:#fff;display:block;margin-bottom:2px}
-.ep small{font-size:9px;color:#666;display:block;margin-bottom:6px}
-.ep code{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ac,#ff6b6b);background:rgba(0,0,0,.3);padding:3px 5px;border-radius:3px}
-.ft{text-align:center;padding:20px;border-top:1px solid var(--brd);position:relative;z-index:1}
-.ft .fb{font-size:16px;font-weight:900;background:linear-gradient(90deg,#ff6b6b,#ff922b,#51cf66,#339af0,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.ft .fi{font-size:9px;color:#555;margin-top:2px}
-.ft .fi a{color:#666;text-decoration:none}
-@media(max-width:768px){.hero h1{font-size:30px}.eg{grid-template-columns:1fr}.plf{flex-direction:column}}
-</style></head><body>
-<div class="bg"><div class="o"></div><div class="o"></div><div class="o"></div></div>
-<div class="tb"><span style="color:#000;font-weight:800;font-size:10px">👑 BRONX ULTRA KING</span><span class="ba">✅ Paid API Available</span></div>
-<header class="hero"><h1>BRONX OSINT v21</h1><p class="sub">KILLER ULTRA KING</p><p style="color:#555;font-size:9px;margin-top:4px">👑 King Always King 👑 · Unlimited · Real-Time · No Error</p></header>
-<div class="ct">
-<div class="st"><div><div class="v">${totalEndpoints}</div><div class="l">Endpoints</div></div><div><div class="v">${totalKeys}</div><div class="l">Keys</div></div><div><div class="v">∞</div><div class="l">Requests</div></div><div><div class="v">100%</div><div class="l">Working</div></div></div>
-<div class="pay">
-<h3>💎 GET PAID API KEY</h3>
-<div class="pg"><div class="pc"><div class="d">10 Days</div><div class="a">₹100</div></div><div class="pc"><div class="d">20 Days</div><div class="a">₹200</div></div><div class="pc"><div class="d">30 Days</div><div class="a">₹300</div></div><div class="pc"><div class="d">40 Days</div><div class="a">₹400</div></div><div class="pc"><div class="d">50 Days</div><div class="a">₹500</div></div><div class="pc"><div class="d">60 Days</div><div class="a">₹600</div></div><div class="pc lt"><div class="d">👑 LIFETIME</div><div class="a">₹3000</div></div></div>
-<div class="pm"><span class="pb">📱 UPI</span><span class="pb">💳 PhonePe</span><span class="pb">🏦 Navi</span><span class="pb">💰 Paytm</span></div>
-<div class="upi">
-<a href="upi://pay?pa=8509561376@ibl&pn=BRONX_ULTRA&cu=INR" style="text-decoration:none">
-<p class="id" style="cursor:pointer;font-size:14px;color:#ff922b;font-family:'JetBrains Mono',monospace;font-weight:700">📱 Click to Pay via UPI</p>
-</a>
-<img src="https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg" alt="QR Code" style="max-width:200px;border-radius:12px;margin:10px auto;display:block;border:2px solid rgba(255,146,43,.3)">
-<button class="cpb" onclick="navigator.clipboard.writeText('bronxultra@upi');toast('📋 UPI Copied!')">📋 Copy UPI ID</button>
-</div> alt="QR" onerror="this.style.display='none'"><button class="cpb" onclick="navigator.clipboard.writeText('${PAYMENT_INFO.upiId}');toast('Copied!')">📋 Copy UPI</button></div>
-<p class="tgl">After Payment Send Screenshot → <a href="https://t.me/${PAYMENT_INFO.telegramUser.replace('@','')}">${PAYMENT_INFO.telegramUser}</a></p>
-</div>
-<div class="pl"><h3>🧪 API Playground</h3><div class="plf"><select id="es"><option value="">Select</option>${opts}</select><input id="ak" placeholder="API Key..."><input id="pv" placeholder="Parameter..."><button class="btx" onclick="ta()">⚡ Run</button></div><div class="rb" id="rb"></div></div>
-<div class="eg">${cardsHTML}</div>
-</div>
-<footer class="ft"><p class="fb">BRONX OSINT v21 👑</p><p class="fi">@BRONX_ULTRA · <a href="/admin">Admin</a> · <a href="/test">Status</a></p></footer>
-<script>
-var eps=${epsJSON};
-function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:16px;right:16px;background:#08081a;color:#ff922b;padding:8px 14px;border-radius:8px;font-size:10px;z-index:9999;border:1px solid rgba(255,146,43,.3)';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}
-function cp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('Copied!')})}
-function ccp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/custom/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('Copied!')})}
-async function ta(){var s=document.getElementById('es'),o=s.options[s.selectedIndex],k=document.getElementById('ak').value,v=document.getElementById('pv').value,rb=document.getElementById('rb');if(!s.value||!k||!v){toast('Fill all fields');return}var url=o.dataset.c==='1'?'/api/custom/'+o.dataset.ep+'?key='+k+'&'+o.dataset.p+'='+v:'/api/key-bronx/'+s.value+'?key='+k+'&'+eps[s.value].p+'='+v;rb.style.display='block';rb.style.color='#51cf66';rb.textContent='Loading...';try{var r=await fetch(url);var d=await r.json();rb.textContent=JSON.stringify(d,null,2);if(d.error)rb.style.color='#ff6b6b'}catch(e){rb.textContent='Error: '+e.message;rb.style.color='#ff6b6b'}}
-</script></body></html>`;
-    } catch (e) { return '<html><body><h1>Error</h1></body></html>'; }
-}
-
-// ========== INIT ==========
-(async function () {
-    const loaded = await loadFromStorage();
-    if (!loaded) { initDefaultData(); initCustomAPIs(); }
-    if (!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey();
-    delete keyStorage['BRONX_ULTRA_MASTER_2026'];
-    scheduleSave();
-    console.log('✅ BRONX OSINT v21 Ready!');
-})();
+(async function(){const loaded=await loadFromStorage();if(!loaded){initDefaultData();initCustomAPIs()}if(!keyStorage[MASTER_API_KEY])keyStorage[MASTER_API_KEY]=createMasterKey();delete keyStorage['BRONX_ULTRA_MASTER_2026'];scheduleSave();console.log('✅ BRONX OSINT v21 Ready!')})();
 
 module.exports = app;
