@@ -454,7 +454,7 @@ body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif;overfl
 <div class="pg"><div class="pc"><div class="d">10 Days</div><div class="a">₹100</div></div><div class="pc"><div class="d">20 Days</div><div class="a">₹200</div></div><div class="pc"><div class="d">30 Days</div><div class="a">₹300</div></div><div class="pc"><div class="d">40 Days</div><div class="a">₹400</div></div><div class="pc"><div class="d">50 Days</div><div class="a">₹500</div></div><div class="pc"><div class="d">60 Days</div><div class="a">₹600</div></div><div class="pc lt"><div class="d">👑 LIFETIME</div><div class="a">₹3000</div></div></div>
 <div class="pm"><span class="pb">📱 UPI</span><span class="pb">💳 PhonePe</span><span class="pb">🏦 Navi</span><span class="pb">💰 Paytm</span></div>
 <div class="upi">
-<a href="upi://pay?pa=bronxultra@upi&pn=BRONX_ULTRA&cu=INR" style="text-decoration:none">
+<a href="upi://pay?pa=8509561376@ibl&pn=BRONX_ULTRA&cu=INR" style="text-decoration:none">
 <p class="id" style="cursor:pointer;font-size:14px;color:#ff922b;font-family:'JetBrains Mono',monospace;font-weight:700">📱 Click to Pay via UPI</p>
 </a>
 <img src="https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg" alt="QR Code" style="max-width:200px;border-radius:12px;margin:10px auto;display:block;border:2px solid rgba(255,146,43,.3)">
