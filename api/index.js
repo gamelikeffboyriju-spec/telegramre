@@ -81,31 +81,421 @@ const endpoints = {
 };
 
 const apiExamples = {
-    number:{req:'GET /api/key-bronx/number?key=YOUR_KEY&num=7307841587',res:'{"success":true,"number":"7307841587","total":2,"results":[{"mobile":"7307841587","name":"Nemsingh","address":"j gram dabhaura simra","circle":"JIO UPE","alternate":"8542812624","father_name":"jayram","aadhar":"226010868980","email":"akaShguptu@gmail.com"},{"mobile":"9219059191","name":"Premraj","address":"s/o itwari Tilhar","circle":"JIO UPE","alternate":"7307841587","father_name":"itwari","aadhar":"619872770858"}],"powered_by":"BRONX_ULTRA"}'},
-    aadhar:{req:'GET /api/key-bronx/aadhar?key=YOUR_KEY&num=393933081942',res:'{"success":true,"aadhar":"393933081942","total":1,"results":[{"name":"J Vinod","fathersName":"","phoneNumber":"9490160194","aadharNumber":"393933081942","age":"28","gender":"Male","address":"Hyderabad","district":"HYDERABAD","state":"TELANGANA"}],"powered_by":"BRONX_ULTRA"}'},
-    name:{req:'GET /api/key-bronx/name?key=YOUR_KEY&name=abhiraaj',res:'{"success":true,"name":"abhiraaj","total":1,"results":[{"name":"ABHIRAAJ BALASAHEB GAWADE","phoneNumber":"9823796702","age":"6","gender":"Male","address":"CHAMDGAD","district":"KOLHAPUR","state":"MAHARASHTRA"}],"powered_by":"BRONX_ULTRA"}'},
-    numv2:{req:'GET /api/key-bronx/numv2?key=YOUR_KEY&num=6205949840',res:'{"success":true,"number":"6205949840","results":[{"name":"RAHUL","mobile":"6205949840","circle":"Airtel","address":"Patna,Bihar"}],"powered_by":"BRONX_ULTRA"}'},
-    adv:{req:'GET /api/key-bronx/adv?key=YOUR_KEY&num=9876543210',res:'{"success":true,"number":"9876543210","total":17,"results":[{"aadharNumber":"527034357255","address":"MUMBAI","age":24,"gender":"MALE","mobile":"9876543210","name":"RAHUL SHARMA","state":"MAHARASHTRA"}],"powered_by":"BRONX_ULTRA"}'},
-    adharfamily:{req:'GET /api/key-bronx/adharfamily?key=YOUR_KEY&num=984154610245',res:'{"success":true,"ration_card_id":"202001643745","details":{"card_info":{"Card Type":"PHH","District":"DHANBAD","Scheme":"NFSA","State":"JHARKHAND"},"members":[{"member_name":"Shakuntala Devi","gender":"F","relationship":"SELF","uid_masked":"XXXX-XXXX-5129"}]},"powered_by":"BRONX_ULTRA"}'},
-    adharration:{req:'GET /api/key-bronx/adharration?key=YOUR_KEY&num=701984830542',res:'{"success":true,"aadhar":"701984830542","ration_details":{"card_type":"PHH","state":"JHARKHAND","district":"DHANBAD"},"powered_by":"BRONX_ULTRA"}'},
-    imei:{req:'GET /api/key-bronx/imei?key=YOUR_KEY&imei=357817383506298',res:'{"success":true,"imei":"357817383506298","status":"Done","device":{"brand":"APPLE","model":"iPhone 17 Pro","imei":"357817383506298"},"specs":{"Basic Info":{"Relase Year":"2025","Chipset":"Apple A19 Pro"},"Display":{"Display type":"OLED","Diagonal":"6.3 [in]"}},"powered_by":"BRONX_ULTRA"}'},
-    calltracer:{req:'GET /api/key-bronx/calltracer?key=YOUR_KEY&num=9876543210',res:'{"success":true,"number":"9876543210","data":{"Number":"+91-9876543210","SIM card":"BSNL","Mobile State":"Punjab","Country":"India"},"powered_by":"BRONX_ULTRA"}'},
-    upi:{req:'GET /api/key-bronx/upi?key=YOUR_KEY&upi=example@ybl',res:'{"success":true,"upi_id":"example@ybl","valid":true,"account_name":"MURENDRA SARABU","bank":"Union Bank of India","ifsc":"UBIN","psp":"PhonePe","powered_by":"BRONX_ULTRA"}'},
-    ifsc:{req:'GET /api/key-bronx/ifsc?key=YOUR_KEY&ifsc=SBIN0001234',res:'{"success":true,"ifsc":"SBIN0001234","bank":"State Bank of India","bank_code":"SBIN","branch":"HAJIGANJ","address":"PATNA,BIHAR,PIN 800008","city":"PATNA","state":"BIHAR","payment_modes":{"upi":true,"imps":true,"neft":true,"rtgs":true},"powered_by":"BRONX_ULTRA"}'},
-    pan:{req:'GET /api/key-bronx/pan?key=YOUR_KEY&pan=AXDPR2606K',res:'{"success":true,"pan":"AXDPR2606K","result":{"pan":"AXDPR2606K","gstins":[{"gstin":"192500063179ES0","status":"Active","state":"WEST BENGAL"}]},"powered_by":"BRONX_ULTRA"}'},
-    pincode:{req:'GET /api/key-bronx/pincode?key=YOUR_KEY&pin=110001',res:'{"success":true,"pincode":"110001","state":"Delhi","district":"Central Delhi","division":"New Delhi Central","region":"Delhi","country":"India","total_offices":21,"powered_by":"BRONX_ULTRA"}'},
-    ip:{req:'GET /api/key-bronx/ip?key=YOUR_KEY&ip=8.8.8.8',res:'{"success":true,"ip":"8.8.8.8","type":"IPv4","country":"United States","country_code":"US","city":"Mountain View","isp":"Google LLC","latitude":37.386,"longitude":-122.083,"powered_by":"BRONX_ULTRA"}'},
-    vehicle:{req:'GET /api/key-bronx/vehicle?key=YOUR_KEY&vehicle=MH02FZ0555',res:'{"status":"success","data":{"rc_number":"MH02FZ0555","owner_name":"SHAH RUKH KHAN","maker_description":"ROLLS-ROYCE MOTOR CARS","maker_model":"BLACK BADGE CULLINAN","fuel_type":"PETROL","color":"ARCTIC WHITE","registration_date":"2023-04-12","rc_status":"ACTIVE"},"powered_by":"BRONX_ULTRA"}'},
-    rc:{req:'GET /api/key-bronx/rc?key=YOUR_KEY&owner=UP92P2111',res:'{"success":true,"rc":"UP92P2111","result":{"Ownership Details":{"Owner Name":"SANJU SOLANKI","Father\'s Name":"SUDAMA","Registration Number":"UP92P2111","Registered RTO":"Orai"},"Vehicle Details":{"Model Name":"HERO MOTOCORP LTD","Fuel Type":"PETROL"},"Important Dates":{"Registration Date":"31-Jul-2013","Vehicle Age":"12 years"}},"powered_by":"BRONX_ULTRA"}'},
-    ff:{req:'GET /api/key-bronx/ff?key=YOUR_KEY&uid=3143389983',res:'{"success":true,"uid":"3143389983","info":{"Nickname":"×͜×BRONX×͜×","Level":"67","Region":"IND","Likes":"11431","Account Created":"May 13, 2021"},"ban_status":"BANNED","powered_by":"BRONX_ULTRA"}'},
-    bgmi:{req:'GET /api/key-bronx/bgmi?key=YOUR_KEY&uid=5121439477',res:'{"success":true,"uid":"5121439477","game":"BGMI","region":"IND","username":"BRONX","powered_by":"BRONX_ULTRA"}'},
-    insta:{req:'GET /api/key-bronx/insta?key=YOUR_KEY&username=cristiano',res:'{"success":true,"username":"cristiano","profile":{"id":"173560420","username":"cristiano","name":"Cristiano Ronaldo","verified":true,"followers":672571267,"following":630,"posts":4025},"powered_by":"BRONX_ULTRA"}'},
-    git:{req:'GET /api/key-bronx/git?key=YOUR_KEY&username=ftgamer2',res:'{"success":true,"username":"ftgamer2","name":"FTGAMERV2","bio":"Teen dev cooking cool stuff","public_repos":6,"followers":1,"profile_url":"https://github.com/ftgamer2","powered_by":"BRONX_ULTRA"}'},
-    tg:{req:'GET /api/key-bronx/tg?key=YOUR_KEY&info=6858648491',res:'{"success":true,"info":"6858648491","number":"9627507420","country":"India","country_code":"+91","powered_by":"BRONX_ULTRA"}'},
-    tgidinfo:{req:'GET /api/key-bronx/tgidinfo?key=YOUR_KEY&id=7530266953',res:'{"success":true,"id":"7530266953","basic_info":{"FIRST_NAME":"Aditya","USERNAMES_COUNT":3},"status_info":{"IS_BOT":false,"IS_ACTIVE":true},"activity_info":{"TOTAL_MSG_COUNT":1940,"TOTAL_GROUPS":47},"number_info":{"NUMBER":"9934846958","COUNTRY":"India"},"powered_by":"BRONX_ULTRA"}'},
-    snap:{req:'GET /api/key-bronx/snap?key=YOUR_KEY&username=priyapanchal272',res:'{"success":true,"data":{"username":"priyapanchal272","description":"Priya Panchal | 128.6k Subscribers","exists":true,"subscriber_count":"128.6k","profile_url":"https://www.snapchat.com/add/priyapanchal272"},"powered_by":"BRONX_ULTRA"}'},
-    pk:{req:'GET /api/key-bronx/pk?key=YOUR_KEY&num=03331234567',res:'{"success":true,"number":"03331234567","total":3,"results":[{"name":"ASIM ALI","number":"3331234567","cnic":"3430125586549","address":"KARACHI,Sindh"},{"name":"MUHAMMAD SHAHID","number":"3331234567","cnic":"3430313493131","address":"KARACHI,Sindh"}],"powered_by":"BRONX_ULTRA"}'},
-    pkv2:{req:'GET /api/key-bronx/pkv2?key=YOUR_KEY&num=3359736848',res:'{"success":true,"number":"3359736848","results":[{"name":"AHMED KHAN","number":"3359736848","address":"LAHORE,Punjab"}],"powered_by":"BRONX_ULTRA"}'},
+    number:{req:'GET /api/key-bronx/number?key=YOUR_KEY&num=7307841587',res:`{
+  "success": true,
+  "number": "7307841587",
+  "total": 2,
+  "results": [
+    {
+      "mobile": "7307841587",
+      "name": "Nemsingh",
+      "address": "j gram dabhaura simra post sarsava k tilhar Shahjahanpur Uttar Pradesh 242303",
+      "circle": "JIO UPE",
+      "alternate": "8542812624",
+      "father_name": "jayram",
+      "aadhar": "226010868980",
+      "email": "akaShguptu@gmail.com",
+      "truecaller_name": null
+    },
+    {
+      "mobile": "9219059191",
+      "name": "Premraj",
+      "address": "s/o itwari Tilhar dabhaura simra tilhar Shahjahanpur Uttar Pradesh 242307",
+      "circle": "JIO UPE",
+      "alternate": "7307841587",
+      "father_name": "itwari",
+      "aadhar": "619872770858",
+      "email": "N/A",
+      "truecaller_name": null
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
+    aadhar:{req:'GET /api/key-bronx/aadhar?key=YOUR_KEY&num=393933081942',res:`{
+  "success": true,
+  "aadhar": "393933081942",
+  "total": 1,
+  "results": [
+    {
+      "name": "J Vinod",
+      "fathersName": "",
+      "phoneNumber": "9490160194",
+      "aadharNumber": "393933081942",
+      "age": "28",
+      "gender": "Male",
+      "address": "Hyderabad",
+      "district": "HYDERABAD",
+      "state": "TELANGANA",
+      "town": null
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
+    name:{req:'GET /api/key-bronx/name?key=YOUR_KEY&name=abhiraaj',res:`{
+  "success": true,
+  "name": "abhiraaj",
+  "total": 1,
+  "results": [
+    {
+      "name": "ABHIRAAJ BALASAHEB GAWADE",
+      "fathersName": "",
+      "phoneNumber": "9823796702",
+      "aadharNumber": null,
+      "age": "6",
+      "gender": "Male",
+      "address": "CHAMDGAD",
+      "district": "KOLHAPUR",
+      "pincode": "416509",
+      "state": "MAHARASHTRA",
+      "town": "NAGANWADI"
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
+    numv2:{req:'GET /api/key-bronx/numv2?key=YOUR_KEY&num=6205949840',res:`{
+  "success": true,
+  "number": "6205949840",
+  "results": [
+    {
+      "name": "RAHUL",
+      "mobile": "6205949840",
+      "circle": "Airtel",
+      "address": "Patna, Bihar"
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
+    adv:{req:'GET /api/key-bronx/adv?key=YOUR_KEY&num=9876543210',res:`{
+  "success": true,
+  "number": "9876543210",
+  "total": 17,
+  "results": [
+    {
+      "aadharNumber": "527034357255",
+      "address": "MUMBAI",
+      "age": 24,
+      "district": "MUMBAI",
+      "gender": "MALE",
+      "mobile": "9876543210",
+      "name": "RAHUL SHARMA",
+      "pincode": "400001",
+      "state": "MAHARASHTRA"
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
+    adharfamily:{req:'GET /api/key-bronx/adharfamily?key=YOUR_KEY&num=984154610245',res:`{
+  "success": true,
+  "ration_card_id": "202001643745",
+  "details": {
+    "card_info": {
+      "Card Type": "PHH",
+      "District": "DHANBAD",
+      "Scheme": "NFSA",
+      "State": "JHARKHAND"
+    },
+    "members": [
+      {
+        "member_name": "Shakuntala Devi",
+        "gender": "F",
+        "relationship": "SELF",
+        "uid_masked": "XXXX-XXXX-5129"
+      }
+    ]
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    adharration:{req:'GET /api/key-bronx/adharration?key=YOUR_KEY&num=701984830542',res:`{
+  "success": true,
+  "aadhar": "701984830542",
+  "ration_details": {
+    "card_type": "PHH",
+    "state": "JHARKHAND",
+    "district": "DHANBAD"
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    imei:{req:'GET /api/key-bronx/imei?key=YOUR_KEY&imei=357817383506298',res:`{
+  "success": true,
+  "imei": "357817383506298",
+  "status": "Done",
+  "service": "Basic IMEI Check",
+  "device": {
+    "brand": "APPLE",
+    "model": "iPhone 17 Pro",
+    "imei": "357817383506298"
+  },
+  "specs": {
+    "Basic Info": {
+      "Release Year": "2025",
+      "Chipset": "Apple A19 Pro"
+    },
+    "Display": {
+      "Display type": "OLED",
+      "Diagonal": "6.3 [in]"
+    }
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    calltracer:{req:'GET /api/key-bronx/calltracer?key=YOUR_KEY&num=9876543210',res:`{
+  "success": true,
+  "number": "9876543210",
+  "data": {
+    "Number": "+91-9876543210",
+    "SIM card": "BSNL (Bharat Sanchar Nigam Limited)",
+    "Mobile State": "Punjab",
+    "Language": "Punjabi",
+    "Country": "India",
+    "Helpline": "1800-180-1503"
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    upi:{req:'GET /api/key-bronx/upi?key=YOUR_KEY&upi=example@ybl',res:`{
+  "success": true,
+  "upi_id": "example@ybl",
+  "valid": true,
+  "account_name": "MURENDRA SARABU",
+  "bank": "Union Bank of India",
+  "ifsc": "UBIN",
+  "psp": "PhonePe",
+  "is_merchant": false,
+  "powered_by": "BRONX_ULTRA"
+}`},
+    ifsc:{req:'GET /api/key-bronx/ifsc?key=YOUR_KEY&ifsc=SBIN0001234',res:`{
+  "success": true,
+  "ifsc": "SBIN0001234",
+  "bank": "State Bank of India",
+  "bank_code": "SBIN",
+  "branch": "HAJIGANJ",
+  "address": "PATNA, STATE BIHAR, PIN 800008",
+  "city": "PATNA",
+  "district": "PATNA",
+  "state": "BIHAR",
+  "payment_modes": {
+    "upi": true,
+    "imps": true,
+    "neft": true,
+    "rtgs": true
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    pan:{req:'GET /api/key-bronx/pan?key=YOUR_KEY&pan=AXDPR2606K',res:`{
+  "success": true,
+  "pan": "AXDPR2606K",
+  "result": {
+    "pan": "AXDPR2606K",
+    "total": 1,
+    "gstins": [
+      {
+        "gstin": "192500063179ES0",
+        "status": "Active",
+        "state": "WEST BENGAL"
+      }
+    ]
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    pincode:{req:'GET /api/key-bronx/pincode?key=YOUR_KEY&pin=110001',res:`{
+  "success": true,
+  "pincode": "110001",
+  "state": "Delhi",
+  "district": "Central Delhi",
+  "division": "New Delhi Central",
+  "region": "Delhi",
+  "country": "India",
+  "total_offices": 21,
+  "powered_by": "BRONX_ULTRA"
+}`},
+    ip:{req:'GET /api/key-bronx/ip?key=YOUR_KEY&ip=8.8.8.8',res:`{
+  "success": true,
+  "ip": "8.8.8.8",
+  "type": "IPv4",
+  "country": "United States",
+  "country_code": "US",
+  "flag_emoji": "🇺🇸",
+  "continent": "North America",
+  "region": "California",
+  "city": "Mountain View",
+  "postal": "94039",
+  "latitude": 37.3860517,
+  "longitude": -122.0838511,
+  "isp": "Google LLC",
+  "org": "Google LLC",
+  "powered_by": "BRONX_ULTRA"
+}`},
+    vehicle:{req:'GET /api/key-bronx/vehicle?key=YOUR_KEY&vehicle=MH02FZ0555',res:`{
+  "status": "success",
+  "data": {
+    "rc_number": "MH02FZ0555",
+    "owner_name": "SHAH RUKH KHAN",
+    "maker_description": "ROLLS-ROYCE MOTOR CARS",
+    "maker_model": "BLACK BADGE CULLINAN",
+    "fuel_type": "PETROL",
+    "color": "ARCTIC WHITE",
+    "insurance_company": "ICICI Lombard General Insurance Co. Ltd.",
+    "insurance_upto": "2026-03-16",
+    "registration_date": "2023-04-12",
+    "registered_at": "MUMBAI (WEST), Maharashtra",
+    "rc_status": "ACTIVE",
+    "vehicle_category": "LMV"
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    rc:{req:'GET /api/key-bronx/rc?key=YOUR_KEY&owner=UP92P2111',res:`{
+  "success": true,
+  "rc": "UP92P2111",
+  "result": {
+    "Ownership Details": {
+      "Owner Name": "SANJU SOLANKI",
+      "Father Name": "SUDAMA",
+      "Owner Serial No": "Second Owner",
+      "Registration Number": "UP92P2111",
+      "Registered RTO": "Orai, Uttar Pradesh"
+    },
+    "Vehicle Details": {
+      "Model Name": "HERO MOTOCORP LTD",
+      "Maker Model": "HF DELUXE",
+      "Fuel Type": "PETROL"
+    },
+    "Important Dates": {
+      "Registration Date": "31-Jul-2013",
+      "Vehicle Age": "12 years, 7 months"
+    }
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    ff:{req:'GET /api/key-bronx/ff?key=YOUR_KEY&uid=3143389983',res:`{
+  "success": true,
+  "uid": "3143389983",
+  "info": {
+    "Account Created": "May 13, 2021",
+    "Experience (XP)": "2138913",
+    "ID": "3143389983",
+    "Influencer": "NO",
+    "Last Login": "March 13, 2025",
+    "Level": "67",
+    "Likes": "11431",
+    "Nickname": "×͜×BRONX×͜×",
+    "Region": "IND"
+  },
+  "ban_status": "❌ BANNED",
+  "powered_by": "BRONX_ULTRA"
+}`},
+    bgmi:{req:'GET /api/key-bronx/bgmi?key=YOUR_KEY&uid=5121439477',res:`{
+  "success": true,
+  "uid": "5121439477",
+  "game": "BGMI",
+  "region": "IND",
+  "username": "BRONX",
+  "powered_by": "BRONX_ULTRA"
+}`},
+    insta:{req:'GET /api/key-bronx/insta?key=YOUR_KEY&username=cristiano',res:`{
+  "success": true,
+  "username": "cristiano",
+  "profile": {
+    "id": "173560420",
+    "username": "cristiano",
+    "name": "Cristiano Ronaldo",
+    "verified": true,
+    "private": false,
+    "followers": 672571267,
+    "following": 630,
+    "posts": 4025
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    git:{req:'GET /api/key-bronx/git?key=YOUR_KEY&username=ftgamer2',res:`{
+  "success": true,
+  "username": "ftgamer2",
+  "name": "FTGAMERV2",
+  "bio": "Teen dev cooking cool stuff with Python & Java",
+  "profile_url": "https://github.com/ftgamer2",
+  "avatar": "https://avatars.githubusercontent.com/u/248530312",
+  "public_repos": 6,
+  "followers": 1,
+  "following": 0,
+  "powered_by": "BRONX_ULTRA"
+}`},
+    tg:{req:'GET /api/key-bronx/tg?key=YOUR_KEY&info=6858648491',res:`{
+  "success": true,
+  "info": "6858648491",
+  "number": "9627507420",
+  "country": "India",
+  "country_code": "+91",
+  "powered_by": "BRONX_ULTRA"
+}`},
+    tgidinfo:{req:'GET /api/key-bronx/tgidinfo?key=YOUR_KEY&id=7530266953',res:`{
+  "success": true,
+  "id": "7530266953",
+  "basic_info": {
+    "ID": 7530266953,
+    "FIRST_NAME": "Aditya",
+    "LAST_NAME": null,
+    "USERNAMES_COUNT": 3,
+    "NAMES_COUNT": 6
+  },
+  "status_info": {
+    "IS_BOT": false,
+    "IS_ACTIVE": true
+  },
+  "activity_info": {
+    "FIRST_MSG_DATE": "2025-01-11T03:05:51Z",
+    "LAST_MSG_DATE": "2026-04-24T07:20:04Z",
+    "TOTAL_MSG_COUNT": 1940,
+    "TOTAL_GROUPS": 47
+  },
+  "number_info": {
+    "NUMBER": "9934846958",
+    "COUNTRY_CODE": "+91",
+    "COUNTRY": "India"
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    snap:{req:'GET /api/key-bronx/snap?key=YOUR_KEY&username=priyapanchal272',res:`{
+  "success": true,
+  "data": {
+    "username": "priyapanchal272",
+    "description": "Priya Panchal | 128.6k Subscribers | Noida, India",
+    "exists": true,
+    "has_stories": true,
+    "is_verified": false,
+    "subscriber_count": "128.6k",
+    "profile_url": "https://www.snapchat.com/add/priyapanchal272"
+  },
+  "powered_by": "BRONX_ULTRA"
+}`},
+    pk:{req:'GET /api/key-bronx/pk?key=YOUR_KEY&num=03331234567',res:`{
+  "success": true,
+  "number": "03331234567",
+  "total": 3,
+  "results": [
+    {
+      "name": "ASIM ALI",
+      "number": "3331234567",
+      "cnic": "3430125586549",
+      "address": "DAAK KHANA KALEKI MANDI KARACHI, Sindh"
+    },
+    {
+      "name": "MUHAMMAD SHAHID",
+      "number": "3331234567",
+      "cnic": "3430313493131",
+      "address": "USMANABAD LANDHI KARACHI, Sindh"
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
+    pkv2:{req:'GET /api/key-bronx/pkv2?key=YOUR_KEY&num=3359736848',res:`{
+  "success": true,
+  "number": "3359736848",
+  "results": [
+    {
+      "name": "AHMED KHAN",
+      "number": "3359736848",
+      "address": "LAHORE, Punjab"
+    }
+  ],
+  "powered_by": "BRONX_ULTRA"
+}`},
 };
 
 app.use(express.json({limit:'50mb'})); app.use(express.urlencoded({extended:true,limit:'50mb'}));
