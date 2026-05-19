@@ -31,19 +31,75 @@ async function saveToStorage() {
 
 async function loadFromStorage() {
     try {
+        console.log('📥 Loading from storage...');
         const res = await axios.get(`${STORAGE_URL}/keys`, { timeout: 10000 });
-        if (res.data) {
+        console.log('📥 Storage response received');
+        
+        if (res.data && res.data.keys) {
             const d = res.data;
-            if (d.keys && Object.keys(d.keys).length > 0) { keyStorage = d.keys; if(!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey(); }
-            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) customAPIs = d.apis;
-            if (d.tokens) { permanentTokens = d.tokens; Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + 365*24*60*60*1000, permanent: true }; }); }
-            if (d.banned) bannedIPs = d.banned;
-            if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
-            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length, 'Logs:', requestLogs.length);
-            return true;
+            
+            // KEYS - SABSE IMPORTANT
+            if (d.keys && typeof d.keys === 'object') {
+                const loadedKeys = Object.keys(d.keys).length;
+                console.log('📥 Storage has', loadedKeys, 'keys');
+                
+                if (loadedKeys > 0) {
+                    // PURANA KEYSTORAGE HATAO
+                    keyStorage = {};
+                    // NAYA DATA LOAD KARO
+                    keyStorage = JSON.parse(JSON.stringify(d.keys));
+                    
+                    // Master key check
+                    if (!keyStorage[MASTER_API_KEY]) {
+                        console.log('📥 Master key missing, creating...');
+                        keyStorage[MASTER_API_KEY] = createMasterKey();
+                    }
+                    
+                    console.log('✅ Keys loaded:', Object.keys(keyStorage).length);
+                } else {
+                    console.log('📥 Storage empty, using defaults');
+                }
+            }
+            
+            // APIs
+            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) {
+                customAPIs = JSON.parse(JSON.stringify(d.apis));
+                console.log('✅ APIs loaded:', customAPIs.length);
+            }
+            
+            // Tokens
+            if (d.tokens && typeof d.tokens === 'object') {
+                permanentTokens = JSON.parse(JSON.stringify(d.tokens));
+                Object.entries(permanentTokens).forEach(([t]) => { 
+                    adminSessions[t] = { 
+                        expiresAt: Date.now() + (365*24*60*60*1000), 
+                        permanent: true 
+                    }; 
+                });
+                console.log('✅ Tokens loaded:', Object.keys(adminSessions).length);
+            }
+            
+            // Banned IPs
+            if (d.banned && Array.isArray(d.banned)) {
+                bannedIPs = JSON.parse(JSON.stringify(d.banned));
+            }
+            
+            // Logs
+            if (d.logs && Array.isArray(d.logs)) {
+                requestLogs = JSON.parse(JSON.stringify(d.logs));
+                console.log('✅ Logs loaded:', requestLogs.length);
+            }
+            
+            console.log('📥 FINAL Keys count:', Object.keys(keyStorage).length);
+            return Object.keys(keyStorage).length > 0;
+        } else {
+            console.log('📥 No data found in storage');
         }
         return false;
-    } catch (e) { console.log('Load err:', e.message); return false; }
+    } catch (e) { 
+        console.log('❌ Load error:', e.message); 
+        return false; 
+    }
 }
 
 function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
