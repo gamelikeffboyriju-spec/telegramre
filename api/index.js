@@ -18,26 +18,70 @@ let permanentTokens = {};
 let bannedIPs = [];
 let cooldownTimers = {};
 
-// ========== STORAGE ==========
+// ========== STORAGE (FIXED) ==========
 async function saveToStorage() {
     try {
-        await axios.post(`${STORAGE_URL}/keys`, { keys: keyStorage, apis: customAPIs, tokens: permanentTokens, banned: bannedIPs }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
-    } catch (e) {}
+        const data = { 
+            keys: keyStorage, 
+            apis: customAPIs, 
+            tokens: permanentTokens, 
+            banned: bannedIPs 
+        };
+        await axios.post(`${STORAGE_URL}/keys`, data, { 
+            timeout: 10000, 
+            headers: { 'Content-Type': 'application/json' } 
+        });
+        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
+    } catch (e) { 
+        console.log('⚠️ Save error:', e.message); 
+    }
 }
+
 async function loadFromStorage() {
     try {
         const res = await axios.get(`${STORAGE_URL}/keys`, { timeout: 10000 });
         if (res.data) {
-            if (res.data.keys && Object.keys(res.data.keys).length > 0) keyStorage = res.data.keys;
-            if (res.data.apis) customAPIs = res.data.apis;
-            if (res.data.tokens) { permanentTokens = res.data.tokens; Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; }); }
-            if (res.data.banned) bannedIPs = res.data.banned;
+            const d = res.data;
+            // Keys - ensure master key exists
+            if (d.keys && typeof d.keys === 'object' && Object.keys(d.keys).length > 0) {
+                keyStorage = d.keys;
+                if (!keyStorage[MASTER_API_KEY]) {
+                    keyStorage[MASTER_API_KEY] = createMasterKey();
+                }
+            }
+            // APIs
+            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) {
+                customAPIs = d.apis;
+            }
+            // Tokens
+            if (d.tokens && typeof d.tokens === 'object') {
+                permanentTokens = d.tokens;
+                Object.entries(permanentTokens).forEach(([t]) => { 
+                    adminSessions[t] = { 
+                        expiresAt: Date.now() + (365*24*60*60*1000), 
+                        permanent: true 
+                    }; 
+                });
+            }
+            // Banned IPs
+            if (d.banned && Array.isArray(d.banned)) {
+                bannedIPs = d.banned;
+            }
+            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length, 'Tokens:', Object.keys(adminSessions).length);
             return Object.keys(keyStorage).length > 0;
         }
         return false;
-    } catch (e) { return false; }
+    } catch (e) { 
+        console.log('⚠️ Load error:', e.message); 
+        return false; 
+    }
 }
-function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
+
+function scheduleSave() { 
+    setTimeout(async () => { 
+        await saveToStorage(); 
+    }, 2000); 
+}
 setInterval(() => scheduleSave(), 3 * 60 * 1000);
 
 // ========== HELPERS ==========
