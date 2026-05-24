@@ -8,33 +8,52 @@ const REAL_API_KEY = process.env.REAL_API_KEY || 'bot-new';
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'BRONX_ULTRA';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'king5';
 const MASTER_API_KEY = process.env.MASTER_API_KEY || 'BRONX_MASTER_' + Math.random().toString(36).substring(2, 10).toUpperCase();
-const STORAGE_URL = 'https://bromx-db-stroge.onrender.com';
+// NAYA:
+const STORAGE_URL = 'https://bronx-db.up.railway.app';
 
-let keyStorage = {};
-let customAPIs = [];
-let requestLogs = [];
-let adminSessions = {};
-let permanentTokens = {};
-let bannedIPs = [];
-let cooldownTimers = {};
-
+// ========== STORAGE (RAILWAY DB) ==========
 async function saveToStorage() {
-    try { await axios.post(`${STORAGE_URL}/keys`, { keys: keyStorage, apis: customAPIs, tokens: permanentTokens, banned: bannedIPs, logs: requestLogs.slice(-100) }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } }); console.log('💾 Saved! Keys:', Object.keys(keyStorage).length); } catch (e) {}
+    try {
+        const data = { 
+            keys: keyStorage, 
+            apis: customAPIs, 
+            tokens: permanentTokens, 
+            banned: bannedIPs, 
+            logs: requestLogs.slice(-100) 
+        };
+        await axios.post(`${STORAGE_URL}/api_keys`, data, { 
+            timeout: 10000, 
+            headers: { 'Content-Type': 'application/json' } 
+        });
+        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
+    } catch (e) { console.log('Save err:', e.message); }
 }
+
 async function loadFromStorage() {
     try {
-        const res = await axios.get(`${STORAGE_URL}/keys`, { timeout: 10000 });
+        const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 10000 });
         if (res.data) {
-            if (res.data.keys && Object.keys(res.data.keys).length > 0) { keyStorage = res.data.keys; if(!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey(); }
-            if (res.data.apis && Array.isArray(res.data.apis) && res.data.apis.length > 0) customAPIs = res.data.apis;
-            if (res.data.tokens) { permanentTokens = res.data.tokens; Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + 365*24*60*60*1000, permanent: true }; }); }
-            if (res.data.banned) bannedIPs = res.data.banned;
-            if (res.data.logs && Array.isArray(res.data.logs)) requestLogs = res.data.logs;
+            const d = res.data;
+            if (d.keys && typeof d.keys === 'object' && Object.keys(d.keys).length > 0) {
+                keyStorage = d.keys;
+                if (!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey();
+            }
+            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) customAPIs = d.apis;
+            if (d.tokens && typeof d.tokens === 'object') {
+                permanentTokens = d.tokens;
+                Object.entries(permanentTokens).forEach(([t]) => { 
+                    adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; 
+                });
+            }
+            if (d.banned && Array.isArray(d.banned)) bannedIPs = d.banned;
+            if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
+            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length, 'Tokens:', Object.keys(adminSessions).length);
             return Object.keys(keyStorage).length > 0;
         }
         return false;
-    } catch (e) { return false; }
+    } catch (e) { console.log('Load err:', e.message); return false; }
 }
+
 function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
 setInterval(() => scheduleSave(), 2 * 60 * 1000);
 
@@ -654,7 +673,8 @@ function renderHome(){try{const vapis=customAPIs.filter(a=>a.visible&&a.endpoint
 :root{--bg:#06060c;--sur:#0d0d1a;--brd:rgba(139,0,255,.15);--txt:#e0e0f0;--acc:#8b00ff;--acc2:#00c8ff;--green:#00ff88;--red:#ff0080;--yellow:#ffaa00;--pink:#ff0080}
 *{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--txt);font-family:'Rajdhani',sans-serif;overflow-x:hidden;font-size:14px}
 ::selection{background:var(--acc);color:#fff}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--acc);border-radius:10px}
-.snow{position:fixed;inset:0;pointer-events:none;z-index:0}.snowflake{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;animation:fall linear infinite;opacity:0}
+.snow{position:fixed;inset:0;pointer-events:none;z-index:0}
+.snowflake{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;animation:fall linear infinite;opacity:0}
 @keyframes fall{0%{transform:translateY(-10vh) rotate(0deg);opacity:0}10%{opacity:0.7}90%{opacity:0.7}100%{transform:translateY(110vh) rotate(360deg);opacity:0}}
 .tb{position:sticky;top:0;z-index:1000;background:rgba(13,13,26,.9);border-bottom:1px solid var(--brd);padding:8px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;backdrop-filter:blur(30px)}
 .tb .logo{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:4px;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900}
@@ -702,7 +722,10 @@ function toast(m){var t=document.createElement('div');t.style.cssText='position:
 function cp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('📋 Copied!')})}
 function ccp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/custom/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('📋 Copied!')})}
 async function ta(){var s=document.getElementById('es'),o=s.options[s.selectedIndex],k=document.getElementById('ak').value,v=document.getElementById('pv').value,rb=document.getElementById('rb');if(!s.value||!k||!v){toast('⚠ Fill all fields');return}var url=o.dataset.c==='1'?'/api/custom/'+o.dataset.ep+'?key='+k+'&'+o.dataset.p+'='+v:'/api/key-bronx/'+s.value+'?key='+k+'&'+eps[s.value].p+'='+v;rb.style.display='block';rb.style.color='#00ff88';rb.textContent='⏳ Loading...';try{var r=await fetch(url);var d=await r.json();rb.textContent=JSON.stringify(d,null,2);if(d.error)rb.style.color='#ff0080'}catch(e){rb.textContent='Error: '+e.message;rb.style.color='#ff0080'}}
+<div class="snow" id="snow"></div>
+<script>
 for(var i=0;i<30;i++){var sf=document.createElement('div');sf.className='snowflake';sf.style.left=Math.random()*100+'%';sf.style.animationDelay=Math.random()*10+'s';sf.style.animationDuration=(5+Math.random()*10)+'s';sf.style.width=sf.style.height=(2+Math.random()*3)+'px';document.getElementById('snow').appendChild(sf)}
+</script>
 </script></body></html>`}catch(e){return '<html><body><h1>Error</h1></body></html>'}}
 
 (async function(){const loaded=await loadFromStorage();if(!loaded){initDefaultData();initCustomAPIs()}if(!keyStorage[MASTER_API_KEY])keyStorage[MASTER_API_KEY]=createMasterKey();delete keyStorage['BRONX_ULTRA_MASTER_2026'];scheduleSave();console.log('✅ BRONX OSINT v60 ULTRA Ready! Keys:',Object.keys(keyStorage).length)})();
