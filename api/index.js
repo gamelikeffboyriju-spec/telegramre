@@ -21,7 +21,6 @@ let cooldownTimers = {};
 // ========== STORAGE (RAILWAY DB - FIXED PERMANENT) ==========
 async function saveToStorage() {
     try {
-        // Save data in nested format: {keys, apis, tokens, banned, logs}
         const data = { 
             keys: keyStorage, 
             apis: customAPIs, 
@@ -33,48 +32,75 @@ async function saveToStorage() {
             timeout: 10000, 
             headers: { 'Content-Type': 'application/json' } 
         });
-        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
-    } catch (e) { console.log('Save err:', e.message); }
+        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
+        return true;
+    } catch (e) { 
+        console.log('Save err:', e.message); 
+        return false;
+    }
 }
 
 async function loadFromStorage() {
     try {
+        console.log('📥 Attempting to load from Railway DB...');
         const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 10000 });
+        console.log('📥 Railway DB response received');
+        
         if (res.data) {
             const d = res.data;
+            console.log('📥 Data keys:', Object.keys(d).join(', '));
             
-            // ONLY use nested format
-            if (d.keys && typeof d.keys === 'object' && Object.keys(d.keys).length > 0) {
-                keyStorage = d.keys;
-                if (!keyStorage[MASTER_API_KEY]) {
-                    keyStorage[MASTER_API_KEY] = createMasterKey();
+            // Check if data has nested 'keys' property
+            if (d.keys && typeof d.keys === 'object') {
+                const loadedKeyCount = Object.keys(d.keys).length;
+                console.log('📥 Found', loadedKeyCount, 'keys in DB');
+                
+                if (loadedKeyCount > 0) {
+                    // ✅ DON'T clear keyStorage first - merge instead!
+                    // Only update if DB has more or equal keys
+                    keyStorage = d.keys;
+                    
+                    // Ensure master key exists
+                    if (!keyStorage[MASTER_API_KEY]) {
+                        console.log('📥 Master key missing, creating...');
+                        keyStorage[MASTER_API_KEY] = createMasterKey();
+                    }
+                    
+                    console.log('✅ Keys loaded from DB:', Object.keys(keyStorage).length);
+                } else {
+                    console.log('⚠️ DB has keys object but it is empty');
                 }
+            } else {
+                console.log('⚠️ No "keys" property found in DB response');
             }
+            
+            // Load other data
             if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) {
                 customAPIs = d.apis;
+                console.log('✅ APIs loaded:', customAPIs.length);
             }
             if (d.tokens && typeof d.tokens === 'object') {
                 permanentTokens = d.tokens;
                 Object.entries(permanentTokens).forEach(([t]) => { 
-                    adminSessions[t] = { 
-                        expiresAt: Date.now() + (365*24*60*60*1000), 
-                        permanent: true 
-                    }; 
+                    adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; 
                 });
+                console.log('✅ Tokens loaded:', Object.keys(adminSessions).length);
             }
             if (d.banned && Array.isArray(d.banned)) {
                 bannedIPs = d.banned;
             }
             if (d.logs && Array.isArray(d.logs)) {
                 requestLogs = d.logs;
+                console.log('✅ Logs loaded:', requestLogs.length);
             }
             
-            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
+            console.log('📥 FINAL Keys count:', Object.keys(keyStorage).length);
             return Object.keys(keyStorage).length > 0;
         }
+        console.log('⚠️ No data in DB response');
         return false;
     } catch (e) { 
-        console.log('Load err:', e.message); 
+        console.log('❌ Load error:', e.message); 
         return false; 
     }
 }
