@@ -133,13 +133,13 @@ function createMasterKey() { return { name:'👑 OWNER',scopes:['*'],type:'owner
 
 function initDefaultData() {
     const now = getIndiaDateTime(); keyStorage = {}; keyStorage[MASTER_API_KEY] = createMasterKey();
-    [{ key:'BRONX_DEMO_001',name:'🎁 Premium',scopes:['*'],limit:1000,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_DEMO_002',name:'🎁 Basic',scopes:['number','aadhar','pan','upi'],limit:500,cooldown:2,expiry:'30-06-2027' },{ key:'BRONX_DEMO_003',name:'🎁 Starter',scopes:['number','ip','pincode'],limit:200,cooldown:1,expiry:'31-12-2027' },{ key:'BRONX_OP_KEY',name:'🎁 OP',scopes:['*'],limit:999,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_PRO_KEY',name:'🎁 Pro',scopes:['*'],limit:5000,cooldown:0,expiry:'31-12-2028' },{ key:'BRONX_BOMBER',name:'🎁 Bomber',scopes:['number','custom'],limit:300,cooldown:3,expiry:'31-12-2027' }].forEach(d => { keyStorage[d.key] = { name:d.name,scopes:d.scopes,type:'demo',limit:d.limit,used:0,cooldown:d.cooldown||0,expiry:parseExpiryDate(d.expiry),expiryStr:d.expiry,created:now,unlimited:false,hidden:false }; });
+    [{ key:'BRONX_DEMO_001',name:'🎁 Premium',scopes:['*'],limit:1000,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_DEMO_002',name:'🎁 Basic',scopes:['number','aadhar','vehcial','rc'],limit:500,cooldown:2,expiry:'30-06-2027' },{ key:'BRONX_DEMO_003',name:'🎁 Starter',scopes:['number','ip','pincode'],limit:200,cooldown:1,expiry:'31-12-2027' },{ key:'BRONX_OP_KEY',name:'🎁 OP',scopes:['*'],limit:999,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_PRO_KEY',name:'🎁 Pro',scopes:['*'],limit:5000,cooldown:0,expiry:'31-12-2028' },{ key:'BRONX_BOMBER',name:'🎁 Bomber',scopes:['number','custom'],limit:300,cooldown:3,expiry:'31-12-2027' }].forEach(d => { keyStorage[d.key] = { name:d.name,scopes:d.scopes,type:'demo',limit:d.limit,used:0,cooldown:d.cooldown||0,expiry:parseExpiryDate(d.expiry),expiryStr:d.expiry,created:now,unlimited:false,hidden:false }; });
 }
 
 function initCustomAPIs() {
     customAPIs = [
         { id:1,name:'Number Info',endpoint:'number-advanced',param:'num',example:'9876543210',visible:true,realAPI:'https://num-tg-info-api.vercel.app/info?number={param}' },
-        { id:2,name:'Vehicle RC',endpoint:'rc-details',param:'ca_number',example:'MH02FZ0555',visible:true,realAPI:'https://rc-bala-api-bronx0.vercel.app/?ca_number={param}' },
+        { id:2,name:'Vehicle RC',endpoint:'rc-details',param:'ca_number',example:'MH02FZ0555',visible:true,realAPI:'https://rc-bala-api-bronx0.vercel.app/bronx?rc_num={param}' },
         { id:3,name:'Aadhar',endpoint:'aadhar-verify',param:'aadhar',example:'393933081942',visible:true,realAPI:'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}' },
         { id:4,name:'Email',endpoint:'email-lookup',param:'mail',example:'user@gmail.com',visible:true,realAPI:'https://bronx-king-mail-opi.vercel.app/mail={param}' },
         { id:5,name:'Telegram',endpoint:'telegram-scan',param:'id',example:'7530266953',visible:true,realAPI:'https://bronx-tg-king-bro.vercel.app/tg?key=BRONXop&query={param}' },
