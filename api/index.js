@@ -18,96 +18,33 @@ let permanentTokens = {};
 let bannedIPs = [];
 let cooldownTimers = {};
 
-// ========== STORAGE (RAILWAY DB - FIXED PERMANENT) ==========
+// ========== STORAGE (RAILWAY DB) ==========
 async function saveToStorage() {
     try {
-        const data = { 
-            keys: keyStorage, 
-            apis: customAPIs, 
-            tokens: permanentTokens, 
-            banned: bannedIPs, 
-            logs: requestLogs.slice(-100) 
-        };
-        await axios.post(`${STORAGE_URL}/api_keys`, data, { 
-            timeout: 10000, 
-            headers: { 'Content-Type': 'application/json' } 
-        });
+        await axios.post(`${STORAGE_URL}/api_keys`, { 
+            keys: keyStorage, apis: customAPIs, tokens: permanentTokens, 
+            banned: bannedIPs, logs: requestLogs.slice(-100) 
+        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
         console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
-        return true;
-    } catch (e) { 
-        console.log('Save err:', e.message); 
-        return false;
-    }
+    } catch (e) { console.log('Save err:', e.message); }
 }
 
 async function loadFromStorage() {
     try {
-        console.log('📥 Attempting to load from Railway DB...');
         const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 10000 });
-        console.log('📥 Railway DB response received');
-        
         if (res.data) {
             const d = res.data;
-            console.log('📥 Data keys:', Object.keys(d).join(', '));
-            
-            // Check if data has nested 'keys' property
-            if (d.keys && typeof d.keys === 'object') {
-                const loadedKeyCount = Object.keys(d.keys).length;
-                console.log('📥 Found', loadedKeyCount, 'keys in DB');
-                
-                if (loadedKeyCount > 0) {
-                    // ✅ DON'T clear keyStorage first - merge instead!
-                    // Only update if DB has more or equal keys
-                    keyStorage = d.keys;
-                    
-                    // Ensure master key exists
-                    if (!keyStorage[MASTER_API_KEY]) {
-                        console.log('📥 Master key missing, creating...');
-                        keyStorage[MASTER_API_KEY] = createMasterKey();
-                    }
-                    
-                    console.log('✅ Keys loaded from DB:', Object.keys(keyStorage).length);
-                } else {
-                    console.log('⚠️ DB has keys object but it is empty');
-                }
-            } else {
-                console.log('⚠️ No "keys" property found in DB response');
-            }
-            
-            // Load other data
-            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) {
-                customAPIs = d.apis;
-                console.log('✅ APIs loaded:', customAPIs.length);
-            }
-            if (d.tokens && typeof d.tokens === 'object') {
-                permanentTokens = d.tokens;
-                Object.entries(permanentTokens).forEach(([t]) => { 
-                    adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; 
-                });
-                console.log('✅ Tokens loaded:', Object.keys(adminSessions).length);
-            }
-            if (d.banned && Array.isArray(d.banned)) {
-                bannedIPs = d.banned;
-            }
-            if (d.logs && Array.isArray(d.logs)) {
-                requestLogs = d.logs;
-                console.log('✅ Logs loaded:', requestLogs.length);
-            }
-            
-            console.log('📥 FINAL Keys count:', Object.keys(keyStorage).length);
+            if (d.keys && Object.keys(d.keys).length > 0) { keyStorage = d.keys; if(!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey(); }
+            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) customAPIs = d.apis;
+            if (d.tokens) { permanentTokens = d.tokens; Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + 365*24*60*60*1000, permanent: true }; }); }
+            if (d.banned) bannedIPs = d.banned;
+            if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
             return Object.keys(keyStorage).length > 0;
         }
-        console.log('⚠️ No data in DB response');
         return false;
-    } catch (e) { 
-        console.log('❌ Load error:', e.message); 
-        return false; 
-    }
+    } catch (e) { return false; }
 }
-
-function scheduleSave() { 
-    setTimeout(async () => { await saveToStorage(); }, 2000); 
-}
+function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
 setInterval(() => scheduleSave(), 2 * 60 * 1000);
 
 // ========== HELPERS ==========
@@ -125,7 +62,7 @@ function isAdminAuth(t) { if (!t) return false; if (adminSessions[t]) { if (admi
 function isIPBanned(ip) { return ip && ip !== 'unknown' && bannedIPs.includes(ip); }
 function banIP(ip) { if (ip && ip !== 'unknown' && !bannedIPs.includes(ip)) { bannedIPs.push(ip); scheduleSave(); } }
 function unbanIP(ip) { const i = bannedIPs.indexOf(ip); if (i > -1) { bannedIPs.splice(i, 1); scheduleSave(); } }
-function sanitizeResponse(d) { if (!d) return d; try { const c = JSON.parse(JSON.stringify(d)); delete c.truecaller_name; delete c.cached; delete c.cached_at; delete c.api_by; delete c.by; delete c.channel; delete c.developer; delete c.api_key; delete c.real_url; delete c.source_url; delete c.internal_id; delete c.response_time_ms; delete c.quota_used; if(c.meta){delete c.meta.api_by; delete c.meta.response_time_ms; delete c.meta.quota_used; if(Object.keys(c.meta).length===0)delete c.meta;} c.powered_by = "BRONX_ULTRA"; return c; } catch (e) { return d; } }
+function sanitizeResponse(d) { if (!d) return d; try { const c = JSON.parse(JSON.stringify(d)); delete c.truecaller_name; delete c.cached; delete c.cached_at; delete c.by; delete c.channel; delete c.developer; delete c.api_key; delete c.real_url; delete c.source_url; delete c.internal_id; c.powered_by = "BRONX_ULTRA"; return c; } catch (e) { return d; } }
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 function detectBrowser(ua) { if(!ua) return {name:'?',device:'?'}; let n='?'; if(ua.includes('Firefox')) n='Firefox'; else if(ua.includes('Chrome')) n='Chrome'; else if(ua.includes('Safari')) n='Safari'; let d='Desktop'; if(ua.includes('Mobile')) d='Mobile'; return {name:n,device:d}; }
 function logRequest(key, ep, param, status, ip, ua) { const b = detectBrowser(ua); requestLogs.push({ timestamp: getIndiaDateTime(), key: key ? key.substring(0, 8) + '***' : '?', endpoint: ep, param: param ? param.substring(0, 20) : '', status, ip: ip || '?', browser: b.name, device: b.device }); if (requestLogs.length > 300) requestLogs = requestLogs.slice(-300); if (requestLogs.length % 5 === 0) scheduleSave(); }
@@ -133,13 +70,13 @@ function createMasterKey() { return { name:'👑 OWNER',scopes:['*'],type:'owner
 
 function initDefaultData() {
     const now = getIndiaDateTime(); keyStorage = {}; keyStorage[MASTER_API_KEY] = createMasterKey();
-    [{ key:'BRONX_DEMO_001',name:'🎁 Premium',scopes:['*'],limit:1000,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_DEMO_002',name:'🎁 Basic',scopes:['number','aadhar','vehcial','rc'],limit:500,cooldown:2,expiry:'30-06-2027' },{ key:'BRONX_DEMO_003',name:'🎁 Starter',scopes:['number','ip','pincode'],limit:200,cooldown:1,expiry:'31-12-2027' },{ key:'BRONX_OP_KEY',name:'🎁 OP',scopes:['*'],limit:999,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_PRO_KEY',name:'🎁 Pro',scopes:['*'],limit:5000,cooldown:0,expiry:'31-12-2028' },{ key:'BRONX_BOMBER',name:'🎁 Bomber',scopes:['number','custom'],limit:300,cooldown:3,expiry:'31-12-2027' }].forEach(d => { keyStorage[d.key] = { name:d.name,scopes:d.scopes,type:'demo',limit:d.limit,used:0,cooldown:d.cooldown||0,expiry:parseExpiryDate(d.expiry),expiryStr:d.expiry,created:now,unlimited:false,hidden:false }; });
+    [{ key:'BRONX_DEMO_001',name:'🎁 Premium',scopes:['*'],limit:1000,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_DEMO_002',name:'🎁 Basic',scopes:['number','aadhar','pan','upi'],limit:500,cooldown:2,expiry:'30-06-2027' },{ key:'BRONX_DEMO_003',name:'🎁 Starter',scopes:['number','ip','pincode'],limit:200,cooldown:1,expiry:'31-12-2027' },{ key:'BRONX_OP_KEY',name:'🎁 OP',scopes:['*'],limit:999,cooldown:0,expiry:'31-12-2027' },{ key:'BRONX_PRO_KEY',name:'🎁 Pro',scopes:['*'],limit:5000,cooldown:0,expiry:'31-12-2028' },{ key:'BRONX_BOMBER',name:'🎁 Bomber',scopes:['number','custom'],limit:300,cooldown:3,expiry:'31-12-2027' }].forEach(d => { keyStorage[d.key] = { name:d.name,scopes:d.scopes,type:'demo',limit:d.limit,used:0,cooldown:d.cooldown||0,expiry:parseExpiryDate(d.expiry),expiryStr:d.expiry,created:now,unlimited:false,hidden:false }; });
 }
 
 function initCustomAPIs() {
     customAPIs = [
         { id:1,name:'Number Info',endpoint:'number-advanced',param:'num',example:'9876543210',visible:true,realAPI:'https://num-tg-info-api.vercel.app/info?number={param}' },
-        { id:2,name:'Vehicle RC',endpoint:'rc-details',param:'ca_number',example:'MH02FZ0555',visible:true,realAPI:'https://rc-bala-api-bronx0.vercel.app/bronx?rc_num={param}' },
+        { id:2,name:'Vehicle RC',endpoint:'rc-details',param:'ca_number',example:'MH02FZ0555',visible:true,realAPI:'https://rc-bala-api-bronx0.vercel.app/bronx?ca_number={param}' },
         { id:3,name:'Aadhar',endpoint:'aadhar-verify',param:'aadhar',example:'393933081942',visible:true,realAPI:'https://bronx-king-vip999.vercel.app/api/aadhaar?num={param}' },
         { id:4,name:'Email',endpoint:'email-lookup',param:'mail',example:'user@gmail.com',visible:true,realAPI:'https://bronx-king-mail-opi.vercel.app/mail={param}' },
         { id:5,name:'Telegram',endpoint:'telegram-scan',param:'id',example:'7530266953',visible:true,realAPI:'https://bronx-tg-king-bro.vercel.app/tg?key=BRONXop&query={param}' },
