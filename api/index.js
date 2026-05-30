@@ -18,29 +18,51 @@ let permanentTokens = {};
 let bannedIPs = [];
 let cooldownTimers = {};
 
-// ========== STORAGE (RAILWAY DB - FIXED LIKE PYTHON) ==========
+// ========== STORAGE (RAILWAY DB - FULL DATA) ==========
 async function saveToStorage() {
     try {
-        // Save keys directly (like Python: requests.post(DB_API, json=keys))
-        await axios.post(`${STORAGE_URL}/api_keys`, keyStorage, { 
-            timeout: 10000, 
-            headers: { 'Content-Type': 'application/json' } 
-        });
-        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
+        // Save EVERYTHING like before
+        await axios.post(`${STORAGE_URL}/api_keys`, { 
+            keys: keyStorage, 
+            apis: customAPIs, 
+            tokens: permanentTokens, 
+            banned: bannedIPs, 
+            logs: requestLogs.slice(-100) 
+        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        console.log('💾 Saved! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
     } catch (e) { console.log('Save err:', e.message); }
 }
 
 async function loadFromStorage() {
     try {
-        // Get keys directly (like Python: requests.get(DB_API).json())
         const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 10000 });
-        if (res.data && typeof res.data === 'object' && Object.keys(res.data).length > 0) {
-            keyStorage = res.data;
-            if (!keyStorage[MASTER_API_KEY]) {
-                keyStorage[MASTER_API_KEY] = createMasterKey();
+        if (res.data) {
+            const d = res.data;
+            
+            // Check if data has 'keys' property (new format) or direct keys (old format)
+            if (d.keys && typeof d.keys === 'object') {
+                // NEW FORMAT
+                if (Object.keys(d.keys).length > 0) {
+                    keyStorage = d.keys;
+                    if (!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey();
+                }
+                if (d.apis && Array.isArray(d.apis)) customAPIs = d.apis;
+                if (d.tokens && typeof d.tokens === 'object') {
+                    permanentTokens = d.tokens;
+                    Object.entries(permanentTokens).forEach(([t]) => { 
+                        adminSessions[t] = { expiresAt: Date.now() + 365*24*60*60*1000, permanent: true }; 
+                    });
+                }
+                if (d.banned && Array.isArray(d.banned)) bannedIPs = d.banned;
+                if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
+            } else if (typeof d === 'object' && Object.keys(d).length > 0 && d.BRONX_DEMO_001) {
+                // OLD FORMAT - direct keys object
+                keyStorage = d;
+                if (!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey();
             }
-            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length);
-            return true;
+            
+            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
+            return Object.keys(keyStorage).length > 0;
         }
         return false;
     } catch (e) { 
