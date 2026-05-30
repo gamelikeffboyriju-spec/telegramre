@@ -18,7 +18,6 @@ let permanentTokens = {};
 let bannedIPs = [];
 let cooldownTimers = {};
 
-// ========== STORAGE (RAILWAY DB) ==========
 // ========== STORAGE (RAILWAY DB - FIXED LIKE PYTHON) ==========
 async function saveToStorage() {
     try {
