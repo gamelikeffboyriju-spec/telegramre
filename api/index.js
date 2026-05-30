@@ -18,8 +18,8 @@ let bannedIPs = [];
 let cooldownTimers = {};
 
 // ========== STORAGE (GITHUB GIST - 100% PERMANENT) ==========
-const GIST_ID = '386977dba3df1d39cd86765a98a4835d';
-const GITHUB_TOKEN = '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';
+const GIST_ID = process.env.GIST_ID || '386977dba3df1d39cd86765a98a4835d';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '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';
 
 async function saveToStorage() {
     try {
