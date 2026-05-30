@@ -19,32 +19,40 @@ let bannedIPs = [];
 let cooldownTimers = {};
 
 // ========== STORAGE (RAILWAY DB) ==========
+// ========== STORAGE (RAILWAY DB - FIXED LIKE PYTHON) ==========
 async function saveToStorage() {
     try {
-        await axios.post(`${STORAGE_URL}/api_keys`, { 
-            keys: keyStorage, apis: customAPIs, tokens: permanentTokens, 
-            banned: bannedIPs, logs: requestLogs.slice(-100) 
-        }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        // Save keys directly (like Python: requests.post(DB_API, json=keys))
+        await axios.post(`${STORAGE_URL}/api_keys`, keyStorage, { 
+            timeout: 10000, 
+            headers: { 'Content-Type': 'application/json' } 
+        });
         console.log('💾 Saved! Keys:', Object.keys(keyStorage).length);
     } catch (e) { console.log('Save err:', e.message); }
 }
 
 async function loadFromStorage() {
     try {
+        // Get keys directly (like Python: requests.get(DB_API).json())
         const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 10000 });
-        if (res.data) {
-            const d = res.data;
-            if (d.keys && Object.keys(d.keys).length > 0) { keyStorage = d.keys; if(!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey(); }
-            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) customAPIs = d.apis;
-            if (d.tokens) { permanentTokens = d.tokens; Object.entries(permanentTokens).forEach(([t]) => { adminSessions[t] = { expiresAt: Date.now() + 365*24*60*60*1000, permanent: true }; }); }
-            if (d.banned) bannedIPs = d.banned;
-            if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
-            return Object.keys(keyStorage).length > 0;
+        if (res.data && typeof res.data === 'object' && Object.keys(res.data).length > 0) {
+            keyStorage = res.data;
+            if (!keyStorage[MASTER_API_KEY]) {
+                keyStorage[MASTER_API_KEY] = createMasterKey();
+            }
+            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length);
+            return true;
         }
         return false;
-    } catch (e) { return false; }
+    } catch (e) { 
+        console.log('Load err:', e.message); 
+        return false; 
+    }
 }
-function scheduleSave() { setTimeout(async () => { await saveToStorage(); }, 2000); }
+
+function scheduleSave() { 
+    setTimeout(async () => { await saveToStorage(); }, 2000); 
+}
 setInterval(() => scheduleSave(), 2 * 60 * 1000);
 
 // ========== HELPERS ==========
