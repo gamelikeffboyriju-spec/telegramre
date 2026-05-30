@@ -17,10 +17,9 @@ let permanentTokens = {};
 let bannedIPs = [];
 let cooldownTimers = {};
 
-// ========== STORAGE (LOCAL JSON FILE - PERMANENT) ==========
-const fs = require('fs');
-const path = require('path');
-const DATA_FILE = '/tmp/bronx_data.json';  // Vercel pe /tmp folder safe hai!
+// ========== STORAGE (GITHUB GIST - 100% PERMANENT) ==========
+const GIST_ID = '386977dba3df1d39cd86765a98a4835d';
+const GITHUB_TOKEN = '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';
 
 async function saveToStorage() {
     try {
@@ -29,80 +28,60 @@ async function saveToStorage() {
             apis: customAPIs, 
             tokens: permanentTokens, 
             banned: bannedIPs, 
-            logs: requestLogs.slice(-200),
-            lastSaved: new Date().toISOString()
+            logs: requestLogs.slice(-200)
         };
         
-        // ✅ LOCAL JSON FILE MEIN SAVE - JAISE PYTHON EXAMPLE!
-        fs.writeFileSync(DATA_FILE, JSON.stringify(fullData, null, 2));
-        console.log('💾 Saved to local file! Keys:', Object.keys(keyStorage).length);
+        await axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+            files: { 'bronx_data.json': { content: JSON.stringify(fullData, null, 2) } }
+        }, {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' }
+        });
         
-        // ✅ Railway DB mein bhi backup save karo (optional)
-        try {
-            await axios.post(`${STORAGE_URL}/api_keys`, fullData, { 
-                timeout: 5000, 
-                headers: { 'Content-Type': 'application/json' } 
-            });
-        } catch (railwayErr) {
-            // Railway fail ho to bhi local file save ho chuki hai
-        }
-        
+        console.log('💾 Saved to GitHub! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
     } catch (e) { console.log('Save err:', e.message); }
 }
 
 async function loadFromStorage() {
     try {
-        // ✅ PEHLE LOCAL FILE SE LOAD KARO
-        if (fs.existsSync(DATA_FILE)) {
-            const rawData = fs.readFileSync(DATA_FILE, 'utf8');
-            const d = JSON.parse(rawData);
+        const res = await axios.get(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+        });
+        
+        if (res.data && res.data.files && res.data.files['bronx_data.json']) {
+            const d = JSON.parse(res.data.files['bronx_data.json'].content);
             
-            if (d.keys && Object.keys(d.keys).length > 0) {
+            if (d.keys && typeof d.keys === 'object' && Object.keys(d.keys).length > 0) {
                 keyStorage = d.keys;
                 if (!keyStorage[MASTER_API_KEY]) {
                     keyStorage[MASTER_API_KEY] = createMasterKey();
                 }
-                console.log('📁 Loaded from local file! Keys:', Object.keys(keyStorage).length);
             }
-            if (d.apis && Array.isArray(d.apis)) customAPIs = d.apis;
+            
+            if (d.apis && Array.isArray(d.apis) && d.apis.length > 0) {
+                customAPIs = d.apis;
+            }
+            
             if (d.tokens && typeof d.tokens === 'object') {
                 permanentTokens = d.tokens;
                 Object.entries(permanentTokens).forEach(([t]) => { 
-                    adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; 
+                    adminSessions[t] = { 
+                        expiresAt: Date.now() + (365*24*60*60*1000), 
+                        permanent: true 
+                    }; 
                 });
             }
-            if (d.banned && Array.isArray(d.banned)) bannedIPs = d.banned;
-            if (d.logs && Array.isArray(d.logs)) requestLogs = d.logs;
             
-            console.log('📁 Loaded! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
+            if (d.banned && Array.isArray(d.banned)) {
+                bannedIPs = d.banned;
+            }
+            
+            if (d.logs && Array.isArray(d.logs)) {
+                requestLogs = d.logs;
+            }
+            
+            console.log('📥 Loaded! Keys:', Object.keys(keyStorage).length, 'APIs:', customAPIs.length, 'Logs:', requestLogs.length);
             return Object.keys(keyStorage).length > 0;
         }
-        
-        // ✅ LOCAL FILE NAHI MILI TO RAILWAY SE TRY KARO
-        try {
-            const res = await axios.get(`${STORAGE_URL}/api_keys`, { timeout: 5000 });
-            if (res.data) {
-                const d = res.data;
-                if (d.keys && Object.keys(d.keys).length > 0) {
-                    keyStorage = d.keys;
-                    if (!keyStorage[MASTER_API_KEY]) keyStorage[MASTER_API_KEY] = createMasterKey();
-                }
-                if (d.apis && Array.isArray(d.apis)) customAPIs = d.apis;
-                if (d.tokens) {
-                    permanentTokens = d.tokens;
-                    Object.entries(permanentTokens).forEach(([t]) => { 
-                        adminSessions[t] = { expiresAt: Date.now() + (365*24*60*60*1000), permanent: true }; 
-                    });
-                }
-                if (d.banned) bannedIPs = d.banned;
-                if (d.logs) requestLogs = d.logs;
-                console.log('📥 Loaded from Railway! Keys:', Object.keys(keyStorage).length);
-                return Object.keys(keyStorage).length > 0;
-            }
-        } catch (railwayErr) {
-            console.log('Railway load failed, using defaults');
-        }
-        
         return false;
     } catch (e) { 
         console.log('Load err:', e.message); 
@@ -114,58 +93,6 @@ function scheduleSave() {
     setTimeout(async () => { await saveToStorage(); }, 2000); 
 }
 setInterval(() => scheduleSave(), 2 * 60 * 1000);
-
-// ========== AI CHAT FUNCTION (GROQ API) ==========
-async function askAI(question) {
-    try {
-        const response = await axios.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            {
-                model: 'llama3-70b-8192',
-                messages: [{ role: 'user', content: question }]
-            },
-            {
-                headers: {
-                    'Authorization': 'Bearer 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',
-                    'Content-Type': 'application/json'
-                },
-                timeout: 30000
-            }
-        );
-        
-        const answer = response.data.choices[0].message.content;
-        
-        // ✅ AI response bhi local file mein save karo
-        const aiFile = '/tmp/bronx_ai_chats.json';
-        let chats = [];
-        try {
-            if (fs.existsSync(aiFile)) {
-                chats = JSON.parse(fs.readFileSync(aiFile, 'utf8'));
-            }
-        } catch(e) {}
-        
-        chats.push({
-            timestamp: new Date().toISOString(),
-            question: question,
-            answer: answer
-        });
-        
-        fs.writeFileSync(aiFile, JSON.stringify(chats, null, 2));
-        
-        return answer;
-    } catch (e) {
-        console.log('AI Error:', e.message);
-        return 'Error: ' + e.message;
-    }
-}
-
-// Optional: AI Chat endpoint
-app.get('/ai', async (req, res) => {
-    const q = req.query.q;
-    if (!q) return res.json({ error: 'Missing question' });
-    const answer = await askAI(q);
-    res.json({ question: q, answer: answer });
-});
 
 // ========== HELPERS ==========
 function getIndiaTime() { return new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000)); }
